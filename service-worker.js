@@ -1,11 +1,17 @@
-// Planet Slide service worker: makes the app open with no internet connection.
+// Planet Slide service worker: lets the game open with no internet connection.
 //
-// How updates work: every time the app opens with a connection, it asks the server for the
-// newest index.html and shows that. With no connection (or a very slow one) it shows the copy
-// saved on the phone. Saved scores live in the phone's storage and are never touched here.
+// Safety rules this file follows, so it cannot affect anything else on the same site:
+//  - It only answers requests for files inside its own folder, plus the game's two Google Fonts
+//    files (so the fonts work offline). Everything else (your other pages, other sites) is passed
+//    straight to the browser untouched.
+//  - It only creates, reads and deletes caches whose names start with "planet-slide-".
+//  - It never touches cookies, localStorage, IndexedDB or other sites' data.
 //
-// You only need to change SHELL_VERSION if you add, rename or replace the icon or manifest files.
-const SHELL_VERSION = 'planet-slide-v3';
+// How updates work: when the game opens with a connection it shows the newest index.html
+// from the server; with no connection (or after 3 slow seconds) it shows the saved copy.
+// Saved scores live in the browser's storage and are never touched here.
+const SHELL_VERSION = 'planet-slide-v5';
+const PREFIX = 'planet-slide-';
 const SHELL = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', event => {
@@ -15,16 +21,12 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      // Only tidy up this game's own old copies. Other pages on the same github.io site
-      // (your personal page, other apps) share this storage, so their caches are left alone.
-      .then(keys => Promise.all(keys.filter(k => k.startsWith('planet-slide-') && k !== SHELL_VERSION).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k.startsWith(PREFIX) && k !== SHELL_VERSION).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
 
 function freshPage(request) {
-  // Newest page from the server, saved for next time. Falls back to the saved copy if the
-  // connection is missing, or after 3 seconds if it is too slow.
   return caches.open(SHELL_VERSION).then(cache => {
     const saved = cache.match('./');
     const network = fetch(request, { cache: 'no-cache' }).then(response => {
@@ -38,7 +40,6 @@ function freshPage(request) {
 }
 
 function savedFirst(request) {
-  // Icons, the manifest and fonts: use the saved copy, otherwise fetch and save it.
   return caches.open(SHELL_VERSION).then(cache =>
     cache.match(request).then(hit => hit || fetch(request).then(response => {
       if (response.ok || response.type === 'opaque') cache.put(request, response.clone());
@@ -49,8 +50,10 @@ function savedFirst(request) {
 
 self.addEventListener('fetch', event => {
   const request = event.request;
-  if (request.method !== 'GET') return;
-  const isPage = request.mode === 'navigate' ||
-    (new URL(request.url).origin === self.location.origin && /(\/|index\.html)$/.test(new URL(request.url).pathname));
+  // Anything that is not a plain read of a file in this game's folder is left alone.
+  const fonts = request.url.startsWith('https://fonts.googleapis.com/') || request.url.startsWith('https://fonts.gstatic.com/');
+  if (request.method !== 'GET' || !(fonts || request.url.startsWith(self.registration.scope))) return;
+  const path = new URL(request.url).pathname;
+  const isPage = request.mode === 'navigate' || /(\/|index\.html)$/.test(path);
   event.respondWith(isPage ? freshPage(request) : savedFirst(request));
 });

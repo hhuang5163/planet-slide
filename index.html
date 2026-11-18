@@ -363,13 +363,60 @@ canvas#c {
 .track .ds { font-size: 12px; color: var(--muted); font-weight: 500; }
 .track .btn { font-size: 13px; padding: 8px 12px; border-radius: 14px; white-space: nowrap; }
 .track.on { border-color: var(--sun); background: #4a3ca0; }
-@media (prefers-reduced-motion: reduce) { .logo { animation: none; } }
+/* ---------- maps, profile, achievements ---------- */
+/* ".btn.icon" sets a 52px width with no padding; this selector is more specific so the button stays a true circle */
+.btn.icon.profile-btn {
+  position: absolute; z-index: 2; top: calc(14px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left));
+  width: 58px; height: 58px; border-radius: 50%; padding: 4px; background: var(--blue); margin: 0;
+}
+.profile-btn img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.card img.board { max-width: none; width: 100%; aspect-ratio: 2 / 3; border-radius: 10px; border: 2px solid var(--ink); }
+.card .ds { font-size: 11px; color: var(--muted); font-weight: 500; line-height: 1.3; text-align: center; }
+.card.locked img { opacity: 0.55; }
+.card.locked .st { color: var(--muted); }
+.card.ach { cursor: default; padding: 8px 6px 10px; }
+.card.ach:active { transform: none; box-shadow: 0 4px 0 var(--ink); }
+.grid2 .card.ach img { max-width: 92px; }
+.tabs.two { grid-template-columns: 1fr 1fr; }
+.tabs.two .btn { grid-column: auto; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat { padding: 8px 6px; text-align: center; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat b { font-family: var(--display); font-weight: 400; font-size: 18px; color: var(--sun); font-variant-numeric: tabular-nums; }
+.maprows { display: flex; flex-direction: column; gap: 10px; }
+.maprow { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; padding: 6px 10px; }
+.maprow img { width: 44px; border-radius: 8px; border: 2px solid var(--ink); display: block; }
+.maprow .nm { font-family: var(--display); font-size: 14px; }
+.maprow .ds { font-size: 12px; color: var(--muted); font-weight: 500; }
+.maprow .ds b { color: var(--sun); font-family: var(--display); font-weight: 400; font-size: 15px; font-variant-numeric: tabular-nums; }
+.maprow.locked img { opacity: 0.55; }
+.maprow .btn { font-size: 13px; padding: 7px 12px; border-radius: 14px; }
+.advbox { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.bar { height: 14px; background: #1d1648; border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--sun); }
+.advbox .ds { margin: 0; font-size: 13px; color: var(--muted); font-weight: 500; }
+.dots { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+.dot { aspect-ratio: 1; display: grid; place-items: center; border-radius: 50%; background: #3a2d86; color: #9a93c9; font-size: 10px; border: 2px solid var(--ink); }
+.dot.done { background: var(--sun); color: #2a1650; }
+.dot.boss { border-color: var(--pink); }
+.ach-banner {
+  position: fixed; z-index: 40; left: 50%; top: calc(10px + env(safe-area-inset-top)); transform: translate(-50%, -170%);
+  transition: transform 0.35s cubic-bezier(0.2, 1.3, 0.4, 1); display: flex; align-items: center; gap: 10px;
+  padding: 6px 16px 6px 6px; background: var(--panel); border: 3px solid var(--sun); border-radius: 20px;
+  box-shadow: 0 5px 0 var(--ink); width: max-content; max-width: calc(100% - 32px); pointer-events: none;
+}
+.ach-banner.show { transform: translate(-50%, 0); }
+.ach-banner img { width: 58px; height: 58px; flex: none; }
+.ach-k { font-size: 11px; color: var(--sun); letter-spacing: 0.08em; }
+.ach-n { font-family: var(--display); font-size: 16px; }
+.ach-c { font-size: 13px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .logo { animation: none; } .ach-banner { transition: none; } }
 </style>
 </head>
 <body>
 
 <section class="screen on" id="home">
   <canvas id="homeCanvas" aria-hidden="true"></canvas>
+  <button class="btn icon profile-btn" id="btnProfile" type="button" aria-label="Profile"><img id="avatar" alt=""></button>
   <div class="home-inner">
     <h1 class="logo"><span class="l1">Planet</span><span class="l2">Slide</span></h1>
     <div class="pills">
@@ -385,7 +432,7 @@ canvas#c {
       </div>
       <button class="btn ghost" id="btnHomeSettings" type="button">Settings</button>
     </div>
-    <div class="ver">Version 1.7</div>
+    <div class="ver">Version 1.14</div>
   </div>
 </section>
 
@@ -421,6 +468,33 @@ canvas#c {
   </div>
 </section>
 
+<section class="screen" id="maps">
+  <div class="shop-app">
+    <header class="shop-head">
+      <button class="btn ghost" id="mapsBack" type="button">Home</button>
+      <h2>Classic</h2>
+      <div class="panel best-pill"><i class="coin"></i><b id="mapsCoins">0</b></div>
+    </header>
+    <p class="shop-note">Pick a map. Each one keeps its own high score. New maps are in the shop.</p>
+    <div class="shop-list"><div class="grid2" id="mapList"></div></div>
+  </div>
+</section>
+
+<section class="screen" id="profile">
+  <div class="shop-app">
+    <header class="shop-head">
+      <button class="btn ghost" id="profBack" type="button">Home</button>
+      <h2>Profile</h2>
+      <div class="panel best-pill"><i class="coin"></i><b id="profCoins">0</b></div>
+    </header>
+    <div class="tabs two" role="tablist" id="profTabs">
+      <button class="btn ghost" type="button" role="tab" id="ptab_records" data-ptab="records">Records</button>
+      <button class="btn ghost" type="button" role="tab" id="ptab_ach" data-ptab="ach">Achievements</button>
+    </div>
+    <div class="shop-list" id="profList"></div>
+  </div>
+</section>
+
 <section class="screen" id="shop">
   <div class="shop-app">
     <header class="shop-head">
@@ -428,12 +502,13 @@ canvas#c {
       <h2>Shop</h2>
       <div class="panel best-pill"><i class="coin"></i><b id="shopCoins">0</b></div>
     </header>
-    <div class="tabs" role="tablist">
+    <div class="tabs" role="tablist" id="shopTabs">
       <button class="btn ghost" type="button" role="tab" id="tab_planets" data-tab="planets">Planets</button>
       <button class="btn ghost" type="button" role="tab" id="tab_faces" data-tab="faces">Faces</button>
       <button class="btn ghost" type="button" role="tab" id="tab_skies" data-tab="skies">Skies</button>
-      <button class="btn ghost half" type="button" role="tab" id="tab_music" data-tab="music">Music</button>
-      <button class="btn ghost half" type="button" role="tab" id="tab_walls" data-tab="walls">Wallpapers</button>
+      <button class="btn ghost" type="button" role="tab" id="tab_maps" data-tab="maps">Maps</button>
+      <button class="btn ghost" type="button" role="tab" id="tab_music" data-tab="music">Music</button>
+      <button class="btn ghost" type="button" role="tab" id="tab_walls" data-tab="walls">Wallpapers</button>
     </div>
     <div class="shop-list" id="shopList"></div>
   </div>
@@ -450,6 +525,11 @@ canvas#c {
   </div>
 </div>
 
+<div class="ach-banner" id="achBanner" role="status" aria-live="polite">
+  <img id="achImg" alt="">
+  <div><div class="ach-k">ACHIEVEMENT!</div><div class="ach-n" id="achName"></div><div class="ach-c" id="achCoins"></div></div>
+</div>
+
 <div class="modal" id="modal">
   <div class="panel sheet" id="sheet" role="dialog" aria-labelledby="sheetTitle"></div>
 </div>
@@ -459,10 +539,12 @@ canvas#c {
   'use strict';
 
   // ---------- Tunables ----------
+  const DEV = false;             // dev build: separate save plus the DEV panel. The phone package sets this to false
+                                 // and deletes the dev tools block at the end of this script.
   const W = 360;                 // world width in game units; height follows the screen
   // Physics for the normal game. Sandbox mode edits its own copy of these with sliders.
   const DEFAULTS = {
-    launch: 380,     // shot speed: a launched planet glides at this speed until it first touches something
+    launch: 380,     // impact speed: how hard a shot hits whatever it first touches (sets the collision physics)
     pull: 1100,      // pull toward the back wall (units/s^2)
     friction: 123,   // surface friction (units/s^2)
     drag: 0.4,       // speed-based slowing
@@ -470,26 +552,42 @@ canvas#c {
     kick: 0.6,       // how much planets kick apart when squeezed together
     grip: 0          // extra friction between touching planets
   };
+  // Sandbox shows every physics setting as a level from 1 to 10, with 5 = normal. Behind the scenes
+  // 1 maps to the low end, 5 to the normal value and 10 to the high end (straight lines in between).
+  const toLevel = (key, v) => {
+    const [, , lo, hi] = SLIDERS.find(r => r[0] === key), d = DEFAULTS[key];
+    if (d <= lo) return clamp(Math.round(1 + (v - lo) / (hi - lo) * 9), 1, 10);
+    return clamp(Math.round(v <= d ? 1 + (v - lo) / (d - lo) * 4 : 5 + (v - d) / (hi - d) * 5), 1, 10);
+  };
+  const fromLevel = (key, n) => {
+    const [, , lo, hi] = SLIDERS.find(r => r[0] === key), d = DEFAULTS[key];
+    if (d <= lo) return lo + (n - 1) / 9 * (hi - lo);
+    return n <= 5 ? lo + (n - 1) / 4 * (d - lo) : d + (n - 5) / 5 * (hi - d);
+  };
   const SLIDERS = [
-    ['launch',   'Shot speed',            150, 900, 10],
+    ['launch',   'Shot strength',         150, 900, 10],
     ['pull',     'Pull to the back',      0, 2000, 20],
-    ['friction', 'Surface friction',      0, 400, 1],
+    ['friction', 'Friction',              0, 400, 1],
     ['drag',     'Air drag',              0, 2, 0.05],
     ['bounce',   'Bounce',                0, 1, 0.05],
     ['kick',     'Kick apart on squeeze', 0, 1, 0.05],
     ['grip',     'Planet stickiness',     0, 0.3, 0.01]
   ];
+  let GLIDE = 500;               // how fast a shot travels up the board before it touches anything. Purely visual:
+                                 // on first contact it is slowed to the impact speed above, so hits play out the same.
   const SUBSTEPS = 8;
   const DT = 1 / 60;
-  const RELOAD = 0.45;           // seconds before the next planet is ready
+  let RELOAD = 0.45;             // seconds before the next planet is ready
   const LAUNCH_Y = 62;           // launcher distance from the near edge
   const LINE_Y = 128;            // "full" line distance from the near edge
-  const OVER_STILL = 0.8;        // a planet that sits past the line WITHOUT MOVING for this long ends the game
+  const lineH = () => (TW && TW.line) || LINE_Y;   // a level can raise the line
+  let OVER_STILL = 0.8;          // a planet that sits past the line WITHOUT MOVING for this long ends the game
   const STILL_RADIUS = 3;        // "without moving" = it has stayed within this many units of one spot
   const SPAWN_WEIGHTS = [48, 30, 16, 6];  // classic hands out the four smallest planets, small ones far more often
   const SCORE_CAP = 9999999;     // the score stops here so it always fits its box
-  const COIN_EVERY = 20;         // one coin for every 20 points scored in the normal game
-  const SAVE_KEY = 'planet-slide-v2';
+  let COIN_EVERY = 20;           // one coin for every 20 points scored in the normal game
+  const SAVE_KEY = DEV ? 'planet-slide-dev' : 'planet-slide-v2';   // the dev build never touches real progress
+  let devSpeed = 1;              // game speed; only the dev panel changes it
 
   // Ten planets in true size order. `ring` adds collision shapes along the ring.
   const TIERS = [
@@ -524,9 +622,11 @@ canvas#c {
   }
 
   // ---------- State ----------
+  const freshStats = () => ({ made: TIERS.map(() => 0), merges: 0, novas: 0, games: 0, eaten: 0, heard: {} });
   const store = {
-    best: 0, run: null, opts: { music: true, sfx: true }, sand: { ...DEFAULTS },
-    coins: 0, owned: {}, adv: [],
+    map: 'open', bests: {}, runs: {},       // classic: chosen map, high score per map, game in progress per map
+    opts: { music: true, sfx: true }, sand: { ...DEFAULTS },
+    coins: 0, owned: {}, adv: [], ach: {}, stats: freshStats(),
     equip: { skins: TIERS.map(() => 'classic'), faces: TIERS.map(() => 'classic'), bg: 'night', track: 'sunny' }
   };
   let screen = 'home';           // 'home', 'game', 'shop' or 'adv' (the level list)
@@ -534,6 +634,8 @@ canvas#c {
   let spawn = SPAWN_WEIGHTS;     // which planets get handed out, and how often
   // adventure-only state
   let L = null, levelIdx = 0, hold = false;
+  let TW = null;                 // the twists in play: an adventure level or a classic map (rocks, walls, wind, alien, black hole)
+  let curMap = 'open';
   let made = [], shotsLeft = 0, shotCount = 0, lastShot = 0, timeLeft = 0, shownSec = -1;
   let rocks = [], bars = [], boss = null, ufo = null;
   let P = { ...DEFAULTS };       // physics in use right now
@@ -578,14 +680,14 @@ canvas#c {
     };
   }
   function save() {
-    if (mode === 'classic' && screen === 'game') store.run = over ? null : serialize();
+    if (mode === 'classic' && screen === 'game') store.runs[curMap] = over ? null : serialize();
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(store)); } catch (e) { /* storage unavailable: the game still plays */ }
     dirty = false;
   }
   function loadStore(hotData) {
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) {}
-    if (!saved && hotData && Number.isFinite(hotData.best)) saved = hotData;
+    if (!saved && hotData && (Number.isFinite(hotData.best) || hotData.bests)) saved = hotData;
     if (!saved) {
       try {   // carry the best score over from the previous version
         const old = JSON.parse(localStorage.getItem('planet-slide-v1') || 'null');
@@ -593,8 +695,19 @@ canvas#c {
       } catch (e) {}
     }
     if (!saved) return;
-    if (Number.isFinite(saved.best)) store.best = clamp(saved.best | 0, 0, SCORE_CAP);
-    if (saved.run && Array.isArray(saved.run.bodies)) store.run = saved.run;
+    if (saved.bests && typeof saved.bests === 'object') {
+      for (const k in saved.bests) if (MAPS[k] && Number.isFinite(saved.bests[k])) store.bests[k] = clamp(saved.bests[k] | 0, 0, SCORE_CAP);
+    } else if (Number.isFinite(saved.best)) store.bests.open = clamp(saved.best | 0, 0, SCORE_CAP);   // older saves had one best
+    if (saved.runs && typeof saved.runs === 'object') {
+      for (const k in saved.runs) if (MAPS[k] && saved.runs[k] && Array.isArray(saved.runs[k].bodies)) store.runs[k] = saved.runs[k];
+    } else if (saved.run && Array.isArray(saved.run.bodies)) store.runs.open = saved.run;
+    if (saved.ach && typeof saved.ach === 'object') for (const a of ACH) if (saved.ach[a.id]) store.ach[a.id] = saved.ach[a.id];
+    if (saved.stats && typeof saved.stats === 'object') {
+      const st = saved.stats;
+      if (Array.isArray(st.made)) TIERS.forEach((T, t) => { store.stats.made[t] = Math.max(0, st.made[t] | 0); });
+      for (const k of ['merges', 'novas', 'games', 'eaten']) store.stats[k] = Math.max(0, st[k] | 0);
+      if (st.heard && typeof st.heard === 'object') for (const k in st.heard) if (TRACKS[k]) store.stats.heard[k] = 1;
+    }
     if (saved.opts) { store.opts.music = saved.opts.music !== false; store.opts.sfx = saved.opts.sfx !== false; }
     if (saved.sand) for (const [key, , lo, hi] of SLIDERS) {
       if (Number.isFinite(saved.sand[key])) store.sand[key] = clamp(saved.sand[key], lo, hi);
@@ -613,6 +726,7 @@ canvas#c {
       if (BGS[e.bg] && owned('bg:' + e.bg)) store.equip.bg = e.bg;
       if (TRACKS[e.track] && owned('music:' + e.track)) store.equip.track = e.track;
     }
+    if (MAPS[saved.map] && owned('map:' + saved.map)) store.map = saved.map;
   }
   function restoreRun(g) {
     bodies = g.bodies
@@ -681,6 +795,17 @@ canvas#c {
       name: 'Sunny stroll', desc: 'Calm, bright and gently bouncy', price: 0, bpm: 96, echo: 0.16, twinkle: 0,
       pad: { mode: 'hold', vol: 0.03 }, bass: { beats: [0, 2], len: 1.1, vol: 0.085, alt: 7 },
       arp: { type: 'triangle', mode: 'tune', decay: 0.55, vol: 0.085 },
+      // B: a new melody over F G Em Am Dm G C C, so the tune comes home to C
+      sections: { B: [
+        { bass: 41, pad: [57, 60, 65], tune: [77, 0, 76, 0, 74, 0, 72, 0] },
+        { bass: 43, pad: [55, 59, 62], tune: [74, 0, 72, 0, 71, 0, 67, 0] },
+        { bass: 40, pad: [55, 59, 64], tune: [71, 0, 72, 0, 74, 0, 76, 0] },
+        { bass: 45, pad: [57, 60, 64], tune: [76, 0, 0, 74, 72, 0, 69, 0] },
+        { bass: 50, pad: [57, 62, 65], tune: [69, 0, 72, 0, 77, 0, 74, 0] },
+        { bass: 43, pad: [55, 59, 62], tune: [74, 0, 79, 0, 77, 0, 74, 0] },
+        { bass: 48, pad: [55, 60, 64], tune: [72, 0, 76, 0, 79, 0, 84, 0] },
+        { bass: 48, pad: [55, 60, 64], tune: [79, 0, 0, 0, 72, 0, 0, 0] }] },
+      form: [['A', 'full'], ['B', 'full'], ['A', 'up'], ['B', 'sparse']],
       chords: [
         { bass: 48, pad: [55, 60, 64], tune: [76, 0, 79, 0, 76, 0, 72, 0] },
         { bass: 47, pad: [55, 59, 62], tune: [74, 0, 79, 0, 74, 0, 71, 0] },
@@ -695,6 +820,12 @@ canvas#c {
       name: 'Cloud nap', desc: 'Very slow and sleepy', price: 350, bpm: 56, echo: 0.4, twinkle: 0.1,
       pad: { mode: 'hold', vol: 0.05 }, bass: { beats: [0], len: 3.6, vol: 0.06 },
       arp: { type: 'sine', mode: 'walk', on: 0.38, off: 0.14, decay: 2.0, vol: 0.07 },
+            sections: { B: [
+        { bass: 45, pad: [57, 60, 64], pool: [69, 72, 76, 79, 81] },
+        { bass: 41, pad: [57, 60, 65], pool: [69, 72, 77, 81, 84] },
+        { bass: 50, pad: [57, 60, 62, 65], pool: [69, 72, 74, 77, 81] },
+        { bass: 43, pad: [55, 59, 62], pool: [67, 71, 74, 79, 83] }] },
+      form: [['A', 'full'], ['B', 'full'], ['A', 'up'], ['B', 'break']],
       chords: [
         { bass: 48, pad: [55, 60, 64], pool: [67, 72, 76, 79, 84] },
         { bass: 48, pad: [57, 60, 65], pool: [69, 72, 77, 81, 84] },
@@ -705,6 +836,12 @@ canvas#c {
       name: 'Chill drift', desc: 'Floaty and a little mysterious', price: 400, bpm: 74, echo: 0.3, twinkle: 0.14,
       pad: { mode: 'hold', vol: 0.05 }, bass: { beats: [0], len: 3.6, vol: 0.07 },
       arp: { type: 'triangle', mode: 'walk', on: 0.72, off: 0.4, decay: 1.1, vol: 0.075 },
+            sections: { B: [
+        { bass: 40, pad: [52, 55, 59, 62], pool: [64, 67, 71, 74, 76, 79] },
+        { bass: 45, pad: [52, 55, 57, 60], pool: [57, 60, 64, 67, 72, 76] },
+        { bass: 50, pad: [53, 57, 60, 62], pool: [62, 65, 69, 72, 74, 77] },
+        { bass: 43, pad: [53, 55, 59, 62], pool: [62, 67, 71, 74, 77, 79] }] },
+      form: [['A', 'full'], ['A', 'up'], ['B', 'full'], ['A', 'break']],
       chords: [
         { bass: 48, pad: [52, 55, 59, 64], pool: [60, 64, 67, 71, 74, 76] },
         { bass: 45, pad: [52, 55, 57, 60], pool: [57, 60, 64, 67, 72, 76] },
@@ -715,6 +852,18 @@ canvas#c {
       name: 'Picnic', desc: 'A cheerful skipping tune', price: 550, bpm: 112, echo: 0.12, twinkle: 0,
       pad: { mode: 'stab', vol: 0.04, decay: 0.2 }, bass: { beats: [0, 1, 2, 3], len: 0.5, vol: 0.09, alt: 7 },
       arp: { type: 'triangle', mode: 'tune', decay: 0.32, vol: 0.08 },
+            sections: {
+        B: [
+          { bass: 41, pad: [60, 65, 69], tune: [77, 81, 84, 81, 77, 0, 72, 0] },
+          { bass: 43, pad: [59, 62, 67], tune: [79, 83, 86, 83, 79, 0, 74, 0] },
+          { bass: 40, pad: [59, 64, 67], tune: [76, 79, 83, 79, 76, 0, 71, 0] },
+          { bass: 45, pad: [60, 64, 69], tune: [76, 81, 84, 81, 76, 72, 69, 0] }],
+        C: [
+          { bass: 50, pad: [62, 65, 69], tune: [74, 77, 81, 77, 74, 0, 0, 0] },
+          { bass: 43, pad: [59, 62, 67], tune: [79, 77, 74, 71, 67, 0, 0, 0] },
+          { bass: 48, pad: [60, 64, 67], tune: [72, 76, 79, 84, 79, 76, 72, 0] },
+          { bass: 48, pad: [60, 64, 67], tune: [84, 0, 0, 0, 72, 0, 0, 0] }] },
+      form: [['A', 'full'], ['A', 'answer'], ['B', 'full'], ['C', 'full'], ['A', 'up'], ['B', 'sparse'], ['C', 'full']],
       chords: [
         { bass: 48, pad: [60, 64, 67], tune: [72, 76, 79, 76, 84, 0, 79, 0] },
         { bass: 45, pad: [60, 64, 69], tune: [72, 76, 81, 76, 84, 0, 81, 0] },
@@ -725,6 +874,12 @@ canvas#c {
       name: 'Music box', desc: 'A tinkly bedtime tune', price: 600, bpm: 66, echo: 0.22, twinkle: 0,
       pad: { mode: 'hold', vol: 0.028 }, bass: { beats: [0, 2], len: 1.6, vol: 0.05 },
       arp: { type: 'sine', mode: 'updown', on: 1, off: 1, decay: 0.9, vol: 0.085 },
+            sections: { B: [
+        { bass: 43, pad: [58, 62, 67], pool: [79, 82, 86, 91, 94] },
+        { bass: 48, pad: [55, 60, 64], pool: [76, 79, 84, 88, 91] },
+        { bass: 45, pad: [57, 60, 64], pool: [76, 81, 84, 88, 93] },
+        { bass: 48, pad: [58, 60, 64], pool: [76, 79, 82, 84, 88] }] },
+      form: [['A', 'full'], ['B', 'full'], ['A', 'up'], ['B', 'break']],
       chords: [
         { bass: 53, pad: [57, 60, 65], pool: [77, 81, 84, 89, 93] },
         { bass: 52, pad: [55, 60, 64], pool: [76, 79, 84, 88, 91] },
@@ -735,6 +890,12 @@ canvas#c {
       name: 'Bubble bounce', desc: 'Upbeat and bouncy', price: 700, bpm: 108, echo: 0.14, twinkle: 0.05,
       pad: { mode: 'stab', vol: 0.045, decay: 0.2 }, bass: { beats: [0, 1, 2, 3], len: 0.5, vol: 0.1, alt: 7 },
       arp: { type: 'square', mode: 'walk', on: 0.85, off: 0.6, decay: 0.24, vol: 0.028 },
+            sections: { B: [
+        { bass: 45, pad: [60, 64, 69], pool: [72, 76, 81, 84, 88] },
+        { bass: 40, pad: [59, 64, 67], pool: [71, 76, 79, 83, 88] },
+        { bass: 41, pad: [60, 65, 69], pool: [72, 77, 81, 84, 89] },
+        { bass: 43, pad: [59, 62, 67], pool: [71, 74, 79, 83, 86] }] },
+      form: [['A', 'full'], ['A', 'full'], ['B', 'full'], ['A', 'up'], ['B', 'full'], ['A', 'break']],
       chords: [
         { bass: 48, pad: [60, 64, 67], pool: [72, 76, 79, 84, 88] },
         { bass: 53, pad: [60, 65, 69], pool: [72, 77, 81, 84, 89] },
@@ -745,6 +906,12 @@ canvas#c {
       name: 'Stardust', desc: 'Dreamy, sparkly and a little wistful', price: 900, bpm: 84, echo: 0.46, twinkle: 0.38,
       pad: { mode: 'hold', vol: 0.045 }, bass: { beats: [0], len: 3.6, vol: 0.06 },
       arp: { type: 'sine', mode: 'walk', on: 0.55, off: 0.5, decay: 1.7, vol: 0.065 },
+            sections: { B: [
+        { bass: 50, pad: [53, 57, 60, 62], pool: [69, 72, 74, 77, 81, 84] },
+        { bass: 43, pad: [55, 59, 62, 67], pool: [67, 71, 74, 79, 83] },
+        { bass: 48, pad: [52, 55, 59, 64], pool: [67, 71, 72, 76, 79, 84] },
+        { bass: 41, pad: [53, 57, 60, 64], pool: [69, 72, 76, 77, 81, 84] }] },
+      form: [['A', 'full'], ['B', 'full'], ['A', 'up'], ['B', 'full'], ['A', 'break']],
       chords: [
         { bass: 45, pad: [52, 55, 57, 60], pool: [69, 72, 76, 79, 84, 88] },
         { bass: 53, pad: [53, 57, 60, 64], pool: [69, 72, 77, 81, 84, 88] },
@@ -755,6 +922,18 @@ canvas#c {
       name: 'Tiny arcade', desc: 'Fast, bleepy video-game fun', price: 1000, bpm: 132, echo: 0.1, twinkle: 0,
       pad: { mode: 'none' }, bass: { beats: [0, 1, 2, 3], len: 0.45, vol: 0.09, alt: 12 },
       arp: { type: 'square', mode: 'tune', decay: 0.16, vol: 0.03 },
+            sections: {
+        B: [
+          { bass: 45, pad: [], tune: [81, 76, 72, 76, 81, 76, 72, 76] },
+          { bass: 41, pad: [], tune: [81, 77, 72, 77, 81, 77, 72, 77] },
+          { bass: 48, pad: [], tune: [79, 76, 72, 76, 79, 76, 72, 76] },
+          { bass: 43, pad: [], tune: [79, 74, 71, 74, 83, 79, 74, 71] }],
+        C: [
+          { bass: 41, pad: [], tune: [77, 0, 77, 79, 81, 0, 79, 77] },
+          { bass: 43, pad: [], tune: [79, 0, 79, 81, 83, 0, 81, 79] },
+          { bass: 40, pad: [], tune: [76, 79, 83, 79, 76, 79, 83, 88] },
+          { bass: 43, pad: [], tune: [86, 83, 79, 74, 79, 0, 0, 0] }] },
+      form: [['A', 'full'], ['A', 'answer'], ['B', 'full'], ['C', 'full'], ['A', 'up'], ['B', 'sparse'], ['A', 'full'], ['C', 'full']],
       chords: [
         { bass: 48, pad: [], tune: [84, 79, 76, 79, 84, 79, 76, 79] },
         { bass: 43, pad: [], tune: [83, 79, 74, 79, 83, 79, 74, 79] },
@@ -763,10 +942,21 @@ canvas#c {
     }
   };
   const UPDOWN = [0, 1, 2, 3, 4, 3, 2, 1];
+  // A tune plays as a song: its sections in the order given by `form`, each with a style.
+  //  full: as written. up: melody an octave higher and lighter. answer: melody played backwards.
+  //  sparse: only the main beats, held longer. break: no bass, just a few soft notes (a breather).
+  function songPlan(tr) {
+    if (!tr._plan) {
+      const sec = { A: tr.chords, ...(tr.sections || {}) };
+      tr._plan = (tr.form || [['A', 'full']]).flatMap(([name, style]) => sec[name].map(ch => ({ ch, style })));
+    }
+    return tr._plan;
+  }
+  const loopSeconds = tr => songPlan(tr).length * 4 * 60 / tr.bpm;
   function scheduleBar(t) {
     const tr = TRACKS[audio.track] || TRACKS.sunny;
     const beat = 60 / tr.bpm, bar = beat * 4;
-    const ch = tr.chords[audio.bar % tr.chords.length];
+    const plan = songPlan(tr), part = plan[audio.bar % plan.length], ch = part.ch, style = part.style;
     audio.bar++;
     const dry = audio.voice.in, echo = audio.voice.send;
     if (tr.pad.mode === 'hold') {
@@ -785,18 +975,22 @@ canvas#c {
     } else if (tr.pad.mode === 'stab') {
       for (const b of [0.5, 1.5, 2.5, 3.5]) for (const m of ch.pad) note(dry, 'triangle', hz(m), t + b * beat, 0.01, tr.pad.decay, tr.pad.vol);
     }
-    tr.bass.beats.forEach((b, i) => note(dry, 'triangle', hz(ch.bass + (tr.bass.alt && i % 2 ? tr.bass.alt : 0)), t + b * beat, 0.03, tr.bass.len * beat, tr.bass.vol));
+    if (style !== 'break') tr.bass.beats.forEach((b, i) => note(dry, 'triangle', hz(ch.bass + (tr.bass.alt && i % 2 ? tr.bass.alt : 0)), t + b * beat, 0.03, tr.bass.len * beat, tr.bass.vol));
     for (let i = 0; i < 8; i++) {
+      if ((style === 'sparse' || style === 'break') && i % 4) continue;
+      if (style === 'up' && i % 2) continue;
       let m;
-      if (tr.arp.mode === 'tune') { m = ch.tune[i]; if (!m) continue; }
+      if (tr.arp.mode === 'tune') { m = style === 'answer' ? ch.tune[7 - i] : ch.tune[i]; if (!m) continue; }
       else {
         if (Math.random() > (i % 2 === 0 ? tr.arp.on : tr.arp.off)) continue;
         if (tr.arp.mode === 'updown') audio.walk = UPDOWN[i] % ch.pool.length;
         else audio.walk = clamp(audio.walk + (Math.floor(Math.random() * 5) - 2), 0, ch.pool.length - 1);
         m = ch.pool[audio.walk];
       }
+      if (style === 'up' && m + 12 <= 96) m += 12;
       const when = t + i * beat / 2;
-      const g = note(dry, tr.arp.type, hz(m), when, 0.01, tr.arp.decay, tr.arp.vol);
+      const held = style === 'sparse' || style === 'break' ? 1.6 : 1, soft = style === 'up' ? 0.7 : style === 'break' ? 0.8 : 1;
+      const g = note(dry, tr.arp.type, hz(m), when, 0.01, tr.arp.decay * held, tr.arp.vol * soft);
       g.connect(echo);
       if (Math.random() < tr.twinkle) note(echo, 'sine', hz(m + 12), when + beat / 4, 0.01, 0.9, 0.03);
     }
@@ -870,6 +1064,12 @@ canvas#c {
       for (let i = 0; i < 5; i++) note(audio.sfx, 'sine', i % 2 ? 620 : 880, now + i * 0.11, 0.01, 0.12, 0.09, i % 2 ? 880 : 620);
     },
     hit() { if (this.ok()) note(audio.sfx, 'square', 150, audio.ctx.currentTime, 0.005, 0.12, 0.06, 80); },
+    ach() {
+      if (!this.ok()) return;
+      const now = audio.ctx.currentTime;
+      [72, 76, 79, 84, 88].forEach((m, i) => note(audio.sfx, 'triangle', hz(m), now + i * 0.07, 0.005, 0.45, 0.11));
+      note(audio.sfx, 'sine', hz(96), now + 0.38, 0.01, 0.8, 0.05);
+    },
     nope() { if (this.ok()) note(audio.sfx, 'sine', 180, audio.ctx.currentTime, 0.01, 0.18, 0.12, 120); },
     over() {
       if (!this.ok()) return;
@@ -883,11 +1083,15 @@ canvas#c {
     v = Math.min(SCORE_CAP, v);
     if (mode === 'classic') store.coins += Math.floor(v / COIN_EVERY) - Math.floor(score / COIN_EVERY);
     score = v;
+    if (mode === 'classic') scoreAch(v);
   }
+  const bestOf = id => store.bests[id] || 0;
+  const topScore = () => Math.max(0, ...Object.values(store.bests));
+  function bumpBest() { if (mode === 'classic' && score > bestOf(curMap)) store.bests[curMap] = score; }
   function hud() {
     const s = $('score');
     let text = fmt(score), label = mode === 'sandbox' ? 'Sandbox score' : 'Score';
-    let sideLabel = 'Best', side = fmt(store.best);
+    let sideLabel = 'Best', side = fmt(bestOf(curMap));
     let pic = '';
     if (mode === 'adventure' && L) {
       if (boss) { label = 'Goal: beat boss'; text = 'HP ' + Math.max(0, Math.ceil(boss.hp)); }
@@ -938,53 +1142,70 @@ canvas#c {
     buildMenu();
   });
 
-  function clearBoardExtras() { rocks = []; bars = []; boss = null; ufo = null; hold = false; }
+  function clearBoardExtras() { rocks = []; bars = []; boss = null; ufo = null; hold = false; TW = null; }
+  // Builds the rocks, walls and black hole of an adventure level or a classic map. y is a fraction of the board height.
+  function setupTwists(cfg) {
+    TW = cfg && Object.keys(cfg).length ? cfg : null;
+    rocks = ((cfg && cfg.rocks) || []).map(o => ({ x0: o.x, x: o.x, y: o.y * H, r: o.r, sway: o.sway || 0, speed: o.speed || 0 }));
+    bars = ((cfg && cfg.bars) || []).map(o => ({ x: o.x, y: o.y * H, w: o.w, h: o.h }));
+    boss = cfg && cfg.boss ? { ...cfg.boss, x: W / 2, y: cfg.boss.y * H, hpMax: cfg.boss.hp || 0, flash: 0 } : null;
+    ufo = null; shotCount = 0; lastShot = 0; fuseNext = 3;
+  }
+  // Which screen is showing: home, game, adv (level list), maps (classic map list), shop or profile.
+  const SCREENS = ['home', 'game', 'adv', 'maps', 'shop', 'profile'];
+  function showScreen(id) {
+    screen = id;
+    for (const k of SCREENS) $(k).classList.toggle('on', k === id);
+    $('modal').classList.remove('show');
+  }
   function newGame() {
     bodies = []; particles = [];
-    score = 0; over = false; madeSun = false;
+    score = 0; over = false; madeSun = false; ufo = null; shotCount = 0; fuseNext = 3;
     cur = mode === 'sandbox' ? pick : randomTier(); next = randomTier();
     ready = true; aimX = W / 2;
     hideCard();
     hud(); save();
   }
   function showGame() {
-    screen = 'game';
-    for (const id of ['home', 'shop', 'adv']) $(id).classList.remove('on');
-    $('game').classList.add('on');
-    $('modal').classList.remove('show');
+    showScreen('game');
     over = false; paused = false; particles = [];
     hideCard();
   }
   function enterGame(which) {
     mode = which; L = null;
     showGame(); clearBoardExtras();
-    const sandbox = mode === 'sandbox';
-    P = sandbox ? store.sand : { ...DEFAULTS };
+    const sandbox = mode === 'sandbox', map = MAPS[curMap] || MAPS.open;
+    P = sandbox ? store.sand : { ...DEFAULTS, ...(map.cfg.phys || {}) };
     spawn = SPAWN_WEIGHTS;
     $('bestPanel').style.display = sandbox ? 'none' : '';
     $('nextPanel').style.display = sandbox ? 'none' : '';
-    $('hint').textContent = sandbox ? 'Tap a planet above to choose what you shoot' : 'Drag to aim, let go to slide';
+    $('hint').textContent = sandbox ? 'Tap a planet above to choose what you shoot' : map.name + ' · drag to aim, let go to slide';
     fit();
-    if (!sandbox && store.run) { restoreRun(store.run); ready = true; aimX = W / 2; hud(); }
+    if (!sandbox) setupTwists(map.cfg);
+    const run = !sandbox && store.runs[curMap];
+    if (run) { restoreRun(run); ready = true; aimX = W / 2; hud(); }
     else newGame();
     buildMenu();
+    if (!sandbox) nightOwl();
+  }
+  function playMap(id) {
+    if (!MAPS[id] || !owned('map:' + id)) return;
+    curMap = store.map = id;
+    enterGame('classic');
   }
   function goHome() {
-    if (screen === 'game') {
-      if (mode === 'classic' && score > store.best) store.best = score;
-      save();
-    }
+    if (screen === 'game') { bumpBest(); save(); }
     endPreview();
     $('viewer').classList.remove('show');
-    screen = 'home'; paused = false;
-    $('modal').classList.remove('show');
-    for (const id of ['game', 'shop', 'adv']) $(id).classList.remove('on');
-    $('home').classList.add('on');
+    paused = false;
+    showScreen('home');
     refreshHome(); fitHome();
   }
   function refreshHome() {
-    $('homeBest').textContent = fmt(store.best);
+    $('homeBest').textContent = fmt(topScore());
     $('homeCoins').textContent = fmt(store.coins);
+    const av = $('avatar');
+    if (av && sprites[4]) av.src = sprites[4].url;
   }
 
   // ---------- Adventure ----------
@@ -992,43 +1213,97 @@ canvas#c {
   // by emptying its HP. Optional: shots (limit), time (seconds), spawn (which planets you are handed),
   // phys (physics changes), rocks and bars (obstacles; y is a fraction of the board height),
   // wind, alien (steals a planet every N shots).
+  // Twists a level can use (all optional):
+  //  shots / time   a limit; run out and you lose
+  //  cap: n         you lose if you make any planet bigger than planet n
+  //  fuse           now and then a planet gets a countdown in shots; merge it before it hits zero or you lose
+  //  rain           every few shots, some planets drop in at the back ({ every, count, tier } or tiers: [...])
+  //  meteors        every few shots a space rock lands at the back and stays ({ every, r })
+  //  alien          a number (steals a random planet every N shots) or { every, target: 'big' } (steals your biggest)
+  //  line           distance of the danger line from the near edge (the normal line is 128; bigger = less room)
+  //  rocks, bars, wind, phys, spawn, boss   as before
+  // Levels 1-10 teach the twists and have no limits. Levels 11-20 can all be lost and get harder each time.
   const LEVELS = [
     { name: 'First steps', goal: { make: 2, count: 1 }, spawn: [60, 40], tip: 'Slide two matching planets together and they merge into the next one.' },
     { name: 'Warm up', goal: { score: 150 }, spawn: [50, 30, 20] },
     { name: 'Blue marble', goal: { make: 4, count: 1 }, spawn: [40, 30, 20, 10] },
     { name: 'Rocky road', goal: { make: 3, count: 2 }, spawn: [45, 35, 20], rocks: [{ x: 180, y: 0.42, r: 30 }], tip: 'Space rocks never move and never merge.' },
-    { name: 'Count your shots', goal: { make: 4, count: 1 }, shots: 26, spawn: [45, 30, 25] },
     { name: 'Slippery ice', goal: { score: 400 }, phys: { friction: 15, drag: 0.1, bounce: 0.5 }, tip: 'Almost no friction. Everything keeps sliding.' },
-    { name: 'Pluto party', goal: { make: 3, count: 1 }, shots: 24, spawn: [100], tip: 'Only Plutos today.' },
-    { name: 'Beat the clock', goal: { score: 500 }, time: 65 },
-    { name: 'Space visitors', goal: { make: 5, count: 1 }, alien: 5, tip: 'Every few shots an alien takes one planet. It might help. It might not.' },
-    { name: 'Grumpy asteroid', goal: { boss: true }, boss: { kind: 'rock', hp: 70, r: 56, y: 0.17, toss: 4 }, tip: 'Every merge hurts the boss, and bigger merges hurt more. It throws a Pluto now and then.' },
-    { name: 'Twin rocks', goal: { make: 5, count: 1 }, shots: 50, rocks: [{ x: 95, y: 0.36, r: 28 }, { x: 265, y: 0.5, r: 28 }] },
+    { name: 'Solar wind', goal: { make: 4, count: 1 }, wind: { a: 430, period: 7 }, tip: 'The wind swaps sides every few seconds.' },
+    { name: 'Space visitors', goal: { make: 5, count: 1 }, alien: 6, tip: 'Every few shots an alien takes one planet. It might help. It might not.' },
     { name: 'Sticky syrup', goal: { score: 500 }, phys: { friction: 420, drag: 1.6, pull: 650 }, tip: 'Thick and gloopy. Planets stop short.' },
-    { name: 'Solar wind', goal: { make: 5, count: 1 }, wind: { a: 430, period: 7 }, tip: 'The wind swaps sides every few seconds.' },
-    { name: 'Big deliveries', goal: { make: 7, count: 1 }, shots: 45, spawn: [0, 0, 40, 35, 25], tip: 'Only big planets. Space runs out fast.' },
-    { name: 'Swinging gate', goal: { score: 700 }, time: 100, rocks: [{ x: 180, y: 0.45, r: 30, sway: 110, speed: 0.9 }] },
-    { name: 'Low gravity', goal: { make: 6, count: 1 }, phys: { pull: 260, bounce: 0.6, kick: 1, friction: 60 }, alien: 7, tip: 'Hardly any pull. Planets float where they stop.' },
-    { name: 'The wall', goal: { make: 5, count: 1 }, shots: 48, bars: [{ x: 0, y: 0.44, w: 240, h: 16 }], tip: 'Only one way through.' },
-    { name: 'Rush hour', goal: { make: 6, count: 1 }, time: 60, spawn: [30, 30, 25, 15] },
-    { name: 'Thief storm', goal: { score: 800 }, alien: 4, rocks: [{ x: 80, y: 0.4, r: 24 }, { x: 280, y: 0.4, r: 24 }] },
-    { name: 'Black hole', goal: { boss: true }, boss: { kind: 'hole', hp: 120, r: 46, y: 0.2, eat: 5, heal: 4, g: 520 }, tip: 'It pulls planets toward it and swallows one every few shots, which heals it.' }
+    { name: 'The wall', goal: { make: 5, count: 1 }, bars: [{ x: 0, y: 0.44, w: 220, h: 16 }], tip: 'Only one way through.' },
+    { name: 'Grumpy asteroid', goal: { boss: true }, boss: { kind: 'rock', hp: 60, r: 56, y: 0.17, toss: 4 }, tip: 'Every merge hurts the boss, and bigger merges hurt more. It throws a Pluto now and then.' },
+    { name: 'Handle with care', goal: { score: 900 }, cap: 3, tip: 'Make anything bigger than Venus and you lose. Venuses cannot merge here, so they pile up.' },
+    { name: 'Count your shots', goal: { make: 5, count: 1 }, shots: 40, tip: 'Make a Neptune before your shots run out.' },
+    { name: 'Beat the clock', goal: { score: 800 }, time: 90, tip: 'Score fast. The clock does not wait.' },
+    { name: 'Tick tock', goal: { make: 5, count: 1 }, fuse: { tiers: [0, 1], shots: 5, every: 6 }, tip: 'Now and then a planet gets a timer. Merge it before the number reaches zero.' },
+    { name: 'Low ceiling', goal: { make: 6, count: 1 }, time: 100, line: 275, rocks: [{ x: 180, y: 0.36, r: 24, sway: 100, speed: 0.9 }], tip: 'The danger line is much higher, so there is far less room.' },
+    { name: 'Greedy alien', goal: { score: 600 }, shots: 110, alien: { every: 9, target: 'big' }, tip: 'This alien always takes your biggest planet. Keep scoring anyway.' },
+    { name: 'Hungry storm', goal: { make: 6, count: 1 }, time: 170, wind: { a: 430, period: 6 }, alien: { every: 14, target: 'big' }, tip: 'Wind, and an alien that takes your biggest planet.' },
+    { name: 'Meteor shower', goal: { make: 6, count: 1 }, meteors: { every: 9, r: 18 }, tip: 'Every 9 shots a space rock lands at the back and stays. Room runs out, so be quick.' },
+    { name: 'Bomb squad', goal: { score: 600 }, shots: 110, line: 160, fuse: { tiers: [0, 1], shots: 7, every: 8 }, tip: 'Timers keep coming and there is less room to work in.' },
+    { name: 'Black hole', goal: { boss: true }, shots: 115, boss: { kind: 'hole', hp: 150, r: 46, y: 0.2, eat: 5, heal: 6, g: 520, target: 'big' }, tip: 'It pulls planets in and swallows your biggest one every few shots, which heals it.' }
   ];
   const reward = i => (30 + 10 * (i + 1)) * (LEVELS[i].boss ? 2 : 1);
+
+  // ---------- Classic maps ----------
+  // A map is the classic game on a different board. Each one keeps its own high score.
+  // cfg uses the same twists as adventure levels (a black hole here has no HP and never goes away).
+  const MAPS = {
+    open:  { name: 'Open space', price: 0, desc: 'The classic board. Nothing in the way.', cfg: {} },
+    rock:  { name: 'Rocky middle', price: 250, desc: 'A sleepy space rock sits in the middle.', cfg: { rocks: [{ x: 180, y: 0.42, r: 30 }] } },
+    ice:   { name: 'Slippery ice', price: 350, desc: 'Almost no friction. Everything keeps sliding.', cfg: { phys: { friction: 15, drag: 0.1, bounce: 0.5 } } },
+    twin:  { name: 'Twin rocks', price: 400, desc: 'Two rocks split the board.', cfg: { rocks: [{ x: 95, y: 0.36, r: 28 }, { x: 265, y: 0.5, r: 28 }] } },
+    wall:  { name: 'The wall', price: 500, desc: 'A wall with one gap. Pick your lane.', cfg: { bars: [{ x: 0, y: 0.44, w: 205, h: 16 }] } },
+    swing: { name: 'Swinging rock', price: 600, desc: 'A rock sweeps back and forth across the middle.', cfg: { rocks: [{ x: 180, y: 0.45, r: 30, sway: 110, speed: 0.9 }] } },
+    wind:  { name: 'Solar wind', price: 700, desc: 'The wind swaps sides every few seconds.', cfg: { wind: { a: 430, period: 7 } } },
+    alien: { name: 'Alien visitors', price: 800, desc: 'Every 20 shots an alien takes one planet.', cfg: { alien: 20 } },
+    hole:  { name: 'Black hole', price: 1000, desc: 'It pulls planets in and swallows one every 14 shots.', cfg: { boss: { kind: 'hole', r: 46, y: 0.2, eat: 14, g: 520 } } },
+    storm: { name: 'Asteroid storm', price: 1500, desc: 'Two swinging rocks and an alien. Good luck!',
+             cfg: { rocks: [{ x: 110, y: 0.34, r: 24, sway: 70, speed: 1.1 }, { x: 250, y: 0.52, r: 24, sway: 70, speed: 0.8 }], alien: 8 } }
+  };
+  function openMaps() {
+    showScreen('maps');
+    over = true;
+    $('mapsCoins').textContent = fmt(store.coins);
+    $('mapList').innerHTML = Object.keys(MAPS).map(id => {
+      const m = MAPS[id], have = owned('map:' + id), run = store.runs[id];
+      const line = have ? (run ? 'Continue · ' + fmt(run.score | 0) + ' points' : 'Best ' + fmt(bestOf(id))) : '<i class="coin"></i>' + fmt(m.price) + ' in the shop';
+      return '<button type="button" class="card' + (have ? '' : ' locked') + (id === store.map ? ' on' : '') + '" id="map_' + id + '" data-map="' + id + '">' +
+        '<img src="' + mapThumb(id) + '" alt="" class="board"><span class="nm">' + m.name + '</span><span class="ds">' + m.desc + '</span>' +
+        '<span class="st">' + (have ? '' : '🔒 ') + line + '</span></button>';
+    }).join('');
+  }
+  $('mapList').addEventListener('click', ev => {
+    const btn = ev.target.closest('[data-map]');
+    if (!btn) return;
+    const id = btn.dataset.map;
+    if (owned('map:' + id)) playMap(id); else { shopTab = 'maps'; openShop(); }
+  });
+  function rulesOf(lv) {          // every way this level can be lost, in plain words
+    const r = [];
+    if (lv.shots) r.push('You have ' + lv.shots + ' shots');
+    if (lv.time) r.push('You have ' + lv.time + ' seconds');
+    if (lv.cap !== undefined) r.push('Lose if you make anything bigger than ' + TIERS[lv.cap].n);
+    if (lv.fuse) r.push('Merge timer planets within ' + lv.fuse.shots + ' shots');
+    if (lv.rain) r.push(lv.rain.count + ' ' + (lv.rain.tiers ? 'planets' : TIERS[lv.rain.tier].n + 's') + ' fall in every ' + lv.rain.every + ' shots');
+    if (lv.alien && lv.alien.target === 'big') r.push('The alien takes your biggest planet');
+    if (lv.boss && lv.boss.target === 'big') r.push('It eats your biggest planet');
+    if (lv.meteors) r.push('A rock lands every ' + lv.meteors.every + ' shots and stays');
+    if (lv.line) r.push('The danger line is higher');
+    return r;
+  }
   function goalBox(lv) {          // the framed "GOAL" card used on the level intro and the try-again screen
     const what = lv.boss ? 'Beat the ' + (lv.boss.kind === 'hole' ? 'black hole' : 'grumpy asteroid')
       : lv.goal.score ? 'Score ' + fmt(lv.goal.score) + ' points'
       : 'Make ' + (lv.goal.count > 1 ? lv.goal.count + ' × ' : '') + TIERS[lv.goal.make].n;
-    const limit = lv.shots ? 'You have ' + lv.shots + ' shots' : lv.time ? 'You have ' + lv.time + ' seconds' : '';
     return '<div class="goalbox"><span class="tag">GOAL</span>' +
       (lv.goal.make !== undefined ? '<img src="' + sprites[lv.goal.make].url + '" alt="">' : '') +
-      '<span class="what">' + what + '</span>' + (limit ? '<span class="limit">' + limit + '</span>' : '') + '</div>';
+      '<span class="what">' + what + '</span>' + rulesOf(lv).map(t => '<span class="limit">' + t + '</span>').join('') + '</div>';
   }
   function openAdventure() {
-    screen = 'adv'; paused = false; over = true;
-    $('modal').classList.remove('show');
-    for (const id of ['home', 'game', 'shop']) $(id).classList.remove('on');
-    $('adv').classList.add('on');
+    showScreen('adv'); paused = false; over = true;
     $('advCoins').textContent = fmt(store.coins);
     $('levels').innerHTML = LEVELS.map((lv, i) => {
       const open = i === 0 || store.adv[i - 1], done = !!store.adv[i];
@@ -1051,12 +1326,10 @@ canvas#c {
     fit();
     bodies = []; score = 0; madeSun = false;
     made = TIERS.map(() => 0);
-    shotsLeft = L.shots || 0; shotCount = 0; lastShot = 0; timeLeft = L.time || 0; shownSec = -1;
-    rocks = (L.rocks || []).map(o => ({ x0: o.x, x: o.x, y: o.y * H, r: o.r, sway: o.sway || 0, speed: o.speed || 0 }));
-    bars = (L.bars || []).map(o => ({ x: o.x, y: o.y * H, w: o.w, h: o.h }));
-    boss = L.boss ? { ...L.boss, x: W / 2, y: L.boss.y * H, hpMax: L.boss.hp, flash: 0 } : null;
+    shotsLeft = L.shots || 0; timeLeft = L.time || 0; shownSec = -1;
+    setupTwists(L);
     cur = randomTier(); next = randomTier(); ready = true; aimX = W / 2;
-    buildMenu(); hud();
+    buildMenu(); hud(); nightOwl();
     hold = true;
     showCard('Level ' + (i + 1), '<p class="lvname">' + L.name + '</p>' + goalBox(L) + (L.tip ? '<p class="tip">' + L.tip + '</p>' : ''), [
       { label: 'Start', cls: 'big pink', fn: () => { hideCard(); hold = false; } },
@@ -1073,6 +1346,8 @@ canvas#c {
     const first = !store.adv[levelIdx], coins = first ? reward(levelIdx) : 10;
     store.adv[levelIdx] = true; store.coins += coins;
     for (let i = 0; i < levelIdx; i++) if (!store.adv[i]) store.adv[i] = false;
+    if (levelIdx === 9) award('boss1');
+    if (LEVELS.every((lv, i) => store.adv[i])) award('adv');
     save(); hud();
     sfx.sun(); sparkle(W / 2, H / 2, 70, 380);
     const last = levelIdx === LEVELS.length - 1;
@@ -1083,41 +1358,90 @@ canvas#c {
   }
   function failLevel(why) {
     over = true; sfx.over();
-    showCard(why === 'shots' ? 'Out of shots!' : why === 'time' ? 'Time is up!' : 'The sky is full!',
+    const titles = { shots: 'Out of shots!', time: 'Time is up!', fuse: 'Boom! A timer ran out', cap: 'Too big!', full: 'The sky is full!' };
+    showCard(titles[why] || titles.full,
       goalBox(L), [
         { label: 'Try again', cls: 'big pink', fn: () => enterLevel(levelIdx) },
         { label: 'Levels', cls: 'ghost', fn: openAdventure }
       ]);
   }
   function fail(why) { if (mode === 'adventure') failLevel(why); else endGame(); }
-  function steal(kind) {            // an alien or the black hole takes one planet at random
+  function steal(kind, how) {       // an alien or the black hole takes a planet: a random one, or the biggest
     const pool = bodies.filter(b => !b.fly && !b.taken && !b.dead && b.age > 0.5);
     if (!pool.length) return null;
-    const b = pool[Math.floor(Math.random() * pool.length)];
+    const top = Math.max(...pool.map(p => p.t));
+    const from = how === 'big' ? pool.filter(p => p.t === top) : pool;
+    const b = from[Math.floor(Math.random() * from.length)];
     if (kind === 'eat') b.taken = { kind: 'eat' };
     return b;
   }
+  let fuseNext = 3;
   function afterShot() {
     shotCount++; lastShot = clock;
-    if (L.shots) shotsLeft--;
-    if (L.alien && shotCount % L.alien === 0 && !ufo) {
-      const target = steal('ufo');
+    if (mode === 'adventure' && L.shots) shotsLeft--;
+    const al = TW.alien, every = typeof al === 'number' ? al : al && al.every;
+    if (every && shotCount % every === 0 && !ufo) {
+      const target = steal('ufo', al.target);
       if (target) { ufo = { target, t: 0, from: Math.random() < 0.5 ? -70 : W + 70, x: 0, y: 0 }; sfx.ufo(); toast('An alien!'); }
     }
     if (boss && boss.toss && shotCount % boss.toss === 0) {
       const nb = makeBody(boss.x + (Math.random() - 0.5) * 50, boss.y + boss.r + 26, 0);
       nb.age = 5; bodies.push(nb); sfx.hit();
     }
-    if (boss && boss.eat && shotCount % boss.eat === 0 && steal('eat')) {
-      boss.hp = Math.min(boss.hpMax, boss.hp + boss.heal); toast('Gulp!'); sfx.nope();
+    if (boss && boss.eat && shotCount % boss.eat === 0 && steal('eat', boss.target)) {
+      if (boss.hpMax) boss.hp = Math.min(boss.hpMax, boss.hp + boss.heal);
+      store.stats.eaten++; if (store.stats.eaten >= 10) award('gulp');
+      toast('Gulp!'); sfx.nope();
+    }
+    if (TW.rain && shotCount % TW.rain.every === 0) {        // planets drop in at the back
+      for (let i = 0; i < TW.rain.count; i++) {
+        const tiers = TW.rain.tiers || [TW.rain.tier], tier = tiers[Math.floor(Math.random() * tiers.length)], T = TIERS[tier];
+        const nb = makeBody(T.left + Math.random() * (W - T.left - T.right), T.top + 2 + i * 6, tier);
+        nb.age = 5; nb.s = reduceMotion ? 1 : 0.5; bodies.push(nb);
+      }
+      sfx.hit();
+    }
+    if (TW.meteors && shotCount % TW.meteors.every === 0) {   // a space rock lands at the back and stays
+      const r = TW.meteors.r, room = (H - lineH()) * 0.7;
+      let x = 0, y = 0;
+      for (let tries = 0; tries < 20; tries++) {
+        x = r + Math.random() * (W - 2 * r); y = r + 4 + Math.random() * Math.max(10, room - r);
+        if (rocks.every(o => Math.hypot(o.x - x, o.y - y) > o.r + r + 10)) break;
+      }
+      rocks.push({ x0: x, x, y, r, sway: 0, speed: 0 });
+      sparkle(x, y, 18, 160); sfx.hit();
+    }
+    if (TW.fuse) {                    // timers count down one per shot
+      for (const b of bodies) {
+        if (!b.fuse || b.dead || b.taken) continue;
+        b.fuse--;
+        if (b.fuse <= 0 && !over) { sparkle(b.x, b.y, 40, 300); fail('fuse'); return; }
+      }
+      if (!bodies.some(b => b.fuse && !b.dead && !b.taken) && shotCount >= fuseNext) {
+        // only planets near the front get timers, so a shot can always reach them
+        const pool = bodies.filter(b => !b.fly && !b.taken && !b.dead && b.age > 0.5 && TW.fuse.tiers.includes(b.t))
+          .sort((p, q) => q.y - p.y).slice(0, 3);
+        if (pool.length) {
+          pool[Math.floor(Math.random() * pool.length)].fuse = TW.fuse.shots;
+          fuseNext = shotCount + TW.fuse.every; toast('Tick tock!'); sfx.hit();
+        }
+      }
     }
     hud();
   }
   // Pushes one planet out of a fixed obstacle. px, py is the nearest point of the obstacle to the planet part.
+  // A shot glides faster than it hits. The moment it first touches anything, its speed is set to the
+  // impact speed, so collisions and merges behave exactly as they did before the faster glide.
+  function land(b) {
+    if (!b.fly) return;
+    b.px = b.x; b.py = b.y + P.launch * (DT / SUBSTEPS);
+    b.fly = false;
+  }
   function bump(b, part, qx, qy) {
     const cx = b.x + part.ox * b.s, cy = b.y + part.oy * b.s, rad = part.r * b.s;
     let dx = cx - qx, dy = cy - qy, d = Math.hypot(dx, dy);
     if (d >= rad) return;
+    land(b);
     if (d < 0.001) { dx = 0; dy = 1; d = 1; }
     const nx = dx / d, ny = dy / d, ov = rad - d;
     b.x += nx * ov; b.y += ny * ov; b.px += nx * ov; b.py += ny * ov;
@@ -1169,7 +1493,8 @@ canvas#c {
     ready = false; readyAt = clock + RELOAD;
     dirty = true;
     sfx.launch();
-    if (mode === 'adventure') afterShot();
+    if (mode !== 'sandbox') award('pluto');
+    if (TW) afterShot();
   }
 
   function merge(a, b, born) {
@@ -1185,6 +1510,9 @@ canvas#c {
       nb.age = 5;
       born.push(nb);
       setScore(score + 2 ** t);
+      if (mode !== 'sandbox') { onMerge(t); if (a.close || b.close) award('close'); }
+      if (a.fuse || b.fuse) { toast('Defused!'); if (TW && TW.fuse) fuseNext = shotCount + TW.fuse.every; }
+      if (mode === 'adventure' && L.cap !== undefined && t > L.cap && !over) setTimeout(() => { if (!over) fail('cap'); }, 0);
       if (mode === 'adventure') {
         made[t]++;
         if (boss) { boss.hp -= t + 1; boss.flash = 0.25; sfx.hit(); }
@@ -1198,12 +1526,13 @@ canvas#c {
       } else sfx.merge(t);
     } else {
       setScore(score + 2000);                           // two Suns: supernova, both vanish
+      if (mode !== 'sandbox') onNova();
       sparkle(x, y, 80, 420);
       sfx.nova();
       toast('Supernova! +2,000');
     }
     if (!reduceMotion) particles.push({ kind: 'ring', x, y, r: A.r, life: 0, max: 0.35 });
-    if (mode === 'classic' && score > store.best) store.best = score;
+    bumpBest();
     dirty = true;
   }
 
@@ -1223,6 +1552,7 @@ canvas#c {
       }
     }
     if (ov <= 0) return;
+    land(a); land(b);
     if (a.t === b.t) { merge(a, b, born); return; }
 
     // heavier planets give way less
@@ -1250,7 +1580,7 @@ canvas#c {
 
   function step() {
     const h = DT / SUBSTEPS;
-    const windNow = L && L.wind && mode === 'adventure' ? (Math.sin(clock * TAU / L.wind.period) >= 0 ? L.wind.a : -L.wind.a) : 0;
+    const windNow = TW && TW.wind ? (Math.sin(clock * TAU / TW.wind.period) >= 0 ? TW.wind.a : -TW.wind.a) : 0;
     for (const o of rocks) if (o.sway) o.x = o.x0 + Math.sin(clock * o.speed) * o.sway;
     for (let s = 0; s < SUBSTEPS; s++) {
       for (const b of bodies) {
@@ -1263,7 +1593,7 @@ canvas#c {
           continue;
         }
         if (b.fly) {                                  // the shot itself: steady glide, no pull, no friction
-          b.px = b.x; b.py = b.y; b.y -= P.launch * h;
+          b.px = b.x; b.py = b.y; b.y -= Math.max(GLIDE, P.launch) * h;
           continue;
         }
         let vx = b.x - b.px, vy = b.y - b.py;
@@ -1308,7 +1638,7 @@ canvas#c {
       // is; while it stays within STILL_RADIUS of the anchor its still-timer runs, and the moment it
       // strays the anchor moves and the timer restarts. A planet passing through, drifting slowly in
       // a high-friction level, or being shoved around can never lose the game, however long it takes.
-      const lineY = H - LINE_Y;
+      const lineY = H - lineH();
       for (const b of bodies) {
         b.age += DT;
         if (Math.hypot(b.x - b.ax, b.y - b.ay) > STILL_RADIUS) { b.ax = b.x; b.ay = b.y; b.stillT = 0; }
@@ -1316,9 +1646,11 @@ canvas#c {
         const past = !b.fly && !b.taken && b.age > 0.8 && b.y + TIERS[b.t].bottom * b.s > lineY;
         b.overT = past ? b.stillT : 0;
         if (past && b.stillT > OVER_STILL && !over) fail('full');
+        if (past && b.stillT > 0.5) b.close = true;                       // nearly lost...
+        else if (b.close && !past && !over) { b.close = false; award('close'); }   // ...and saved
       }
     }
-    if (mode === 'adventure' && !over) {
+    if (TW && !over) {
       if (boss && boss.flash > 0) boss.flash -= DT;
       if (ufo) {                      // fly in, beam the planet up, fly away
         const u = ufo, tb = u.target;
@@ -1327,13 +1659,15 @@ canvas#c {
           if (tb.dead || tb.taken) ufo = null;
           else { const k = u.t / 0.7; u.x = u.from + (tb.x - u.from) * k; u.y = tb.y - TIERS[tb.t].r - 60; }
         } else if (u.t < 1.5) {
-          if (!tb.taken && !tb.dead) tb.taken = { kind: 'ufo' };
+          if (!tb.taken && !tb.dead) { tb.taken = { kind: 'ufo' }; if (mode !== 'sandbox') award('abduct'); }
           u.beam = !tb.dead;
         } else {
           u.beam = false; u.x += (u.from < 0 ? 1 : -1) * 420 * DT; u.y -= 60 * DT;
           if (u.t > 2.4) ufo = null;
         }
       }
+    }
+    if (mode === 'adventure' && !over) {
       if (L.time) {
         timeLeft -= DT;
         const sec = Math.ceil(timeLeft);
@@ -1352,14 +1686,18 @@ canvas#c {
 
   function endGame() {
     over = true;
-    const isBest = score > 0 && score >= store.best;
-    if (score > store.best) store.best = score;
+    const isBest = score > 0 && score >= bestOf(curMap);
+    bumpBest();
+    store.stats.games++;
+    if (store.stats.games >= 25) award('games');
+    if (score < 100) award('tiny');
     sfx.over();
     hud(); save();
     showCard('The sky is full!',
-      '<p>You scored <b class="big">' + fmt(score) + '</b></p><div class="newbest">' + (isBest ? 'New high score!' : '') + '</div>' +
+      '<p>You scored <b class="big">' + fmt(score) + '</b></p><div class="newbest">' + (isBest ? 'New high score on ' + MAPS[curMap].name + '!' : '') + '</div>' +
       '<p><i class="coin"></i>' + fmt(Math.floor(score / COIN_EVERY)) + ' coins earned this game</p>', [
         { label: 'Play again', cls: 'big pink', fn: newGame },
+        { label: 'Maps', cls: 'ghost', fn: openMaps },
         { label: 'Home', cls: 'ghost', fn: goHome }
       ]);
   }
@@ -2143,7 +2481,7 @@ canvas#c {
     sky(ctx, W, H, now);
     const bg = BGS[store.equip.bg] || BGS.night;
     if (mode !== 'sandbox') {
-      const lineY = H - LINE_Y;
+      const lineY = H - lineH();
       ctx.fillStyle = 'rgba(255,126,182,0.07)'; ctx.fillRect(0, lineY, W, H - lineY);
       const danger = bodies.some(b => b.overT > 0.15);
       ctx.strokeStyle = danger ? bg.line : bg.soft;
@@ -2151,12 +2489,12 @@ canvas#c {
       ctx.setLineDash([10, 8]);
       ctx.beginPath(); ctx.moveTo(0, lineY); ctx.lineTo(W, lineY); ctx.stroke();
     }
-    if (mode === 'adventure' && L) {
-      if (L.wind) {                 // streaks that drift the way the wind is blowing
-        const dir = Math.sin(clock * TAU / L.wind.period) >= 0 ? 1 : -1;
+    if (TW) {
+      if (TW.wind) {                // streaks that drift the way the wind is blowing
+        const dir = Math.sin(clock * TAU / TW.wind.period) >= 0 ? 1 : -1;
         ctx.strokeStyle = bg.guide; ctx.lineWidth = 2; ctx.lineCap = 'round';
         for (let i = 0; i < 9; i++) {
-          const x = (((i * 71 + clock * dir * 170) % (W + 80)) + W + 80) % (W + 80) - 40, y = (i * 97 + 40) % (H - LINE_Y);
+          const x = (((i * 71 + clock * dir * 170) % (W + 80)) + W + 80) % (W + 80) - 40, y = (i * 97 + 40) % (H - lineH());
           ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 26 * dir, y); ctx.stroke();
         }
       }
@@ -2169,10 +2507,12 @@ canvas#c {
       if (boss) {
         if (boss.kind === 'hole') drawHole(ctx, boss.x, boss.y, boss.r, now, boss.flash > 0);
         else drawRock(ctx, boss.x, boss.y, boss.r, 'grumpy', boss.flash > 0);
+        if (boss.hpMax) {
         const bw = 130, bx = boss.x - bw / 2, by = boss.y + boss.r + 12, k = clamp(boss.hp / boss.hpMax, 0, 1);
         ctx.fillStyle = '#120d2e'; ctx.fillRect(bx - 3, by - 3, bw + 6, 16);
         ctx.fillStyle = '#4a3ca0'; ctx.fillRect(bx, by, bw, 10);
         ctx.fillStyle = '#ff7eb6'; ctx.fillRect(bx, by, bw * k, 10);
+        }
       }
     }
     const showLauncher = ready && !over && !hold;
@@ -2185,6 +2525,16 @@ canvas#c {
     }
     ctx.setLineDash([]);
     for (const b of bodies) planet(ctx, b.x, b.y, b.t, b.s);
+    for (const b of bodies) {          // timer planets: a pulsing ring and the shots left
+      if (!b.fuse || b.dead || b.taken) continue;
+      const r = TIERS[b.t].r * b.s, pulse = reduceMotion ? 0 : Math.sin(now / 120) * 2;
+      ctx.strokeStyle = b.fuse <= 2 ? '#ff3b5c' : '#ff7eb6'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(b.x, b.y, r + 4 + pulse, 0, TAU); ctx.stroke();
+      const ty = b.y + r + 13;        // below the planet: planets rest against the back wall, so above would be off the board
+      blob(ctx, b.x, ty, 12, '#120d2e'); blob(ctx, b.x, ty, 10, b.fuse <= 2 ? '#ff3b5c' : '#ff7eb6');
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "Trebuchet MS", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(b.fuse), b.x, ty + 1);
+    }
     if (showLauncher) planet(ctx, lx, ly, cur, 1);
 
     if (ufo) drawUfo(ctx, ufo);
@@ -2234,7 +2584,10 @@ canvas#c {
       if (f.y < -size - 20) { f.y = hh + size + 20; f.x = Math.random() * hw; }
       const sway = reduceMotion ? 0 : Math.sin(now / 1000 * f.sw + f.ph);
       g.globalAlpha = 0.92;
-      planet(g, f.x + sway * 16, f.y, f.t, f.k * u, sway * 0.2);
+      f.dx = f.x + sway * 16; f.dy = f.y; f.dr = TIERS[f.t].r * f.k * u;
+      if (f.boop > 0) f.boop = Math.max(0, f.boop - dt);
+      const squish = f.boop > 0 ? 1 + Math.sin(f.boop * 30) * 0.12 * (f.boop / 0.5) : 1;
+      planet(g, f.dx, f.dy, f.t, f.k * u * squish, sway * 0.2);
     }
     g.globalAlpha = 1;
   }
@@ -2271,6 +2624,7 @@ canvas#c {
     if (kind === 'face') return FACES[a].price;
     if (kind === 'bg') return BGS[a].price;
     if (kind === 'wall') return WALLS[a].price;
+    if (kind === 'map') return MAPS[a].price;
     return TRACKS[a].price;
   }
   function owned(id) {
@@ -2284,10 +2638,14 @@ canvas#c {
     if (kind === 'set') return store.equip.skins.every(sk => sk === a);
     if (kind === 'face') return faceTarget === 'all' ? store.equip.faces.every(f => f === a) : store.equip.faces[faceTarget] === a;
     if (kind === 'bg') return store.equip.bg === a;
-    if (kind === 'wall') return false;
+    if (kind === 'wall' || kind === 'map') return false;
     return store.equip.track === a;
   }
   function equip(id) {
+    equipItem(id);
+    checkOutfits();
+  }
+  function equipItem(id) {
     const [kind, a, b] = id.split(':');
     if (kind === 'skin') { store.equip.skins[+a] = b; buildSprites(); }
     else if (kind === 'set') { store.equip.skins = TEN.map(() => a); buildSprites(); }
@@ -2297,12 +2655,13 @@ canvas#c {
     }
     else if (kind === 'bg') store.equip.bg = a;
     else if (kind === 'wall') openWall(a);
+    else if (kind === 'map') { /* maps are chosen from the Classic screen */ }
     else { store.equip.track = a; audio.preview = false; setTrack(a); if (audio.ctx) audio.music.gain.setTargetAtTime(store.opts.music ? 1 : 0, audio.ctx.currentTime, 0.05); if (!store.opts.music) stopMusic(); }
   }
   function statusText(id) {
     const kind = id.split(':')[0];
     if (inUse(id)) return 'In use';
-    if (owned(id)) return kind === 'set' ? 'Wear all' : kind === 'wall' ? 'View' : 'Use';
+    if (owned(id)) return kind === 'set' ? 'Wear all' : kind === 'wall' ? 'View' : kind === 'map' ? 'Play' : 'Use';
     if (short.id === id && Date.now() - short.at < 1800) return '<span class="warn">Need ' + fmt(price(id) - store.coins) + '</span>';
     if (armed.id === id && Date.now() - armed.at < 3000) return 'Buy?';
     return '<i class="coin"></i>' + fmt(price(id));
@@ -2314,7 +2673,7 @@ canvas#c {
   function renderShop() {
     const list = $('shopList'), top = list.scrollTop;
     $('shopCoins').textContent = fmt(store.coins);
-    for (const tab of ['planets', 'faces', 'skies', 'music', 'walls']) $('tab_' + tab).setAttribute('aria-selected', tab === shopTab);
+    for (const tab of ['planets', 'faces', 'skies', 'maps', 'music', 'walls']) $('tab_' + tab).setAttribute('aria-selected', tab === shopTab);
     const eq = store.equip;
     let html = '';
     if (shopTab === 'planets') {
@@ -2335,6 +2694,9 @@ canvas#c {
     } else if (shopTab === 'skies') {
       html = '<p class="shop-note">A sky changes the game board and the home screen.</p><div class="grid2">' +
         Object.keys(BGS).map(b => card('bg:' + b, bgThumb(b), BGS[b].name, 'wide')).join('') + '</div>';
+    } else if (shopTab === 'maps') {
+      html = '<p class="shop-note">New boards for Classic, each with its own high score. Buy one, then pick it from the Classic screen.</p><div class="grid2">' +
+        Object.keys(MAPS).map(m => card('map:' + m, mapThumb(m), MAPS[m].name, 'board')).join('') + '</div>';
     } else if (shopTab === 'walls') {
       html = '<p class="shop-note">Wallpapers for your phone, sized for a tall iPhone screen. Buy one, then save it to your photos.</p><div class="grid2">' +
         Object.keys(WALLS).map(wl => card('wall:' + wl, wallThumb(wl), WALLS[wl].name, 'tall')).join('') + '</div>';
@@ -2374,6 +2736,8 @@ canvas#c {
   });
   function previewTrack(id) {
     audio.preview = id;
+    store.stats.heard[id] = 1;
+    if (Object.keys(TRACKS).every(k => store.stats.heard[k])) award('dj');
     audioWake();
     if (!audio.ctx) return;
     audio.music.gain.setTargetAtTime(1, audio.ctx.currentTime, 0.05);
@@ -2388,19 +2752,21 @@ canvas#c {
   }
   function shopTap(id) {
     if (inUse(id)) return;
-    if (owned(id)) equip(id);
+    if (owned(id)) { if (id.startsWith('map:')) { playMap(id.slice(4)); return; } equip(id); }
     else if (store.coins < price(id)) { short.id = id; short.at = Date.now(); sfx.nope(); setTimeout(() => { if (screen === 'shop') renderShop(); }, 1900); }
     else if (armed.id === id && Date.now() - armed.at < 3000) {
       store.coins -= price(id); armed.id = null;
       if (id.startsWith('set:')) TEN.forEach(t => { store.owned['skin:' + t + ':' + id.slice(4)] = true; });
       else store.owned[id] = true;
       equip(id); sfx.buy();
+      award('buy');
+      if (id.startsWith('map:')) award('map');
+      checkShopAll();
     } else { armed.id = id; armed.at = Date.now(); setTimeout(() => { if (screen === 'shop') renderShop(); }, 3100); }
     save(); renderShop();
   }
   function openShop() {
-    screen = 'shop';
-    $('home').classList.remove('on'); $('shop').classList.add('on');
+    showScreen('shop');
     armed.id = short.id = null;
     renderShop();
   }
@@ -2415,11 +2781,399 @@ canvas#c {
     const item = ev.target.closest('[data-id]');
     if (item) shopTap(item.dataset.id);
   });
-  document.querySelector('.tabs').addEventListener('click', ev => {
+  $('shopTabs').addEventListener('click', ev => {
     const tab = ev.target.closest('[data-tab]');
     if (!tab) return;
     shopTab = tab.dataset.tab; endPreview(); $('shopList').scrollTop = 0; renderShop();
   });
+
+  // ---------- Achievements ----------
+  // coins: what each pays the first time. secret: hidden as "Secret" until earned. icon: which badge picture to draw.
+  const PLANET_ACH = [null, ['Moonwalk', 5], ['Red rover', 10], ['Morning star', 15], ['Home sweet home', 25], ['Deep blue', 40],
+                      ['Sideways spin', 60], ['Put a ring on it', 90], ['King of the planets', 140], ['Let there be light', 250]];
+  const ACH = [
+    { id: 'pluto', name: 'Hello, Pluto', desc: 'Launch your first planet', coins: 5, icon: 'planet:0' },
+    ...PLANET_ACH.slice(1).map(([name, coins], i) => ({ id: 'make' + (i + 1), name, desc: (i + 1 === SUN ? 'Make the ' : 'Make ') + TIERS[i + 1].n, coins, icon: 'planet:' + (i + 1) })),
+    { id: 'nova', name: 'Supernova!', desc: 'Smash two Suns together', coins: 600, icon: 'nova', bg: '#3b1a5e' },
+    { id: 'score1', name: 'Rising star', desc: 'Score 1,000 in one Classic game', coins: 50, icon: 'stars:1', bg: '#3b2a7a' },
+    { id: 'score2', name: 'Star player', desc: 'Score 3,000 in one Classic game', coins: 150, icon: 'stars:2', bg: '#3b2a7a' },
+    { id: 'score3', name: 'Superstar', desc: 'Score 6,000 in one Classic game', coins: 400, icon: 'stars:3', bg: '#3b2a7a' },
+    { id: 'chain', name: 'Combo!', desc: 'Make 3 merges within one second', coins: 40, icon: 'bolt', bg: '#5a2a6a' },
+    { id: 'close', name: 'Close call', desc: 'Save a planet that was about to sink past the line', coins: 50, icon: 'sweat', bg: '#2a3a6a' },
+    { id: 'merges', name: 'Merge machine', desc: 'Merge 500 times', coins: 100, icon: 'merge', bg: '#5a2a5e' },
+    { id: 'games', name: 'Frequent flyer', desc: 'Finish 25 Classic games', coins: 80, icon: 'rocket', bg: '#1e3a6a' },
+    { id: 'boss1', name: 'Rock breaker', desc: 'Beat the Grumpy asteroid in Adventure', coins: 150, icon: 'rock', bg: '#3a3460' },
+    { id: 'adv', name: 'Space explorer', desc: 'Clear all 20 Adventure levels', coins: 400, icon: 'flag', bg: '#1e4a5a' },
+    { id: 'abduct', name: 'Abducted!', desc: 'Watch the alien steal a planet', coins: 20, icon: 'ufo', bg: '#1e3a4a' },
+    { id: 'buy', name: 'First purchase', desc: 'Buy anything in the shop', coins: 20, icon: 'bag', bg: '#5a2a4a' },
+    { id: 'map', name: 'New horizons', desc: 'Unlock a new Classic map', coins: 50, icon: 'map', bg: '#2a4a5a' },
+    { id: 'match', name: 'Matching outfits', desc: 'Dress all ten planets in the same skin', coins: 40, icon: 'match', bg: '#5a2a4a' },
+    { id: 'faces', name: 'Party of ten', desc: 'Give every planet a different face', coins: 120, icon: 'mask', bg: '#4a2a6a' },
+    { id: 'all', name: 'Big spender', desc: 'Buy everything in the shop', coins: 2000, icon: 'crown', bg: '#5a3a1e' },
+    { id: 'boop', name: 'Boop!', desc: 'Tap a planet floating on the home screen', coins: 25, icon: 'boop', secret: true, bg: '#2a2a6a' },
+    { id: 'owl', name: 'Night owl', desc: 'Play between midnight and 4 a.m.', coins: 40, icon: 'owl', secret: true, bg: '#141a3e' },
+    { id: 'dj', name: 'DJ', desc: 'Listen to every tune in the shop', coins: 30, icon: 'dj', secret: true, bg: '#3a1e5a' },
+    { id: 'tiny', name: 'Oopsie', desc: 'End a Classic game with under 100 points', coins: 20, icon: 'oops', secret: true, bg: '#4a2a3a' },
+    { id: 'lab', name: 'Mad scientist', desc: 'Push every Sandbox slider all the way up', coins: 40, icon: 'flask', secret: true, bg: '#1e4a3a' },
+    { id: 'gulp', name: 'Snack time', desc: 'Let a black hole eat 10 planets', coins: 50, icon: 'hole', secret: true, bg: '#1a1030' }
+  ];
+  const ACH_BY = {};
+  ACH.forEach(a => { ACH_BY[a.id] = a; });
+  const achQueue = [];
+  let achBusy = false;
+  function award(id) {
+    const a = ACH_BY[id];
+    if (!a || store.ach[id]) return;
+    store.ach[id] = Date.now();
+    store.coins += a.coins;
+    save();
+    achQueue.push(id);
+    if (!achBusy) nextBanner();
+    if (screen === 'home') refreshHome();
+  }
+  function nextBanner() {
+    const id = achQueue.shift();
+    if (!id) { achBusy = false; return; }
+    achBusy = true;
+    const a = ACH_BY[id];
+    $('achImg').src = badge(id, true);
+    $('achName').textContent = a.name;
+    $('achCoins').innerHTML = '<i class="coin"></i>+' + fmt(a.coins) + ' coins';
+    $('achBanner').classList.add('show');
+    sfx.ach();
+    setTimeout(() => { $('achBanner').classList.remove('show'); setTimeout(nextBanner, 450); }, 2600);
+  }
+  const recentMerges = [];
+  function onMerge(t) {
+    const st = store.stats;
+    st.made[t]++; st.merges++;
+    if (t >= 1) award('make' + t);
+    if (st.merges >= 500) award('merges');
+    recentMerges.push(clock);
+    while (recentMerges.length && clock - recentMerges[0] > 1) recentMerges.shift();
+    if (recentMerges.length >= 3) award('chain');
+  }
+  function onNova() { store.stats.novas++; award('nova'); }
+  function scoreAch(v) {
+    if (v >= 1000) award('score1');
+    if (v >= 3000) award('score2');
+    if (v >= 6000) award('score3');
+  }
+  function nightOwl() { if (new Date().getHours() < 4) award('owl'); }
+  function shopItems() {          // every item that costs coins
+    const ids = [];
+    TEN.forEach(t => Object.keys(SKINS).forEach(sk => ids.push('skin:' + t + ':' + sk)));
+    Object.keys(FACES).forEach(k => ids.push('face:' + k));
+    Object.keys(BGS).forEach(k => ids.push('bg:' + k));
+    Object.keys(TRACKS).forEach(k => ids.push('music:' + k));
+    Object.keys(WALLS).forEach(k => ids.push('wall:' + k));
+    Object.keys(MAPS).forEach(k => ids.push('map:' + k));
+    return ids.filter(id => price(id) > 0);
+  }
+  function checkShopAll() { if (shopItems().every(owned)) award('all'); }
+  function checkOutfits() {
+    const sk = store.equip.skins;
+    if (sk[0] !== 'classic' && sk.every(x => x === sk[0])) award('match');
+    if (new Set(store.equip.faces).size === TIERS.length) award('faces');
+  }
+  function checkStanding() {      // achievements an existing save has already earned
+    if (store.adv[9]) award('boss1');
+    if (LEVELS.every((lv, i) => store.adv[i])) award('adv');
+    if (Object.keys(store.owned).length) award('buy');
+    if (Object.keys(MAPS).some(m => MAPS[m].price && store.owned['map:' + m])) award('map');
+    checkShopAll(); checkOutfits(); scoreAch(topScore());
+  }
+  $('home').addEventListener('pointerdown', ev => {      // secret: boop a floating planet
+    if (ev.target.closest('button')) return;
+    const rect = $('home').getBoundingClientRect(), x = ev.clientX - rect.left, y = ev.clientY - rect.top;
+    for (const f of floaters) {
+      if (f.dr && Math.hypot(x - f.dx, y - f.dy) < f.dr + 8) {
+        f.boop = 0.5; audioWake(); sfx.merge(f.t); award('boop');
+        break;
+      }
+    }
+  });
+
+  // ---------- Badge art ----------
+  // Every badge is a medal: a rim coloured by how rare it is (bronze, silver, gold, rainbow), a ribbon,
+  // and a little picture. Locked badges are drawn faded with a padlock; secret ones show a "?".
+  function burst(g, x, y, R, r, n, fill) {
+    g.beginPath();
+    for (let i = 0; i < n * 2; i++) { const a = -Math.PI / 2 + i * Math.PI / n, q = i % 2 ? r : R; g.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q); }
+    g.closePath(); g.fillStyle = fill; g.fill();
+  }
+  function inked(g, w) { g.strokeStyle = '#120d2e'; g.lineWidth = w || 2.5; g.lineJoin = 'round'; g.stroke(); }
+  function mini(g, t, x, y, r, skin, faceId) {
+    g.save(); g.translate(x, y);
+    const k = r / TIERS[t].bound; g.scale(k, k);
+    drawPlanet(g, t, skin || 'classic', faceId || 'classic');
+    g.restore();
+  }
+  function cuteStar(g, x, y, R, fill) {
+    starPath(g, x, y, R); g.fillStyle = fill; g.fill(); inked(g, Math.max(1.5, R * 0.09));
+    blob(g, x - R * 0.17, y, R * 0.07, INK); blob(g, x + R * 0.17, y, R * 0.07, INK);
+    g.strokeStyle = INK; g.lineWidth = Math.max(1, R * 0.06); g.lineCap = 'round';
+    g.beginPath(); g.arc(x, y + R * 0.1, R * 0.1, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();
+    blob(g, x - R * 0.3, y + R * 0.13, R * 0.07, 'rgba(255,110,150,0.6)'); blob(g, x + R * 0.3, y + R * 0.13, R * 0.07, 'rgba(255,110,150,0.6)');
+  }
+  function drop(g, x, y, s) {
+    g.beginPath(); g.moveTo(x, y - s); g.quadraticCurveTo(x + s * 0.8, y + s * 0.2, x, y + s * 0.6);
+    g.quadraticCurveTo(x - s * 0.8, y + s * 0.2, x, y - s); g.fillStyle = '#8fd6ff'; g.fill(); inked(g, 1.5);
+  }
+  const ICONS = {
+    planet(g, x, y, r, t) { t = +t; mini(g, t, x, y + (TIERS[t].ring ? 0 : 2), r * (TIERS[t].ring ? 1.08 : 0.82), 'classic', t === 0 ? 'sparkle' : 'classic'); },
+    nova(g, x, y, r) {
+      burst(g, x, y, r * 1.05, r * 0.55, 10, '#ff7eb6'); burst(g, x, y, r * 0.8, r * 0.45, 10, '#ffd45e');
+      blob(g, x, y, r * 0.32, '#fff6d0');
+      for (const [a, d, q] of [[0.6, 0.95, 0.07], [2.4, 0.9, 0.05], [4.2, 0.98, 0.06]]) blob(g, x + Math.cos(a) * r * d, y + Math.sin(a) * r * d, r * q, '#fff');
+    },
+    stars(g, x, y, r, n) {
+      n = +n;
+      if (n === 1) cuteStar(g, x, y + 2, r * 0.82, '#ffd45e');
+      else if (n === 2) { cuteStar(g, x + r * 0.35, y - r * 0.3, r * 0.42, '#ff9ecb'); cuteStar(g, x - r * 0.12, y + r * 0.12, r * 0.7, '#ffd45e'); }
+      else { cuteStar(g, x - r * 0.52, y + r * 0.32, r * 0.4, '#8fd6ff'); cuteStar(g, x + r * 0.52, y + r * 0.32, r * 0.4, '#ff9ecb'); cuteStar(g, x, y - r * 0.18, r * 0.62, '#ffd45e'); }
+    },
+    bolt(g, x, y, r) {
+      g.beginPath();
+      [[0.15, -1], [-0.55, 0.12], [-0.05, 0.12], [-0.25, 1], [0.6, -0.2], [0.1, -0.2], [0.35, -1]].forEach(([px, py]) => g.lineTo(x + px * r, y + py * r * 0.92));
+      g.closePath(); g.fillStyle = '#ffd45e'; g.fill(); inked(g);
+      blob(g, x - r * 0.13, y - r * 0.02, r * 0.06, INK); blob(g, x + r * 0.11, y - r * 0.02, r * 0.06, INK);
+    },
+    sweat(g, x, y, r) {
+      mini(g, 3, x - r * 0.1, y - r * 0.12, r * 0.62, 'classic', 'wow');
+      g.strokeStyle = '#ff7eb6'; g.lineWidth = 3; g.setLineDash([6, 5]);
+      g.beginPath(); g.moveTo(x - r * 1.2, y + r * 0.62); g.lineTo(x + r * 1.2, y + r * 0.62); g.stroke(); g.setLineDash([]);
+      drop(g, x + r * 0.62, y - r * 0.5, r * 0.22);
+    },
+    merge(g, x, y, r) {
+      mini(g, 0, x - r * 0.5, y + r * 0.15, r * 0.4, 'classic', 'love'); mini(g, 1, x + r * 0.45, y + r * 0.1, r * 0.48, 'classic', 'love');
+      heart(g, x, y - r * 0.55, r * 0.36, '#ff4f8b');
+    },
+    rocket(g, x, y, r) {
+      g.save(); g.translate(x, y); g.rotate(0.55);
+      g.fillStyle = '#ffb347'; g.beginPath(); g.moveTo(-r * 0.2, r * 0.55); g.lineTo(0, r * 1.05); g.lineTo(r * 0.2, r * 0.55); g.fill();
+      for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(sd * r * 0.22, r * 0.15); g.lineTo(sd * r * 0.5, r * 0.6); g.lineTo(sd * r * 0.22, r * 0.5); g.closePath(); g.fillStyle = '#ff7eb6'; g.fill(); inked(g, 2); }
+      g.beginPath(); g.ellipse(0, 0, r * 0.3, r * 0.68, 0, 0, TAU); g.fillStyle = '#fdf6ff'; g.fill(); inked(g);
+      blob(g, 0, -r * 0.15, r * 0.15, '#7fd0ff'); g.beginPath(); g.arc(0, -r * 0.15, r * 0.15, 0, TAU); inked(g, 2);
+      g.restore();
+    },
+    rock(g, x, y, r) {
+      drawRock(g, x, y, r * 0.78, 'grumpy', false);
+      g.strokeStyle = '#3a3550'; g.lineWidth = 2.5; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(x + r * 0.15, y - r * 0.78); g.lineTo(x + r * 0.02, y - r * 0.5); g.lineTo(x + r * 0.2, y - r * 0.38); g.stroke();
+      burst(g, x - r * 0.7, y - r * 0.6, r * 0.18, r * 0.08, 4, '#ffd45e');
+    },
+    flag(g, x, y, r) {
+      mini(g, 4, x, y + r * 0.42, r * 0.62, 'classic', 'happy');
+      g.strokeStyle = '#fdf6ff'; g.lineWidth = 3; g.beginPath(); g.moveTo(x, y - r * 0.15); g.lineTo(x, y - r * 0.95); g.stroke();
+      g.beginPath(); g.moveTo(x, y - r * 0.95); g.lineTo(x + r * 0.6, y - r * 0.75); g.lineTo(x, y - r * 0.52); g.closePath(); g.fillStyle = '#ff7eb6'; g.fill(); inked(g, 2);
+    },
+    ufo(g, x, y, r) { g.save(); g.translate(x, y + r * 0.1); g.scale(r / 30, r / 30); drawUfo(g, { x: 0, y: 0, beam: false }); g.restore(); },
+    bag(g, x, y, r) {
+      g.strokeStyle = '#120d2e'; g.lineWidth = 3; g.beginPath(); g.arc(x, y - r * 0.3, r * 0.3, Math.PI, 0); g.stroke();
+      g.beginPath(); g.moveTo(x - r * 0.65, y - r * 0.3); g.lineTo(x + r * 0.65, y - r * 0.3); g.lineTo(x + r * 0.55, y + r * 0.8); g.lineTo(x - r * 0.55, y + r * 0.8); g.closePath();
+      g.fillStyle = '#ff9ecb'; g.fill(); inked(g);
+      heart(g, x, y + r * 0.32, r * 0.32, '#fdf6ff');
+    },
+    map(g, x, y, r) {
+      g.save(); g.translate(x, y); g.rotate(-0.12);
+      g.fillStyle = '#ffe9b0'; g.fillRect(-r * 0.8, -r * 0.6, r * 1.6, r * 1.2);
+      g.beginPath(); g.rect(-r * 0.8, -r * 0.6, r * 1.6, r * 1.2); inked(g);
+      g.strokeStyle = 'rgba(160,110,50,0.4)'; g.lineWidth = 2;
+      for (const fx of [-0.27, 0.27]) { g.beginPath(); g.moveTo(fx * r, -r * 0.6); g.lineTo(fx * r, r * 0.6); g.stroke(); }
+      g.strokeStyle = '#4a7bd8'; g.setLineDash([4, 4]); g.lineWidth = 2.5;
+      g.beginPath(); g.moveTo(-r * 0.6, r * 0.35); g.quadraticCurveTo(-r * 0.1, -r * 0.5, r * 0.45, -r * 0.1); g.stroke(); g.setLineDash([]);
+      g.strokeStyle = '#e2482d'; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(r * 0.33, -r * 0.24); g.lineTo(r * 0.57, r * 0.02); g.moveTo(r * 0.57, -r * 0.24); g.lineTo(r * 0.33, r * 0.02); g.stroke();
+      g.restore();
+    },
+    match(g, x, y, r) { mini(g, 2, x - r * 0.42, y + r * 0.1, r * 0.48, 'candy', 'happy'); mini(g, 2, x + r * 0.42, y + r * 0.1, r * 0.48, 'candy', 'happy'); heart(g, x, y - r * 0.55, r * 0.24, '#fdf6ff'); },
+    mask(g, x, y, r) {
+      mini(g, 1, x, y - r * 0.38, r * 0.4, 'classic', 'star');
+      mini(g, 0, x - r * 0.48, y + r * 0.35, r * 0.38, 'classic', 'cool');
+      mini(g, 3, x + r * 0.48, y + r * 0.35, r * 0.38, 'classic', 'love');
+    },
+    crown(g, x, y, r) {
+      g.beginPath();
+      [[-0.8, 0.5], [-0.8, -0.35], [-0.42, 0.05], [0, -0.65], [0.42, 0.05], [0.8, -0.35], [0.8, 0.5]].forEach(([px, py]) => g.lineTo(x + px * r, y + py * r));
+      g.closePath(); g.fillStyle = '#ffd45e'; g.fill(); inked(g);
+      g.fillStyle = '#e8a92c'; g.fillRect(x - r * 0.8, y + r * 0.3, r * 1.6, r * 0.2);
+      blob(g, x, y + r * 0.08, r * 0.13, '#ff4f8b'); blob(g, x - r * 0.45, y + r * 0.16, r * 0.09, '#7fd0ff'); blob(g, x + r * 0.45, y + r * 0.16, r * 0.09, '#7be0a8');
+      for (const px of [-0.8, 0, 0.8]) blob(g, x + px * r, y + (px ? -0.42 : -0.72) * r, r * 0.09, '#fff6d0');
+    },
+    boop(g, x, y, r) {
+      mini(g, 1, x - r * 0.08, y + r * 0.1, r * 0.72, 'classic', 'squee');
+      heart(g, x + r * 0.62, y - r * 0.58, r * 0.28, '#ff4f8b');
+      g.strokeStyle = '#fdf6ff'; g.lineWidth = 2.5; g.lineCap = 'round';
+      for (const a of [-0.9, -0.5]) { g.beginPath(); g.moveTo(x - Math.cos(a) * r * 0.85, y + Math.sin(a) * r * 0.85); g.lineTo(x - Math.cos(a) * r * 1.05, y + Math.sin(a) * r * 1.05); g.stroke(); }
+    },
+    owl(g, x, y, r) {
+      blob(g, x - r * 0.05, y, r * 0.7, '#ffe9a8');
+      blob(g, x + r * 0.3, y - r * 0.18, r * 0.62, '#141a3e');
+      g.strokeStyle = INK; g.lineWidth = 2.5; g.lineCap = 'round';
+      g.beginPath(); g.arc(x - r * 0.42, y - r * 0.02, r * 0.09, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();
+      blob(g, x - r * 0.36, y + r * 0.22, r * 0.08, 'rgba(255,110,150,0.6)');
+      g.fillStyle = '#fdf6ff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = 'bold ' + Math.round(r * 0.42) + 'px "Trebuchet MS", sans-serif'; g.fillText('z', x + r * 0.35, y - r * 0.35);
+      g.font = 'bold ' + Math.round(r * 0.3) + 'px "Trebuchet MS", sans-serif'; g.fillText('z', x + r * 0.62, y - r * 0.68);
+      for (const [px, py] of [[0.7, 0.4], [0.2, 0.75], [-0.75, -0.7]]) blob(g, x + px * r, y + py * r, 1.8, '#fdf6ff');
+    },
+    dj(g, x, y, r) {
+      mini(g, 4, x, y + r * 0.12, r * 0.62, 'classic', 'happy');
+      g.strokeStyle = '#ff7eb6'; g.lineWidth = 5; g.beginPath(); g.arc(x, y + r * 0.1, r * 0.72, 1.1 * Math.PI, 1.9 * Math.PI); g.stroke();
+      for (const sd of [-1, 1]) { g.beginPath(); g.ellipse(x + sd * r * 0.68, y + r * 0.12, r * 0.16, r * 0.26, 0, 0, TAU); g.fillStyle = '#ff7eb6'; g.fill(); inked(g, 2); }
+      g.fillStyle = '#ffd45e'; g.font = 'bold ' + Math.round(r * 0.5) + 'px "Trebuchet MS", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('♪', x + r * 0.62, y - r * 0.7);
+    },
+    oops(g, x, y, r) { mini(g, 0, x, y + r * 0.15, r * 0.55, 'classic', 'wow'); drop(g, x + r * 0.5, y - r * 0.35, r * 0.2); drop(g, x - r * 0.55, y - r * 0.15, r * 0.14); },
+    flask(g, x, y, r) {
+      g.beginPath();
+      g.moveTo(x - r * 0.18, y - r * 0.85); g.lineTo(x - r * 0.18, y - r * 0.3);
+      g.arc(x, y + r * 0.3, r * 0.62, -Math.PI / 2 - 0.3, -Math.PI / 2 + 0.3 + TAU - 0.0001, false);
+      g.lineTo(x + r * 0.18, y - r * 0.85); g.closePath();
+      g.fillStyle = 'rgba(220,250,255,0.85)'; g.fill();
+      g.save(); g.clip(); g.fillStyle = '#7be0a8'; g.fillRect(x - r, y + r * 0.1, r * 2, r); g.restore();
+      inked(g);
+      for (const [px, py, q] of [[-0.2, 0.4, 0.1], [0.15, 0.6, 0.07], [0.05, 0.2, 0.06]]) blob(g, x + px * r, y + py * r, r * q, '#fdf6ff');
+      blob(g, x - r * 0.25, y - r * 1.0, r * 0.08, '#7be0a8'); blob(g, x + r * 0.2, y - r * 1.15, r * 0.06, '#7be0a8');
+    },
+    hole(g, x, y, r) { drawHole(g, x, y, r * 0.5, 0, false); }
+  };
+  function drawLock(g, x, y) {
+    g.strokeStyle = '#120d2e'; g.lineWidth = 7; g.beginPath(); g.arc(x, y - 6, 8, Math.PI, 0); g.stroke();
+    g.strokeStyle = '#c9c3e8'; g.lineWidth = 3.5; g.beginPath(); g.arc(x, y - 6, 8, Math.PI, 0); g.stroke();
+    g.fillStyle = '#ffd45e'; g.beginPath(); g.rect(x - 12, y - 6, 24, 18); g.fill(); inked(g, 3);
+    blob(g, x, y + 2, 3, '#120d2e');
+  }
+  function drawBadge(g, a, open) {
+    const cx = 64, cy = 56, R = 48;
+    [[-1, open ? '#ff7eb6' : '#5a5480'], [1, open ? '#7fd0ff' : '#4a4470']].forEach(([sd, col]) => {
+      g.beginPath();
+      g.moveTo(cx + sd * 6, cy + 28); g.lineTo(cx + sd * 34, cy + 68); g.lineTo(cx + sd * 25, cy + 63); g.lineTo(cx + sd * 20, cy + 72); g.lineTo(cx + sd * -6, cy + 36);
+      g.closePath(); g.fillStyle = col; g.fill(); inked(g, 3);
+    });
+    let rim = '#6f6a94';
+    if (open) {
+      const tier = a.coins <= 25 ? ['#f6c79c', '#b8713a'] : a.coins <= 100 ? ['#ffffff', '#9aa6c4'] : a.coins <= 400 ? ['#ffe9a0', '#d99a1e'] : null;
+      if (tier) { rim = g.createLinearGradient(cx - R, cy - R, cx + R, cy + R); rim.addColorStop(0, tier[0]); rim.addColorStop(1, tier[1]); }
+      else {
+        rim = g.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+        ['#ff8fa3', '#ffc66b', '#fff08a', '#9be39b', '#8fc7ff', '#c3a6ff'].forEach((c, i, arr) => rim.addColorStop(i / (arr.length - 1), c));
+      }
+    }
+    blob(g, cx, cy + 4, R + 3, '#120d2e');
+    blob(g, cx, cy, R + 3, '#120d2e');
+    blob(g, cx, cy, R, rim);
+    for (let i = 0; i < 18; i++) { const q = i / 18 * TAU; blob(g, cx + Math.cos(q) * (R - 4.5), cy + Math.sin(q) * (R - 4.5), 1.8, 'rgba(255,255,255,0.45)'); }
+    blob(g, cx, cy, R - 9, '#120d2e');
+    blob(g, cx, cy, R - 11, open ? (a.bg || '#25205c') : '#2a2450');
+    g.save();
+    g.beginPath(); g.arc(cx, cy, R - 11, 0, TAU); g.clip();
+    if (!open && a.secret) {
+      g.fillStyle = '#9a93c9'; g.font = 'bold 46px "Arial Rounded MT Bold", "Trebuchet MS", sans-serif';
+      g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', cx, cy + 3);
+    } else {
+      const [name, arg] = a.icon.split(':');
+      ICONS[name](g, cx, cy, R - 15, arg);
+      if (!open) { g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(42,36,80,0.7)'; g.fillRect(0, 0, 128, 128); g.globalCompositeOperation = 'source-over'; }
+    }
+    g.restore();
+    if (open) { g.fillStyle = 'rgba(255,255,255,0.55)'; g.beginPath(); g.ellipse(cx - 27, cy - 31, 9, 3.5, -0.75, 0, TAU); g.fill(); }
+    else drawLock(g, cx + 34, cy + 34);
+  }
+  const badgeCache = new Map();
+  function badge(id, open) {
+    const key = id + (open ? '+' : '-');
+    if (!badgeCache.has(key)) {
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      drawBadge(c.getContext('2d'), ACH_BY[id], open);
+      badgeCache.set(key, c.toDataURL());
+    }
+    return badgeCache.get(key);
+  }
+
+  // ---------- Map pictures ----------
+  const mapThumbs = new Map();
+  function mapThumb(id) {
+    const key = id + '|' + store.equip.bg + '|' + store.equip.skins.join() + '|' + store.equip.faces.join();
+    if (!mapThumbs.has(key)) {
+      const c = document.createElement('canvas'); c.width = 180; c.height = 270;
+      const g = c.getContext('2d'), cfg = MAPS[id].cfg, k = 180 / W, h = 270 / k;
+      const bg = BGS[store.equip.bg] || BGS.night;
+      bg.draw(g, 180, 270, 0);
+      g.scale(k, k);
+      g.fillStyle = 'rgba(255,126,182,0.07)'; g.fillRect(0, h - LINE_Y, W, LINE_Y);
+      g.strokeStyle = bg.soft; g.lineWidth = 3; g.setLineDash([12, 9]);
+      g.beginPath(); g.moveTo(0, h - LINE_Y); g.lineTo(W, h - LINE_Y); g.stroke(); g.setLineDash([]);
+      if (cfg.phys) {                     // ice: a pale sheen with shiny streaks
+        g.fillStyle = 'rgba(190,235,255,0.2)'; g.fillRect(0, 0, W, h);
+        g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 5; g.lineCap = 'round';
+        for (const [x0, y0] of [[40, 160], [210, 120], [120, 300], [270, 260]]) { g.beginPath(); g.moveTo(x0, y0); g.lineTo(x0 + 60, y0 - 34); g.stroke(); }
+      }
+      if (cfg.wind) {
+        g.strokeStyle = bg.guide; g.lineWidth = 5; g.lineCap = 'round';
+        for (const [x0, y0, dir] of [[60, 150, 1], [200, 250, -1], [90, 330, 1]]) {
+          g.beginPath(); g.moveTo(x0, y0); g.lineTo(x0 + 80 * dir, y0);
+          g.moveTo(x0 + 80 * dir, y0); g.lineTo(x0 + 66 * dir, y0 - 12); g.moveTo(x0 + 80 * dir, y0); g.lineTo(x0 + 66 * dir, y0 + 12); g.stroke();
+        }
+      }
+      for (const o of cfg.bars || []) {
+        const y = o.y * h;
+        g.fillStyle = '#55526e'; g.fillRect(o.x - 2, y + 3, o.w + 4, o.h + 2);
+        g.fillStyle = '#8d8aa3'; g.fillRect(o.x - 2, y - 2, o.w + 4, o.h + 2);
+      }
+      for (const o of cfg.rocks || []) {
+        if (o.sway) {
+          g.strokeStyle = bg.guide; g.lineWidth = 4; g.setLineDash([8, 8]);
+          g.beginPath(); g.moveTo(o.x - o.sway, o.y * h); g.lineTo(o.x + o.sway, o.y * h); g.stroke(); g.setLineDash([]);
+        }
+        drawRock(g, o.x, o.y * h, o.r, 'snooze', false);
+      }
+      if (cfg.boss) drawHole(g, W / 2, cfg.boss.y * h, cfg.boss.r, 0, false);
+      planet(g, 48, 28, 1, 1); planet(g, 312, 34, 2, 1);
+      if (cfg.alien) drawUfo(g, { x: 262, y: h * 0.64, beam: false });
+      planet(g, 180, h - 62, 0, 1);
+      mapThumbs.set(key, c.toDataURL());
+    }
+    return mapThumbs.get(key);
+  }
+
+  // ---------- Profile ----------
+  let profTab = 'records';
+  function openProfile() { showScreen('profile'); renderProfile(); }
+  function renderProfile() {
+    $('profCoins').textContent = fmt(store.coins);
+    for (const t of ['records', 'ach']) $('ptab_' + t).setAttribute('aria-selected', t === profTab);
+    const st = store.stats, got = ACH.filter(a => store.ach[a.id]).length, cleared = LEVELS.filter((lv, i) => store.adv[i]).length;
+    let html = '';
+    if (profTab === 'records') {
+      const tiles = [['Top score', fmt(topScore())], ['Adventure', cleared + '/' + LEVELS.length], ['Badges', got + '/' + ACH.length],
+                     ['Suns made', fmt(st.made[SUN])], ['Supernovas', fmt(st.novas)], ['Merges', fmt(st.merges)]];
+      html += '<div class="stats">' + tiles.map(([k, v]) => '<div class="panel stat"><span class="lbl">' + k + '</span><b>' + v + '</b></div>').join('') + '</div>';
+      html += '<div><div class="pname">Classic high scores</div><div class="maprows">' + Object.keys(MAPS).map(id => {
+        const have = owned('map:' + id);
+        return '<div class="panel maprow' + (have ? '' : ' locked') + '"><img src="' + mapThumb(id) + '" alt=""><div><div class="nm">' + MAPS[id].name + '</div>' +
+          '<div class="ds">' + (have ? 'Best <b>' + fmt(bestOf(id)) + '</b>' : '🔒 Locked · <i class="coin"></i>' + fmt(MAPS[id].price)) + '</div></div>' +
+          (have ? '<span></span>' : '<button type="button" class="btn" id="pshop_' + id + '" data-goshop="1">Shop</button>') + '</div>';
+      }).join('') + '</div></div>';
+      const nextLv = LEVELS.findIndex((lv, i) => !store.adv[i]);
+      html += '<div><div class="pname">Adventure</div><div class="panel advbox"><div class="bar"><i style="width:' + Math.round(cleared / LEVELS.length * 100) + '%"></i></div>' +
+        '<p class="ds">' + (nextLv < 0 ? 'Every level cleared!' : 'Next up: level ' + (nextLv + 1) + ' · ' + LEVELS[nextLv].name) + '</p>' +
+        '<div class="dots">' + LEVELS.map((lv, i) => '<span class="dot' + (store.adv[i] ? ' done' : '') + (lv.boss ? ' boss' : '') + '">' + (i + 1) + '</span>').join('') + '</div></div></div>';
+    } else {
+      html += '<p class="shop-note">' + got + ' of ' + ACH.length + ' earned. Each one pays coins the first time.</p><div class="grid2">' + ACH.map(a => {
+        const open = !!store.ach[a.id], hide = a.secret && !open;
+        return '<div class="card ach' + (open ? ' on' : '') + '"><img src="' + badge(a.id, open) + '" alt=""><span class="nm">' + (hide ? 'Secret' : a.name) + '</span>' +
+          '<span class="ds">' + (hide ? 'Keep exploring to find this one.' : a.desc) + '</span><span class="st">' + (open ? 'Earned ✓' : '<i class="coin"></i>' + fmt(a.coins)) + '</span></div>';
+      }).join('') + '</div>';
+    }
+    $('profList').innerHTML = html;
+  }
+  $('profTabs').addEventListener('click', ev => {
+    const t = ev.target.closest('[data-ptab]');
+    if (t) { profTab = t.dataset.ptab; $('profList').scrollTop = 0; renderProfile(); }
+  });
+  $('profList').addEventListener('click', ev => { if (ev.target.closest('[data-goshop]')) { shopTab = 'maps'; openShop(); } });
 
   // ---------- Settings sheet ----------
   function twoTap(btn, fn) {
@@ -2438,17 +3192,18 @@ canvas#c {
     if (where === 'sandbox') {
       html += '<div class="sliders">' + SLIDERS.map(([key, label, lo, hi, stepSize]) =>
         '<div><label for="sl_' + key + '">' + label + ' <output id="out_' + key + '"></output></label>' +
-        '<input type="range" id="sl_' + key + '" min="' + lo + '" max="' + hi + '" step="' + stepSize + '"></div>').join('') + '</div>' +
+        '<input type="range" id="sl_' + key + '" min="1" max="10" step="1"></div>').join('') + '</div>' +
+        '<p class="note">1 is the lowest, 10 the highest, 5 is normal.</p>' +
         '<div class="row2"><button class="btn ghost" id="optPhysics" type="button">Reset physics</button>' +
         '<button class="btn ghost" id="optClear" type="button">Clear board</button></div>';
     }
     html += '<div class="row2"><button class="btn ghost" id="optMusic" type="button"></button>' +
             '<button class="btn ghost" id="optSfx" type="button"></button></div>';
     if (where === 'home') {
-      html += '<button class="btn ghost" id="optReset" type="button">Reset high score</button>' +
-              '<p class="note">This also clears any game in progress.</p>' +
+      html += '<button class="btn ghost" id="optReset" type="button">Reset high scores</button>' +
+              '<p class="note">Clears the high score on every map, and any Classic game in progress.</p>' +
               '<button class="btn ghost" id="optWipe" type="button">Reset entire game</button>' +
-              '<p class="note">Erases your high score, coins, everything you bought and your adventure progress.</p>';
+              '<p class="note">Erases your high scores, coins, everything you bought, your achievements and your adventure progress.</p>';
     }
     if (where === 'classic') html += '<button class="btn ghost" id="optRestart" type="button">Restart game</button>';
     if (where === 'adventure') html += '<div class="row2"><button class="btn ghost" id="optRetry" type="button">Restart level</button><button class="btn ghost" id="optLevels" type="button">Levels</button></div>';
@@ -2470,21 +3225,23 @@ canvas#c {
     if ($('optRestart')) twoTap($('optRestart'), () => { newGame(); closeSettings(); });
     if ($('optRetry')) twoTap($('optRetry'), () => { closeSettings(); enterLevel(levelIdx); });
     if ($('optLevels')) $('optLevels').addEventListener('click', openAdventure);
-    if ($('optReset')) twoTap($('optReset'), () => { store.best = 0; store.run = null; save(); refreshHome(); $('optReset').textContent = 'High score reset'; });
+    if ($('optReset')) twoTap($('optReset'), () => { store.bests = {}; store.runs = {}; save(); refreshHome(); $('optReset').textContent = 'High scores reset'; });
     if ($('optWipe')) twoTap($('optWipe'), () => {
       Object.assign(store, {
-        best: 0, run: null, sand: { ...DEFAULTS }, coins: 0, owned: {}, adv: [],
+        map: 'open', bests: {}, runs: {}, sand: { ...DEFAULTS }, coins: 0, owned: {}, adv: [], ach: {}, stats: freshStats(),
         equip: { skins: TIERS.map(() => 'classic'), faces: TIERS.map(() => 'classic'), bg: 'night', track: 'sunny' }
       });
-      pick = 0; faceTarget = 'all';
+      pick = 0; faceTarget = 'all'; curMap = 'open';
       buildSprites(); setTrack('sunny'); save(); refreshHome();
       $('optWipe').textContent = 'Everything reset';
     });
     if (where === 'sandbox') {
-      const sync = () => SLIDERS.forEach(([key]) => { $('sl_' + key).value = store.sand[key]; $('out_' + key).textContent = store.sand[key]; });
+      const show = (key, n) => { $('out_' + key).textContent = n + (n === toLevel(key, DEFAULTS[key]) ? ' · normal' : ''); };
+      const sync = () => SLIDERS.forEach(([key]) => { const n = toLevel(key, store.sand[key]); $('sl_' + key).value = n; show(key, n); });
       sync();
       SLIDERS.forEach(([key]) => $('sl_' + key).addEventListener('input', ev => {
-        store.sand[key] = +ev.target.value; $('out_' + key).textContent = store.sand[key];
+        const n = +ev.target.value; store.sand[key] = fromLevel(key, n); show(key, n);
+        if (SLIDERS.every(([k, , , hi]) => store.sand[k] >= hi)) award('lab');
       }));
       $('optPhysics').addEventListener('click', () => { Object.assign(store.sand, DEFAULTS); sync(); });
       $('optClear').addEventListener('click', () => { newGame(); closeSettings(); });
@@ -2527,7 +3284,10 @@ canvas#c {
   document.addEventListener('touchmove', ev => { if (!ev.target.closest('.sheet, .shop-list, .viewer')) ev.preventDefault(); }, { passive: false });
   document.addEventListener('click', ev => { if (ev.target.closest('button')) { audioWake(); sfx.tap(); } });
 
-  $('btnPlay').addEventListener('click', () => enterGame('classic'));
+  $('btnPlay').addEventListener('click', openMaps);
+  $('btnProfile').addEventListener('click', openProfile);
+  $('mapsBack').addEventListener('click', goHome);
+  $('profBack').addEventListener('click', goHome);
   $('btnSandbox').addEventListener('click', () => enterGame('sandbox'));
   $('btnHomeSettings').addEventListener('click', openSettings);
   $('btnShop').addEventListener('click', openShop);
@@ -2549,10 +3309,10 @@ canvas#c {
     if (screen === 'home') drawHome(now, dt);
     else if (screen === 'game') {
       if (!over && !paused && !hold) {
-        acc += dt;
+        acc += dt * devSpeed;
         let n = 0;
-        while (acc >= DT && n++ < 3) { step(); acc -= DT; }
-        if (n >= 3) acc = 0;
+        while (acc >= DT && n++ < 3 * devSpeed) { step(); acc -= DT; }
+        if (n >= 3 * devSpeed) acc = 0;
       }
       draw(now, paused ? 0 : dt);
     }
@@ -2561,23 +3321,27 @@ canvas#c {
 
   function start(hotData) {
     loadStore(hotData);
+    curMap = store.map;
     audio.track = store.equip.track;
     buildSprites();
     refreshHome(); fitHome();
+    checkStanding();
     const refit = () => { if (screen === 'home') fitHome(); else if (screen === 'game') fit(); };
     if (window.ResizeObserver) { new ResizeObserver(refit).observe(stage); new ResizeObserver(refit).observe($('home')); }
     window.addEventListener('resize', refit);
     requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
     if (typeof window.__PS_TEST === 'function') {
-      window.__PS_TEST({ enterGame, enterLevel, openAdventure, step, openSettings, openShop, shopTap, store, start() { hideCard(); hold = false; }, peek: () => ({ over, hold, made: made.slice(), shotsLeft, timeLeft, bossHp: boss && boss.hp, done: store.adv.slice(), title: ($('overCard').querySelector('h2') || {}).textContent }), tab(t) { shopTab = t; renderShop(); }, shoot(x) { aimX = x; launch(); }, get: () => ({ score, over, n: bodies.length, best: store.best }) });
+      window.__PS_TEST({ LEVELS, peekBodies: () => bodies.map(b => ({ x: b.x, y: b.y, t: b.t, fly: b.fly, fuse: b.fuse || 0 })), peekCur: () => cur, badge, ACH, MAPS, TRACKS, songPlan, loopSeconds, audio, audioWake, setTrack, scheduleBar, enterGame, enterLevel, openAdventure, openMaps, openProfile, playMap, award, profTab(t) { profTab = t; renderProfile(); }, step, openSettings, openShop, shopTap, store, start() { hideCard(); hold = false; }, peek: () => ({ over, hold, made: made.slice(), shotsLeft, timeLeft, bossHp: boss && boss.hp, done: store.adv.slice(), title: ($('overCard').querySelector('h2') || {}).textContent }), tab(t) { shopTab = t; renderShop(); }, shoot(x) { aimX = x; launch(); }, get: () => ({ score, over, n: bodies.length, best: bestOf(curMap), map: curMap }) });
     }
   }
 
-  // Offline support: the service worker keeps a copy of the app on the phone.
+  // Offline support. The service worker's scope is this folder ("./"), so it never sees or
+  // handles any other page on the same site.
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => { navigator.serviceWorker.register('service-worker.js').catch(() => {}); });
+    window.addEventListener('load', () => { navigator.serviceWorker.register('service-worker.js', { scope: './' }).catch(() => {}); });
   }
-  // Ask the phone not to clear saved progress when storage runs low.
+  // Ask the browser not to evict saved progress when space runs low. This can only keep
+  // data; it never removes anything.
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 
   const hot = window.claude && window.claude.hot;
