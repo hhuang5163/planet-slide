@@ -432,7 +432,7 @@ canvas#c {
       </div>
       <button class="btn ghost" id="btnHomeSettings" type="button">Settings</button>
     </div>
-    <div class="ver">Version 1.14</div>
+    <div class="ver">Version 1.17</div>
   </div>
 </section>
 
@@ -565,13 +565,13 @@ canvas#c {
     return n <= 5 ? lo + (n - 1) / 4 * (d - lo) : d + (n - 5) / 5 * (hi - d);
   };
   const SLIDERS = [
-    ['launch',   'Shot strength',         150, 900, 10],
-    ['pull',     'Pull to the back',      0, 2000, 20],
-    ['friction', 'Friction',              0, 400, 1],
-    ['drag',     'Air drag',              0, 2, 0.05],
-    ['bounce',   'Bounce',                0, 1, 0.05],
-    ['kick',     'Kick apart on squeeze', 0, 1, 0.05],
-    ['grip',     'Planet stickiness',     0, 0.3, 0.01]
+    ['launch',   'How hard shots hit',              150, 900, 10],
+    ['pull',     'How strongly planets slide up',   0, 2000, 20],
+    ['friction', 'How quickly planets slow down',   0, 400, 1],
+    ['drag',     'Air resistance',                  0, 2, 0.05],
+    ['bounce',   'Bounciness',                      0, 1, 0.05],
+    ['kick',     'Springiness when squashed',       0, 1, 0.05],
+    ['grip',     'Stickiness between planets',      0, 0.3, 0.01]
   ];
   let GLIDE = 500;               // how fast a shot travels up the board before it touches anything. Purely visual:
                                  // on first contact it is slowed to the impact speed above, so hits play out the same.
@@ -637,7 +637,8 @@ canvas#c {
   let TW = null;                 // the twists in play: an adventure level or a classic map (rocks, walls, wind, alien, black hole)
   let curMap = 'open';
   let made = [], shotsLeft = 0, shotCount = 0, lastShot = 0, timeLeft = 0, shownSec = -1;
-  let rocks = [], bars = [], boss = null, ufo = null;
+  let rocks = [], bars = [], boss = null, ufos = [];
+  let gems = [], pad = 0, quakeT = 0, rainT = 0, shake = 0;   // stars to collect, wall squeeze, earthquake/rain timers
   let P = { ...DEFAULTS };       // physics in use right now
   let H = 640;
   let bodies = [];
@@ -739,7 +740,7 @@ canvas#c {
   }
 
   // ---------- Sound and music (all made in code, no audio files) ----------
-  const audio = { ctx: null, music: null, sfx: null, voice: null, timer: 0, nextBar: 0, bar: 0, walk: 2, track: 'sunny', preview: false };
+  const audio = { ctx: null, out: null, quiet: false, music: null, sfx: null, voice: null, timer: 0, nextBar: 0, bar: 0, walk: 2, track: 'sunny', preview: false };
   const hz = m => 440 * Math.pow(2, (m - 69) / 12);
   function audioInit() {
     if (audio.ctx) return;
@@ -748,7 +749,8 @@ canvas#c {
       if (!AC) return;
       const c = new AC();
       const master = c.createDynamicsCompressor();
-      master.connect(c.destination);
+      audio.out = c.createGain();          // final volume: faded to silence when the app goes to the background
+      master.connect(audio.out); audio.out.connect(c.destination);
       audio.music = c.createGain(); audio.music.gain.value = store.opts.music ? 1 : 0;
       const soften = c.createBiquadFilter(); soften.type = 'lowpass'; soften.frequency.value = 2200;
       audio.music.connect(soften); soften.connect(master);
@@ -773,7 +775,7 @@ canvas#c {
   function audioWake() {       // must run inside a tap: browsers only allow sound after one
     audioInit();
     if (!audio.ctx) return;
-    if (audio.ctx.state === 'suspended') { try { audio.ctx.resume().catch(() => {}); } catch (e) {} }
+    if (audio.ctx.state !== 'running' || audio.quiet) wakeAudio();
     if (store.opts.music || audio.preview) startMusic();
   }
   function note(dest, type, freq, t, attack, decay, vol, slideTo) {
@@ -1020,6 +1022,27 @@ canvas#c {
     audio.timer = setInterval(tick, 200);
   }
   function stopMusic() { if (audio.timer) { clearInterval(audio.timer); audio.timer = 0; } }
+  // Leaving the app: fade to silence over a few hundredths of a second instead of cutting off mid-note
+  // (which clicks), throw away notes already queued for later, then pause the audio.
+  function quietAudio() {
+    if (!audio.ctx || audio.quiet) return;
+    audio.quiet = true;
+    stopMusic();
+    const g = audio.out.gain, now = audio.ctx.currentTime;
+    g.cancelScheduledValues(now); g.setValueAtTime(g.value, now); g.linearRampToValueAtTime(0, now + 0.06);
+    setTrack(audio.track);               // a fresh, empty voice: queued notes of the old one never play
+    setTimeout(() => { if (audio.quiet && audio.ctx) { try { audio.ctx.suspend().catch(() => {}); } catch (e) {} } }, 150);
+  }
+  // Coming back: resume, start the tune again cleanly and fade in.
+  function wakeAudio() {
+    if (!audio.ctx) return;
+    audio.quiet = false;
+    try { audio.ctx.resume().catch(() => {}); } catch (e) {}
+    const g = audio.out.gain, now = audio.ctx.currentTime;
+    g.cancelScheduledValues(now); g.setValueAtTime(0, now); g.linearRampToValueAtTime(1, now + 0.4);
+    audio.nextBar = now + 0.2;
+    if (store.opts.music || audio.preview) startMusic();
+  }
   function setMusic(on) {
     store.opts.music = on;
     if (audio.ctx) audio.music.gain.setTargetAtTime(on ? 1 : 0, audio.ctx.currentTime, 0.08);
@@ -1094,14 +1117,17 @@ canvas#c {
     let sideLabel = 'Best', side = fmt(bestOf(curMap));
     let pic = '';
     if (mode === 'adventure' && L) {
-      if (boss) { label = 'Goal: beat boss'; text = 'HP ' + Math.max(0, Math.ceil(boss.hp)); }
+      if (L.goal.survive) { label = 'Goal: survive'; text = Math.max(0, Math.ceil(timeLeft)) + 's left'; }
+      else if (L.goal.stars) { label = 'Goal: stars'; text = gems.filter(g => g.got).length + '/' + gems.length; }
+      else if (L.goal.breakRocks) { const n = breakTotal(L); label = 'Goal: break rocks'; text = (n - rocks.filter(o => o.brk).length) + '/' + n; }
+      else if (boss && boss.hpMax) { label = 'Goal: beat boss'; text = 'HP ' + Math.max(0, Math.ceil(boss.hp)); }
       else if (L.goal.score) { label = 'Goal: points'; text = fmt(Math.min(score, L.goal.score)) + '/' + fmt(L.goal.score); }
       else {
         label = 'Goal: ' + (L.goal.count > 1 ? L.goal.count + ' ' : '') + TIERS[L.goal.make].n;
         text = Math.min(made[L.goal.make], L.goal.count) + '/' + L.goal.count;
         pic = sprites[L.goal.make].url;
       }
-      if (L.time) { sideLabel = 'Time'; side = Math.max(0, Math.ceil(timeLeft)) + 's'; }
+      if (L.time && !L.goal.survive) { sideLabel = 'Time'; side = Math.max(0, Math.ceil(timeLeft)) + 's'; }
       else if (L.shots) { sideLabel = 'Shots'; side = String(shotsLeft); }
       else { sideLabel = 'Level'; side = String(levelIdx + 1); }
     }
@@ -1114,7 +1140,9 @@ canvas#c {
     $('bestLabel').textContent = sideLabel;
     const b = $('best');
     b.textContent = side; b.className = side.length > 7 ? 'long' : '';
-    if (sprites[next]) { $('next').src = sprites[next].url; $('next').alt = TIERS[next].n; }
+    const hidden = mode === 'adventure' && L && L.hideNext;
+    if (hidden) { $('next').src = mysteryPic(); $('next').alt = 'Hidden'; }
+    else if (sprites[next]) { $('next').src = sprites[next].url; $('next').alt = TIERS[next].n; }
   }
   // The card shown over the board: level intro, level clear, game over.
   function showCard(title, html, buttons) {
@@ -1124,6 +1152,17 @@ canvas#c {
     $('over').classList.add('show');
   }
   function hideCard() { $('over').classList.remove('show'); }
+  let mystery = '';
+  function mysteryPic() {           // a "?" bubble shown instead of the next planet
+    if (!mystery) {
+      const c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d');
+      blob(g, 48, 48, 40, '#120d2e'); blob(g, 48, 48, 37, '#b07cff');
+      g.fillStyle = '#fdf6ff'; g.font = 'bold 50px "Arial Rounded MT Bold", "Trebuchet MS", sans-serif';
+      g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', 48, 52);
+      mystery = c.toDataURL();
+    }
+    return mystery;
+  }
   function buildMenu() {
     const m = $('menu');
     if (mode === 'sandbox') {
@@ -1142,14 +1181,16 @@ canvas#c {
     buildMenu();
   });
 
-  function clearBoardExtras() { rocks = []; bars = []; boss = null; ufo = null; hold = false; TW = null; }
+  function clearBoardExtras() { rocks = []; bars = []; boss = null; ufos = []; gems = []; pad = 0; hold = false; TW = null; }
   // Builds the rocks, walls and black hole of an adventure level or a classic map. y is a fraction of the board height.
   function setupTwists(cfg) {
     TW = cfg && Object.keys(cfg).length ? cfg : null;
-    rocks = ((cfg && cfg.rocks) || []).map(o => ({ x0: o.x, x: o.x, y: o.y * H, r: o.r, sway: o.sway || 0, speed: o.speed || 0 }));
+    rocks = ((cfg && cfg.rocks) || []).map(o => ({ x0: o.x, x: o.x, y: o.y * H, r: o.r, sway: o.sway || 0, speed: o.speed || 0, brk: !!o.brk, bumper: !!o.bumper }));
+    gems = ((cfg && cfg.stars) || []).map(([x, y]) => ({ x, y: y * H, got: false }));
+    pad = 0; quakeT = 0; rainT = 0; shake = 0;
     bars = ((cfg && cfg.bars) || []).map(o => ({ x: o.x, y: o.y * H, w: o.w, h: o.h }));
     boss = cfg && cfg.boss ? { ...cfg.boss, x: W / 2, y: cfg.boss.y * H, hpMax: cfg.boss.hp || 0, flash: 0 } : null;
-    ufo = null; shotCount = 0; lastShot = 0; fuseNext = 3;
+    ufos = []; shotCount = 0; lastShot = 0; fuseNext = 3;
   }
   // Which screen is showing: home, game, adv (level list), maps (classic map list), shop or profile.
   const SCREENS = ['home', 'game', 'adv', 'maps', 'shop', 'profile'];
@@ -1159,14 +1200,16 @@ canvas#c {
     $('modal').classList.remove('show');
   }
   function newGame() {
+    clearToast();
     bodies = []; particles = [];
-    score = 0; over = false; madeSun = false; ufo = null; shotCount = 0; fuseNext = 3;
+    score = 0; over = false; madeSun = false; ufos = []; shotCount = 0; fuseNext = 3;
     cur = mode === 'sandbox' ? pick : randomTier(); next = randomTier();
     ready = true; aimX = W / 2;
     hideCard();
     hud(); save();
   }
   function showGame() {
+    clearToast();
     showScreen('game');
     over = false; paused = false; particles = [];
     hideCard();
@@ -1196,6 +1239,7 @@ canvas#c {
   function goHome() {
     if (screen === 'game') { bumpBest(); save(); }
     endPreview();
+    clearToast();
     $('viewer').classList.remove('show');
     paused = false;
     showScreen('home');
@@ -1222,7 +1266,14 @@ canvas#c {
   //  alien          a number (steals a random planet every N shots) or { every, target: 'big' } (steals your biggest)
   //  line           distance of the danger line from the near edge (the normal line is 128; bigger = less room)
   //  rocks, bars, wind, phys, spawn, boss   as before
-  // Levels 1-10 teach the twists and have no limits. Levels 11-20 can all be lost and get harder each time.
+  // Levels 1-10 teach the twists and have no limits. From 11 on, every level can be lost, and each set of ten gets harder.
+  //  gravity: G   planets pull on each other (mass-weighted)      fleet: { every, count }   several aliens at once
+  //  stars        collect them (goal: { stars: true })            rocks with brk: 1         break them (goal: { breakRocks: true })
+  //  goal: { survive: true } with time   last until the clock ends  squeeze: { rate, max }    side walls close in
+  //  quake: { every (s), power }         earthquakes                 hideNext                  next planet hidden
+  //  rocks with bumper: 1               bounce planets away         start: [[planet, x, y]]   preset board (y up to 1 = fraction)
+  //  boss.sway / speed                  moving boss                 boss kind 'ship' with fleet: the mothership
+  //  big: true                          finale, pays like a boss
   const LEVELS = [
     { name: 'First steps', goal: { make: 2, count: 1 }, spawn: [60, 40], tip: 'Slide two matching planets together and they merge into the next one.' },
     { name: 'Warm up', goal: { score: 150 }, spawn: [50, 30, 20] },
@@ -1234,18 +1285,56 @@ canvas#c {
     { name: 'Sticky syrup', goal: { score: 500 }, phys: { friction: 420, drag: 1.6, pull: 650 }, tip: 'Thick and gloopy. Planets stop short.' },
     { name: 'The wall', goal: { make: 5, count: 1 }, bars: [{ x: 0, y: 0.44, w: 220, h: 16 }], tip: 'Only one way through.' },
     { name: 'Grumpy asteroid', goal: { boss: true }, boss: { kind: 'rock', hp: 60, r: 56, y: 0.17, toss: 4 }, tip: 'Every merge hurts the boss, and bigger merges hurt more. It throws a Pluto now and then.' },
-    { name: 'Handle with care', goal: { score: 900 }, cap: 3, tip: 'Make anything bigger than Venus and you lose. Venuses cannot merge here, so they pile up.' },
-    { name: 'Count your shots', goal: { make: 5, count: 1 }, shots: 40, tip: 'Make a Neptune before your shots run out.' },
-    { name: 'Beat the clock', goal: { score: 800 }, time: 90, tip: 'Score fast. The clock does not wait.' },
-    { name: 'Tick tock', goal: { make: 5, count: 1 }, fuse: { tiers: [0, 1], shots: 5, every: 6 }, tip: 'Now and then a planet gets a timer. Merge it before the number reaches zero.' },
-    { name: 'Low ceiling', goal: { make: 6, count: 1 }, time: 100, line: 275, rocks: [{ x: 180, y: 0.36, r: 24, sway: 100, speed: 0.9 }], tip: 'The danger line is much higher, so there is far less room.' },
-    { name: 'Greedy alien', goal: { score: 600 }, shots: 110, alien: { every: 9, target: 'big' }, tip: 'This alien always takes your biggest planet. Keep scoring anyway.' },
-    { name: 'Hungry storm', goal: { make: 6, count: 1 }, time: 170, wind: { a: 430, period: 6 }, alien: { every: 14, target: 'big' }, tip: 'Wind, and an alien that takes your biggest planet.' },
-    { name: 'Meteor shower', goal: { make: 6, count: 1 }, meteors: { every: 9, r: 18 }, tip: 'Every 9 shots a space rock lands at the back and stays. Room runs out, so be quick.' },
-    { name: 'Bomb squad', goal: { score: 600 }, shots: 110, line: 160, fuse: { tiers: [0, 1], shots: 7, every: 8 }, tip: 'Timers keep coming and there is less room to work in.' },
-    { name: 'Black hole', goal: { boss: true }, shots: 115, boss: { kind: 'hole', hp: 150, r: 46, y: 0.2, eat: 5, heal: 6, g: 520, target: 'big' }, tip: 'It pulls planets in and swallows your biggest one every few shots, which heals it.' }
+    { name: 'Handle with care', goal: { score: 350 }, cap: 4, tip: 'Earths will not merge here. They just pile up, so leave room for them.' },
+    { name: 'Count your shots', goal: { make: 5, count: 1 }, shots: 60, tip: 'Make a Neptune before your shots run out.' },
+    { name: 'Beat the clock', goal: { score: 500 }, time: 100, tip: 'Score fast. The clock does not wait.' },
+    { name: 'Tick tock', goal: { make: 5, count: 1 }, fuse: { tiers: [0, 1], shots: 9, every: 10 }, tip: 'Now and then a planet gets a timer that counts down with every shot. Merge it before it runs out.' },
+    { name: 'Low ceiling', goal: { make: 5, count: 1 }, time: 130, line: 235, rocks: [{ x: 180, y: 0.36, r: 22, sway: 90, speed: 0.6 }], tip: 'The danger line is much higher, so there is far less room.' },
+    { name: 'Greedy alien', goal: { score: 500 }, shots: 120, alien: { every: 11, target: 'big' }, tip: 'This alien always takes your biggest planet. Keep scoring anyway.' },
+    { name: 'Hungry storm', goal: { make: 5, count: 1 }, time: 170, wind: { a: 380, period: 7 }, alien: { every: 14, target: 'big' }, tip: 'Wind, and an alien that takes your biggest planet.' },
+    { name: 'Meteor shower', goal: { make: 5, count: 1 }, meteors: { every: 8, r: 18 }, tip: 'Every 8 shots a space rock lands somewhere in the upper part of the board and stays. Room runs out, so be quick.' },
+    { name: 'Bomb squad', goal: { score: 450 }, shots: 130, line: 140, fuse: { tiers: [0, 1], shots: 12, every: 12 }, tip: 'Timers keep coming and there is less room to work in.' },
+    { name: 'Black hole', goal: { boss: true }, shots: 130, boss: { kind: 'hole', hp: 175, r: 46, y: 0.2, eat: 5, heal: 5, g: 520, target: 'big' }, tip: 'It pulls planets in and swallows your biggest one every few shots, which heals it.' },
+    // 21-30: new tricks, one at a time, then a moving boss
+    { name: 'Star catcher', goal: { stars: true }, shots: 40, stars: [[60, 0.3], [180, 0.22], [300, 0.3], [110, 0.46], [250, 0.46]], tip: 'Touch every star with a planet. A shot flying past a star collects it too.' },
+    { name: 'Demolition', goal: { breakRocks: true }, shots: 70, rocks: [{ x: 90, y: 0.32, r: 22, brk: 1 }, { x: 270, y: 0.32, r: 22, brk: 1 }, { x: 180, y: 0.48, r: 22, brk: 1 }], tip: 'Cracked rocks break when two planets merge right next to them.' },
+    { name: 'Orbit', goal: { make: 6, count: 1 }, time: 150, gravity: 150, tip: 'Planets pull on each other here, and bigger planets pull harder.' },
+    { name: 'Hold the line', goal: { survive: true }, time: 60, rain: { sec: 3, count: 2, tiers: [0, 1, 2] }, tip: 'Planets fall in every few seconds. Keep merging to make room until the clock runs out.' },
+    { name: 'Mystery box', goal: { make: 6, count: 1 }, shots: 85, hideNext: true, tip: 'You can’t see which planet comes next.' },
+    { name: 'Squeeze', goal: { make: 5, count: 1 }, time: 120, squeeze: { rate: 0.25, max: 55 }, tip: 'The side walls slowly close in.' },
+    { name: 'Alien fleet', goal: { score: 500 }, shots: 120, fleet: { every: 14, count: 3 }, tip: 'Every 14 shots, three aliens each grab a random planet at once.' },
+    { name: 'Earthquake', goal: { make: 6, count: 1 }, time: 150, quake: { every: 7, power: 260 }, tip: 'Every few seconds the board shakes everything around.' },
+    { name: 'Pinball', goal: { score: 450 }, shots: 110, rocks: [{ x: 100, y: 0.35, r: 20, bumper: 1 }, { x: 260, y: 0.35, r: 20, bumper: 1 }, { x: 180, y: 0.52, r: 20, bumper: 1 }], tip: 'Bumpers bounce planets away hard.' },
+    { name: 'Comet king', goal: { boss: true }, shots: 130, boss: { kind: 'rock', hp: 180, r: 50, y: 0.18, toss: 5, sway: 90, speed: 0.7 }, tip: 'It moves side to side and throws Plutos. Every merge hurts it.' },
+    // 31-40: tricks combine, then the mothership
+    { name: 'Star field', goal: { stars: true }, shots: 55, meteors: { every: 9, r: 16 }, stars: [[50, 0.24], [140, 0.2], [230, 0.2], [310, 0.26], [90, 0.44], [270, 0.44], [180, 0.36]], tip: 'Seven stars, and rocks keep landing between them.' },
+    { name: 'Gravity well', goal: { make: 6, count: 1 }, shots: 180, gravity: 220, alien: { every: 20, target: 'big' }, tip: 'Strong pull between planets, and an alien after your biggest one.' },
+    { name: 'Chain reaction', goal: { make: 6, count: 1 }, shots: 4, spawn: [100],
+      start: [[4, 130, 43], [3, 130, 123], [2, 130, 189], [1, 130, 242], [0, 130, 284], [4, 230, 43], [3, 230, 123], [2, 230, 189], [1, 230, 242], [0, 230, 284]],
+      tip: 'Each column is a chain, and the two finished chains will meet. You only have 4 Plutos.' },
+    { name: 'Ticking squeeze', goal: { score: 500 }, shots: 110, fuse: { tiers: [0], shots: 14, every: 15 }, squeeze: { rate: 0.2, max: 45 }, tip: 'Timers, and walls closing in.' },
+    { name: 'Storm front', goal: { survive: true }, time: 75, rain: { sec: 2.2, count: 2, tiers: [0, 1, 2, 3] }, wind: { a: 380, period: 7 }, tip: 'Planets keep falling and the wind keeps blowing. Hang on.' },
+    { name: 'Wandering hole', goal: { make: 6, count: 1 }, shots: 95, boss: { kind: 'hole', r: 40, y: 0.22, eat: 8, g: 450, sway: 110, speed: 0.5 }, tip: 'A black hole drifts back and forth, pulling planets in.' },
+    { name: 'Demolition crew', goal: { breakRocks: true }, shots: 90, quake: { every: 8, power: 240 },
+      rocks: [{ x: 70, y: 0.3, r: 20, brk: 1 }, { x: 180, y: 0.24, r: 20, brk: 1 }, { x: 290, y: 0.3, r: 20, brk: 1 }, { x: 120, y: 0.5, r: 20, brk: 1 }, { x: 240, y: 0.5, r: 20, brk: 1 }], tip: 'Five cracked rocks, and the ground keeps shaking.' },
+    { name: 'Alien armada', goal: { score: 600 }, shots: 140, fleet: { every: 16, count: 4 }, tip: 'Four aliens at a time now.' },
+    { name: 'Blind ceiling', goal: { make: 6, count: 1 }, time: 170, hideNext: true, line: 190, meteors: { every: 14, r: 16 }, tip: 'Less room, no peeking, and falling rocks.' },
+    { name: 'Mothership', goal: { boss: true }, shots: 140, boss: { kind: 'ship', hp: 220, r: 46, y: 0.17, fleet: { every: 8, count: 2 }, sway: 80, speed: 0.6 }, tip: 'It drifts overhead and sends aliens after your planets.' },
+    // 41-50: everything at once, then the Big Bang
+    { name: 'Starstorm', goal: { stars: true }, shots: 60, wind: { a: 380, period: 6 }, quake: { every: 9, power: 220 },
+      stars: [[45, 0.22], [130, 0.2], [230, 0.2], [315, 0.22], [80, 0.4], [180, 0.34], [280, 0.4], [180, 0.52]], tip: 'Eight stars in the wind, with the ground shaking.' },
+    { name: 'Heavy gravity', goal: { make: 7, count: 1 }, time: 160, gravity: 300, rocks: [{ x: 90, y: 0.45, r: 18, bumper: 1 }, { x: 270, y: 0.45, r: 18, bumper: 1 }], tip: 'Very strong pull between planets. Bumpers fling them apart.' },
+    { name: 'Pressure', goal: { score: 650 }, shots: 120, squeeze: { rate: 0.25, max: 40 }, fuse: { tiers: [0], shots: 14, every: 15 }, tip: 'Walls close in while timers tick.' },
+    { name: 'Last stand', goal: { survive: true }, time: 80, rain: { sec: 3.5, count: 2, tiers: [0, 1, 2] }, meteors: { every: 14, r: 16 }, tip: 'Survive the rain while rocks pile up.' },
+    { name: 'Orbit storm', goal: { make: 7, count: 1 }, time: 260, gravity: 180, fleet: { every: 18, count: 2 }, wind: { a: 360, period: 7 }, tip: 'Gravity, wind and an alien fleet.' },
+    { name: 'Gauntlet', goal: { score: 480 }, shots: 140, fuse: { tiers: [0], shots: 15, every: 17 }, meteors: { every: 20, r: 15 }, tip: 'Timers and meteors together.' },
+    { name: 'Lights out', goal: { make: 6, count: 1 }, shots: 170, hideNext: true, line: 190, alien: { every: 16, target: 'big' }, tip: 'No peeking, less room, and a greedy alien.' },
+    { name: 'Wrecking ball', goal: { breakRocks: true }, shots: 120, squeeze: { rate: 0.2, max: 30 },
+      rocks: [{ x: 90, y: 0.28, r: 20, brk: 1 }, { x: 270, y: 0.28, r: 20, brk: 1 }, { x: 180, y: 0.4, r: 18, bumper: 1 }, { x: 110, y: 0.52, r: 20, brk: 1 }, { x: 250, y: 0.52, r: 20, brk: 1 }, { x: 180, y: 0.22, r: 20, brk: 1 }], tip: 'Break five rocks around a bumper while the walls close in.' },
+    { name: 'Aftershock', goal: { survive: true }, time: 100, quake: { every: 6, power: 260 }, rain: { sec: 3, count: 2, tiers: [0, 1, 2] }, tip: 'Constant earthquakes and falling planets. Survive.' },
+    { name: 'Big Bang', goal: { make: 9, count: 1 }, big: true, time: 330, spawn: [0, 20, 40, 40], gravity: 260, line: 80, tip: 'The finale. You get bigger planets, they pull together, and there is extra room. Build all the way up to the Sun.' }
   ];
-  const reward = i => (30 + 10 * (i + 1)) * (LEVELS[i].boss ? 2 : 1);
+  const reward = i => (30 + 10 * (i + 1)) * (LEVELS[i].boss && LEVELS[i].boss.hp || LEVELS[i].big ? 2 : 1);
 
   // ---------- Classic maps ----------
   // A map is the classic game on a different board. Each one keeps its own high score.
@@ -1284,18 +1373,30 @@ canvas#c {
   function rulesOf(lv) {          // every way this level can be lost, in plain words
     const r = [];
     if (lv.shots) r.push('You have ' + lv.shots + ' shots');
-    if (lv.time) r.push('You have ' + lv.time + ' seconds');
-    if (lv.cap !== undefined) r.push('Lose if you make anything bigger than ' + TIERS[lv.cap].n);
+    if (lv.time && !lv.goal.survive) r.push('You have ' + lv.time + ' seconds');
+    if (lv.cap !== undefined) r.push(TIERS[lv.cap].n + 's do not merge here, so they pile up');
     if (lv.fuse) r.push('Merge timer planets within ' + lv.fuse.shots + ' shots');
-    if (lv.rain) r.push(lv.rain.count + ' ' + (lv.rain.tiers ? 'planets' : TIERS[lv.rain.tier].n + 's') + ' fall in every ' + lv.rain.every + ' shots');
+    if (lv.rain) r.push(lv.rain.count + ' ' + (lv.rain.tiers ? 'planets' : TIERS[lv.rain.tier].n + 's') + ' fall in every ' + (lv.rain.sec ? lv.rain.sec + ' seconds' : lv.rain.every + ' shots'));
     if (lv.alien && lv.alien.target === 'big') r.push('The alien takes your biggest planet');
     if (lv.boss && lv.boss.target === 'big') r.push('It eats your biggest planet');
-    if (lv.meteors) r.push('A rock lands every ' + lv.meteors.every + ' shots and stays');
-    if (lv.line) r.push('The danger line is higher');
+    if (lv.boss && lv.boss.fleet) r.push('It sends ' + lv.boss.fleet.count + ' aliens every ' + lv.boss.fleet.every + ' shots');
+    if (lv.meteors) r.push('A space rock lands every ' + lv.meteors.every + ' shots and stays');
+    if (lv.fleet) r.push(lv.fleet.count + ' aliens come every ' + lv.fleet.every + ' shots');
+    if (lv.gravity) r.push('Planets pull on each other');
+    if (lv.squeeze) r.push('The side walls close in');
+    if (lv.quake) r.push('An earthquake every ' + lv.quake.every + ' seconds');
+    if (lv.hideNext) r.push('You can’t see the next planet');
+    if (lv.rocks && lv.rocks.some(o => o.bumper)) r.push('Bumpers bounce planets away');
+    if (lv.boss && !lv.boss.hp) r.push('A black hole drifts and eats a planet every ' + lv.boss.eat + ' shots');
+    if (lv.line) r.push(lv.line > LINE_Y ? 'The danger line is higher, so there is less room' : 'The danger line is lower, so there is more room');
     return r;
   }
   function goalBox(lv) {          // the framed "GOAL" card used on the level intro and the try-again screen
-    const what = lv.boss ? 'Beat the ' + (lv.boss.kind === 'hole' ? 'black hole' : 'grumpy asteroid')
+    const what = lv.goal.survive ? 'Survive for ' + lv.time + ' seconds'
+      : lv.goal.stars ? 'Collect ' + lv.stars.length + ' stars'
+      : lv.goal.breakRocks ? 'Break ' + breakTotal(lv) + ' cracked rocks'
+      : lv.goal.make === SUN ? 'Make the Sun'
+      : lv.boss && lv.boss.hp ? 'Beat the ' + ({ hole: 'black hole', rock: 'grumpy asteroid', ship: 'mothership' })[lv.boss.kind]
       : lv.goal.score ? 'Score ' + fmt(lv.goal.score) + ' points'
       : 'Make ' + (lv.goal.count > 1 ? lv.goal.count + ' × ' : '') + TIERS[lv.goal.make].n;
     return '<div class="goalbox"><span class="tag">GOAL</span>' +
@@ -1307,9 +1408,9 @@ canvas#c {
     $('advCoins').textContent = fmt(store.coins);
     $('levels').innerHTML = LEVELS.map((lv, i) => {
       const open = i === 0 || store.adv[i - 1], done = !!store.adv[i];
-      return '<button type="button" class="lv' + (lv.boss ? ' boss' : '') + (done ? ' done' : '') + '" id="lv_' + i + '" data-level="' + i + '"' + (open ? '' : ' disabled') +
+      return '<button type="button" class="lv' + (isBoss(lv) ? ' boss' : '') + (done ? ' done' : '') + '" id="lv_' + i + '" data-level="' + i + '"' + (open ? '' : ' disabled') +
         ' aria-label="Level ' + (i + 1) + ', ' + lv.name + (done ? ', cleared' : open ? '' : ', locked') + '">' + (i + 1) +
-        '<small>' + (done ? '★ done' : lv.boss ? 'BOSS' : open ? 'play' : 'locked') + '</small></button>';
+        '<small>' + (done ? '★ done' : isBoss(lv) ? 'BOSS' : open ? 'play' : 'locked') + '</small></button>';
     }).join('');
   }
   $('levels').addEventListener('click', ev => {
@@ -1328,6 +1429,7 @@ canvas#c {
     made = TIERS.map(() => 0);
     shotsLeft = L.shots || 0; timeLeft = L.time || 0; shownSec = -1;
     setupTwists(L);
+    for (const [t, x, y] of L.start || []) { const nb = makeBody(x, y <= 1 ? y * H : y, t); nb.age = 5; bodies.push(nb); }   // preset board (y: fraction of the board, or exact)
     cur = randomTier(); next = randomTier(); ready = true; aimX = W / 2;
     buildMenu(); hud(); nightOwl();
     hold = true;
@@ -1336,8 +1438,13 @@ canvas#c {
       { label: 'Levels', cls: 'ghost', fn: openAdventure }
     ]);
   }
+  const isBoss = lv => !!((lv.boss && lv.boss.hp) || lv.big);
+  const breakTotal = lv => (lv.rocks || []).filter(o => o.brk).length;
   function goalMet() {
-    if (boss) return boss.hp <= 0;
+    if (L.goal.survive) return timeLeft <= 0;
+    if (L.goal.stars) return gems.length > 0 && gems.every(g => g.got);
+    if (L.goal.breakRocks) return !rocks.some(o => o.brk);
+    if (boss && boss.hpMax) return boss.hp <= 0;
     if (L.goal.score) return score >= L.goal.score;
     return made[L.goal.make] >= L.goal.count;
   }
@@ -1353,7 +1460,7 @@ canvas#c {
     const last = levelIdx === LEVELS.length - 1;
     const buttons = [{ label: 'Levels', cls: 'ghost', fn: openAdventure }];
     if (!last) buttons.unshift({ label: 'Next level', cls: 'big pink', fn: () => enterLevel(levelIdx + 1) });
-    showCard(L.boss ? 'Boss beaten!' : 'Level clear!',
+    showCard(isBoss(L) ? 'Boss beaten!' : 'Level clear!',
       '<p><i class="coin"></i>' + coins + ' coins' + (first ? '' : ' for a replay') + '</p>' + (last ? '<p class="tip">That was the last level for now. More are on the way.</p>' : ''), buttons);
   }
   function failLevel(why) {
@@ -1367,7 +1474,7 @@ canvas#c {
   }
   function fail(why) { if (mode === 'adventure') failLevel(why); else endGame(); }
   function steal(kind, how) {       // an alien or the black hole takes a planet: a random one, or the biggest
-    const pool = bodies.filter(b => !b.fly && !b.taken && !b.dead && b.age > 0.5);
+    const pool = bodies.filter(b => !b.fly && !b.taken && !b.dead && !b.marked && b.age > 0.5);
     if (!pool.length) return null;
     const top = Math.max(...pool.map(p => p.t));
     const from = how === 'big' ? pool.filter(p => p.t === top) : pool;
@@ -1376,14 +1483,35 @@ canvas#c {
     return b;
   }
   let fuseNext = 3;
+  // Sends n aliens, each after a different planet. from: a boss they launch from (otherwise they fly in from the sides).
+  function dropRain() {             // planets drop in at the back
+    for (let i = 0; i < TW.rain.count; i++) {
+      const tiers = TW.rain.tiers || [TW.rain.tier], tier = tiers[Math.floor(Math.random() * tiers.length)], T = TIERS[tier];
+      const nb = makeBody(pad + T.left + Math.random() * (W - 2 * pad - T.left - T.right), T.top + 2 + i * 6, tier);
+      nb.age = 5; nb.s = reduceMotion ? 1 : 0.5; bodies.push(nb);
+    }
+    sfx.hit();
+  }
+  function sendAliens(n, how, from) {
+    let sent = 0;
+    for (let i = 0; i < n; i++) {
+      const target = steal('ufo', how);
+      if (!target) break;
+      target.marked = true;
+      const fx = from ? from.x : (Math.random() < 0.5 ? -70 : W + 70), fy = from ? from.y : target.y - 120;
+      ufos.push({ target, t: -i * 0.25, fx, fy, side: fx < W / 2 ? -1 : 1, x: fx, y: fy, beam: false });
+      sent++;
+    }
+    if (sent) sfx.ufo();
+    return sent;
+  }
   function afterShot() {
     shotCount++; lastShot = clock;
     if (mode === 'adventure' && L.shots) shotsLeft--;
     const al = TW.alien, every = typeof al === 'number' ? al : al && al.every;
-    if (every && shotCount % every === 0 && !ufo) {
-      const target = steal('ufo', al.target);
-      if (target) { ufo = { target, t: 0, from: Math.random() < 0.5 ? -70 : W + 70, x: 0, y: 0 }; sfx.ufo(); toast('An alien!'); }
-    }
+    if (every && shotCount % every === 0 && !ufos.length && sendAliens(1, al.target)) toast('An alien!');
+    if (TW.fleet && shotCount % TW.fleet.every === 0 && sendAliens(TW.fleet.count)) toast('Alien fleet!');
+    if (boss && boss.fleet && shotCount % boss.fleet.every === 0 && sendAliens(boss.fleet.count, null, boss)) toast('Here they come!');
     if (boss && boss.toss && shotCount % boss.toss === 0) {
       const nb = makeBody(boss.x + (Math.random() - 0.5) * 50, boss.y + boss.r + 26, 0);
       nb.age = 5; bodies.push(nb); sfx.hit();
@@ -1393,14 +1521,7 @@ canvas#c {
       store.stats.eaten++; if (store.stats.eaten >= 10) award('gulp');
       toast('Gulp!'); sfx.nope();
     }
-    if (TW.rain && shotCount % TW.rain.every === 0) {        // planets drop in at the back
-      for (let i = 0; i < TW.rain.count; i++) {
-        const tiers = TW.rain.tiers || [TW.rain.tier], tier = tiers[Math.floor(Math.random() * tiers.length)], T = TIERS[tier];
-        const nb = makeBody(T.left + Math.random() * (W - T.left - T.right), T.top + 2 + i * 6, tier);
-        nb.age = 5; nb.s = reduceMotion ? 1 : 0.5; bodies.push(nb);
-      }
-      sfx.hit();
-    }
+    if (TW.rain && TW.rain.every && shotCount % TW.rain.every === 0) dropRain();
     if (TW.meteors && shotCount % TW.meteors.every === 0) {   // a space rock lands at the back and stays
       const r = TW.meteors.r, room = (H - lineH()) * 0.7;
       let x = 0, y = 0;
@@ -1413,16 +1534,17 @@ canvas#c {
     }
     if (TW.fuse) {                    // timers count down one per shot
       for (const b of bodies) {
-        if (!b.fuse || b.dead || b.taken) continue;
+        if (!b.fused || b.dead || b.taken || b.fuse <= 0) continue;
         b.fuse--;
-        if (b.fuse <= 0 && !over) { sparkle(b.x, b.y, 40, 300); fail('fuse'); return; }
+        if (b.fuse <= 0) b.boomAt = clock + 2.5;   // the shot just fired still gets time to land and save it
       }
-      if (!bodies.some(b => b.fuse && !b.dead && !b.taken) && shotCount >= fuseNext) {
+      if (!bodies.some(b => b.fused && !b.dead && !b.taken) && shotCount >= fuseNext) {
         // only planets near the front get timers, so a shot can always reach them
         const pool = bodies.filter(b => !b.fly && !b.taken && !b.dead && b.age > 0.5 && TW.fuse.tiers.includes(b.t))
           .sort((p, q) => q.y - p.y).slice(0, 3);
         if (pool.length) {
-          pool[Math.floor(Math.random() * pool.length)].fuse = TW.fuse.shots;
+          const pk = pool[Math.floor(Math.random() * pool.length)];
+          pk.fused = true; pk.fuse = TW.fuse.shots;
           fuseNext = shotCount + TW.fuse.every; toast('Tick tock!'); sfx.hit();
         }
       }
@@ -1437,7 +1559,7 @@ canvas#c {
     b.px = b.x; b.py = b.y + P.launch * (DT / SUBSTEPS);
     b.fly = false;
   }
-  function bump(b, part, qx, qy) {
+  function bump(b, part, qx, qy, kick) {
     const cx = b.x + part.ox * b.s, cy = b.y + part.oy * b.s, rad = part.r * b.s;
     let dx = cx - qx, dy = cy - qy, d = Math.hypot(dx, dy);
     if (d >= rad) return;
@@ -1447,6 +1569,7 @@ canvas#c {
     b.x += nx * ov; b.y += ny * ov; b.px += nx * ov; b.py += ny * ov;
     const vn = (b.x - b.px) * nx + (b.y - b.py) * ny;
     if (vn < 0) { const k = vn * (1 + P.bounce); b.px += nx * k; b.py += ny * k; }
+    if (kick) { const hk = DT / SUBSTEPS; b.px -= nx * kick * hk; b.py -= ny * kick * hk; }   // bumpers throw planets away
     b.fly = false;
   }
   function obstacles(b) {
@@ -1455,7 +1578,7 @@ canvas#c {
       const cx = b.x + part.ox * b.s, cy = b.y + part.oy * b.s;
       for (const o of rocks) {
         const dx = cx - o.x, dy = cy - o.y, d = Math.hypot(dx, dy) || 1;
-        bump(b, part, o.x + dx / d * o.r, o.y + dy / d * o.r);
+        bump(b, part, o.x + dx / d * o.r, o.y + dy / d * o.r, o.bumper ? 300 : 0);
       }
       if (boss) {
         const dx = cx - boss.x, dy = cy - boss.y, d = Math.hypot(dx, dy) || 1;
@@ -1470,6 +1593,9 @@ canvas#c {
     el.textContent = text;
     el.classList.remove('go'); void el.offsetWidth; el.classList.add('go');
   }
+  // Clears the banner. Without this, leaving mid-animation and opening another game would replay it there.
+  function clearToast() { const el = $('toast'); el.classList.remove('go'); el.textContent = ''; }
+  $('toast').addEventListener('animationend', clearToast);
   function sparkle(x, y, count, speed) {
     if (reduceMotion) return;
     const colors = ['#ffd45e', '#ff7eb6', '#fdf6ff', '#7fd0ff'];
@@ -1487,7 +1613,7 @@ canvas#c {
     if (!ready || over || paused || hold || screen !== 'game') return;
     if (mode === 'adventure' && L.shots && shotsLeft <= 0) return;
     const T = TIERS[cur];
-    const b = makeBody(clamp(aimX, T.left, W - T.right), launchY(), cur);
+    const b = makeBody(clamp(aimX, pad + T.left, W - pad - T.right), launchY(), cur);
     b.fly = true;
     bodies.push(b);
     ready = false; readyAt = clock + RELOAD;
@@ -1511,8 +1637,10 @@ canvas#c {
       born.push(nb);
       setScore(score + 2 ** t);
       if (mode !== 'sandbox') { onMerge(t); if (a.close || b.close) award('close'); }
-      if (a.fuse || b.fuse) { toast('Defused!'); if (TW && TW.fuse) fuseNext = shotCount + TW.fuse.every; }
-      if (mode === 'adventure' && L.cap !== undefined && t > L.cap && !over) setTimeout(() => { if (!over) fail('cap'); }, 0);
+      if (a.fused || b.fused) { toast('Defused!'); if (TW && TW.fuse) fuseNext = shotCount + TW.fuse.every; }
+      const reach = TIERS[t].r + 16;   // a merge right next to a cracked rock breaks it
+      const broke = rocks.filter(o => o.brk && Math.hypot(o.x - x, o.y - y) < o.r + reach);
+      if (broke.length) { rocks = rocks.filter(o => !broke.includes(o)); broke.forEach(o => sparkle(o.x, o.y, 30, 260)); sfx.hit(); }
       if (mode === 'adventure') {
         made[t]++;
         if (boss) { boss.hp -= t + 1; boss.flash = 0.25; sfx.hit(); }
@@ -1553,7 +1681,8 @@ canvas#c {
     }
     if (ov <= 0) return;
     land(a); land(b);
-    if (a.t === b.t) { merge(a, b, born); return; }
+    const capped = mode === 'adventure' && L && L.cap !== undefined && a.t >= L.cap;   // at the cap, matching planets just bump
+    if (a.t === b.t && !capped) { merge(a, b, born); return; }
 
     // heavier planets give way less
     const wa = B.mass / (A.mass + B.mass), wb = 1 - wa;
@@ -1582,7 +1711,22 @@ canvas#c {
     const h = DT / SUBSTEPS;
     const windNow = TW && TW.wind ? (Math.sin(clock * TAU / TW.wind.period) >= 0 ? TW.wind.a : -TW.wind.a) : 0;
     for (const o of rocks) if (o.sway) o.x = o.x0 + Math.sin(clock * o.speed) * o.sway;
+    const G = TW && TW.gravity;
     for (let s = 0; s < SUBSTEPS; s++) {
+      if (G) {                       // planets pull on each other: heavier planets pull harder
+        for (const b of bodies) { b.gx = 0; b.gy = 0; }
+        for (let i = 0; i < bodies.length; i++) {
+          const a = bodies[i]; if (a.fly || a.taken) continue;
+          for (let j = i + 1; j < bodies.length; j++) {
+            const b = bodies[j]; if (b.fly || b.taken) continue;
+            const dx = b.x - a.x, dy = b.y - a.y, rr = TIERS[a.t].r + TIERS[b.t].r;
+            const d2 = Math.max(dx * dx + dy * dy, rr * rr), d = Math.sqrt(d2), f = G * 10000 / d2;
+            const ma = TIERS[a.t].mass / 900, mb = TIERS[b.t].mass / 900;
+            a.gx += dx / d * f * mb; a.gy += dy / d * f * mb;
+            b.gx -= dx / d * f * ma; b.gy -= dy / d * f * ma;
+          }
+        }
+      }
       for (const b of bodies) {
         if (b.taken) {                                // being carried off: no physics, just shrink away
           b.px = b.x; b.py = b.y;
@@ -1604,6 +1748,7 @@ canvas#c {
         }
         b.px = b.x; b.py = b.y;
         b.x += vx; b.y += vy - P.pull * h * h;
+        if (G) { b.x += b.gx * h * h; b.y += b.gy * h * h; }
         if (windNow) b.x += windNow * h * h;
         if (boss && boss.g) {
           const dx = boss.x - b.x, dy = boss.y - b.y, d = Math.hypot(dx, dy) || 1;
@@ -1625,7 +1770,7 @@ canvas#c {
         const T = TIERS[b.t];
         if (b.taken) continue;
         if (rocks.length || bars.length || boss) obstacles(b);
-        const cx = clamp(b.x, T.left * b.s, W - T.right * b.s);
+        const cx = clamp(b.x, pad + T.left * b.s, W - pad - T.right * b.s);
         const cy = clamp(b.y, T.top * b.s, H - T.bottom * b.s);
         if (cx !== b.x) { b.x = cx; b.px = cx; }      // walls absorb the hit
         if (cy !== b.y) { b.y = cy; b.py = cy; b.fly = false; }
@@ -1652,18 +1797,38 @@ canvas#c {
     }
     if (TW && !over) {
       if (boss && boss.flash > 0) boss.flash -= DT;
-      if (ufo) {                      // fly in, beam the planet up, fly away
-        const u = ufo, tb = u.target;
+      for (const u of ufos) {         // each alien: fly in, beam its planet up, fly away
+        const tb = u.target;
         u.t += DT;
+        if (u.t < 0) continue;
         if (u.t < 0.7) {
-          if (tb.dead || tb.taken) ufo = null;
-          else { const k = u.t / 0.7; u.x = u.from + (tb.x - u.from) * k; u.y = tb.y - TIERS[tb.t].r - 60; }
+          if (tb.dead || tb.taken) { u.t = 1.5; continue; }
+          const k = u.t / 0.7; u.x = u.fx + (tb.x - u.fx) * k; u.y = u.fy + (tb.y - TIERS[tb.t].r - 60 - u.fy) * k;
         } else if (u.t < 1.5) {
           if (!tb.taken && !tb.dead) { tb.taken = { kind: 'ufo' }; if (mode !== 'sandbox') award('abduct'); }
           u.beam = !tb.dead;
         } else {
-          u.beam = false; u.x += (u.from < 0 ? 1 : -1) * 420 * DT; u.y -= 60 * DT;
-          if (u.t > 2.4) ufo = null;
+          u.beam = false; u.x += u.side * 420 * DT; u.y -= 60 * DT;
+        }
+      }
+      ufos = ufos.filter(u => u.t < 2.4);
+      for (const b of bodies) {      // a timer that reached zero goes off once its last shot has had time to land
+        if (b.fused && b.fuse <= 0 && !b.dead && !b.taken && clock >= b.boomAt && !over) { sparkle(b.x, b.y, 40, 300); fail('fuse'); break; }
+      }
+      if (boss && boss.sway) boss.x = W / 2 + Math.sin(clock * boss.speed) * boss.sway;   // moving bosses
+      if (TW.squeeze) pad = Math.min(TW.squeeze.max, pad + TW.squeeze.rate * 60 * DT);    // walls close in
+      if (TW.quake && (quakeT += DT) >= TW.quake.every) {                                    // earthquake
+        quakeT = 0; shake = 0.45; toast('Earthquake!'); sfx.hit();
+        const hq = DT / SUBSTEPS;
+        for (const b of bodies) if (!b.fly && !b.taken) {
+          b.px -= (Math.random() * 2 - 1) * TW.quake.power * hq; b.py -= (Math.random() * 1.6 - 0.4) * TW.quake.power * hq;
+        }
+      }
+      if (TW.rain && TW.rain.sec && (rainT += DT) >= TW.rain.sec) { rainT = 0; dropRain(); }
+      for (const g of gems) {          // stars: touched by any planet, even a shot flying past
+        if (g.got) continue;
+        if (bodies.some(b => !b.taken && Math.hypot(b.x - g.x, b.y - g.y) < TIERS[b.t].r * b.s + 12)) {
+          g.got = true; sparkle(g.x, g.y, 24, 220); sfx.merge(4); hud();
         }
       }
     }
@@ -2462,6 +2627,11 @@ canvas#c {
     face(g, r, {}, 'sparkle', '#fdf6ff');
     g.restore();
   }
+  function drawBumper(g, x, y, r, now) {
+    const pulse = reduceMotion ? 0 : Math.sin(now / 200) * 1.5;
+    blob(g, x, y, r + 3 + pulse, '#120d2e'); blob(g, x, y, r + pulse, '#ff7eb6'); blob(g, x, y, r * 0.68, '#ffd45e'); blob(g, x, y, r * 0.38, '#fdf6ff');
+    blob(g, x - r * 0.12, y - r * 0.05, r * 0.06, INK); blob(g, x + r * 0.12, y - r * 0.05, r * 0.06, INK);
+  }
   function drawUfo(g, u) {
     const tb = u.target;
     if (u.beam && tb && !tb.dead) {
@@ -2478,6 +2648,10 @@ canvas#c {
   }
   function draw(now, dt) {
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    if (shake > 0 && !reduceMotion) {               // earthquake shake
+      shake = Math.max(0, shake - dt);
+      ctx.translate((Math.random() - 0.5) * 10 * shake, (Math.random() - 0.5) * 10 * shake);
+    }
     sky(ctx, W, H, now);
     const bg = BGS[store.equip.bg] || BGS.night;
     if (mode !== 'sandbox') {
@@ -2503,9 +2677,23 @@ canvas#c {
         ctx.fillStyle = '#8d8aa3'; ctx.fillRect(o.x - 2, o.y - 2, o.w + 4, o.h + 2);
         ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(o.x, o.y, o.w, 3);
       }
-      for (const o of rocks) drawRock(ctx, o.x, o.y, o.r, 'snooze', false);
+      for (const o of rocks) {
+        if (o.bumper) drawBumper(ctx, o.x, o.y, o.r, now);
+        else drawRock(ctx, o.x, o.y, o.r, o.brk ? 'wow' : 'snooze', false);
+        if (o.brk) {                                // cracks on rocks that can be broken
+          ctx.strokeStyle = '#3a3550'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(o.x - o.r * 0.1, o.y - o.r * 0.95); ctx.lineTo(o.x + o.r * 0.12, o.y - o.r * 0.55); ctx.lineTo(o.x - o.r * 0.05, o.y - o.r * 0.38);
+          ctx.moveTo(o.x + o.r * 0.9, o.y + o.r * 0.2); ctx.lineTo(o.x + o.r * 0.55, o.y + o.r * 0.35); ctx.stroke();
+        }
+      }
+      for (const g of gems) if (!g.got) cuteStar(ctx, g.x, g.y + (reduceMotion ? 0 : Math.sin(now / 300 + g.x) * 3), 15, '#ffd45e');
+      if (pad > 0) {                               // walls closing in
+        ctx.fillStyle = '#55526e'; ctx.fillRect(0, 0, pad, H); ctx.fillRect(W - pad, 0, pad, H);
+        ctx.fillStyle = '#8d8aa3'; ctx.fillRect(pad - 4, 0, 4, H); ctx.fillRect(W - pad, 0, 4, H);
+      }
       if (boss) {
         if (boss.kind === 'hole') drawHole(ctx, boss.x, boss.y, boss.r, now, boss.flash > 0);
+        else if (boss.kind === 'ship') { ctx.save(); ctx.translate(boss.x, boss.y); ctx.scale(boss.r / 34, boss.r / 34); if (boss.flash > 0) ctx.globalAlpha = 0.6; drawUfo(ctx, { x: 0, y: 0, beam: false }); ctx.restore(); }
         else drawRock(ctx, boss.x, boss.y, boss.r, 'grumpy', boss.flash > 0);
         if (boss.hpMax) {
         const bw = 130, bx = boss.x - bw / 2, by = boss.y + boss.r + 12, k = clamp(boss.hp / boss.hpMax, 0, 1);
@@ -2517,7 +2705,7 @@ canvas#c {
     }
     const showLauncher = ready && !over && !hold;
     const T = TIERS[cur];
-    const lx = clamp(aimX, T.left, W - T.right), ly = launchY();
+    const lx = clamp(aimX, pad + T.left, W - pad - T.right), ly = launchY();
     if (showLauncher) {
       ctx.strokeStyle = bg.guide; ctx.lineWidth = 2;
       ctx.setLineDash([4, 9]);
@@ -2526,18 +2714,18 @@ canvas#c {
     ctx.setLineDash([]);
     for (const b of bodies) planet(ctx, b.x, b.y, b.t, b.s);
     for (const b of bodies) {          // timer planets: a pulsing ring and the shots left
-      if (!b.fuse || b.dead || b.taken) continue;
+      if (!b.fused || b.dead || b.taken) continue;
       const r = TIERS[b.t].r * b.s, pulse = reduceMotion ? 0 : Math.sin(now / 120) * 2;
       ctx.strokeStyle = b.fuse <= 2 ? '#ff3b5c' : '#ff7eb6'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(b.x, b.y, r + 4 + pulse, 0, TAU); ctx.stroke();
       const ty = b.y + r + 13;        // below the planet: planets rest against the back wall, so above would be off the board
       blob(ctx, b.x, ty, 12, '#120d2e'); blob(ctx, b.x, ty, 10, b.fuse <= 2 ? '#ff3b5c' : '#ff7eb6');
       ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "Trebuchet MS", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(String(b.fuse), b.x, ty + 1);
+      ctx.fillText(String(Math.max(0, b.fuse)), b.x, ty + 1);
     }
     if (showLauncher) planet(ctx, lx, ly, cur, 1);
 
-    if (ufo) drawUfo(ctx, ufo);
+    for (const u of ufos) if (u.t >= 0) drawUfo(ctx, u);
     for (const p of particles) {
       p.life += dt;
       const k = Math.min(1, p.life / p.max);
@@ -2803,7 +2991,7 @@ canvas#c {
     { id: 'merges', name: 'Merge machine', desc: 'Merge 500 times', coins: 100, icon: 'merge', bg: '#5a2a5e' },
     { id: 'games', name: 'Frequent flyer', desc: 'Finish 25 Classic games', coins: 80, icon: 'rocket', bg: '#1e3a6a' },
     { id: 'boss1', name: 'Rock breaker', desc: 'Beat the Grumpy asteroid in Adventure', coins: 150, icon: 'rock', bg: '#3a3460' },
-    { id: 'adv', name: 'Space explorer', desc: 'Clear all 20 Adventure levels', coins: 400, icon: 'flag', bg: '#1e4a5a' },
+    { id: 'adv', name: 'Space explorer', desc: 'Clear every Adventure level', coins: 400, icon: 'flag', bg: '#1e4a5a' },
     { id: 'abduct', name: 'Abducted!', desc: 'Watch the alien steal a planet', coins: 20, icon: 'ufo', bg: '#1e3a4a' },
     { id: 'buy', name: 'First purchase', desc: 'Buy anything in the shop', coins: 20, icon: 'bag', bg: '#5a2a4a' },
     { id: 'map', name: 'New horizons', desc: 'Unlock a new Classic map', coins: 50, icon: 'map', bg: '#2a4a5a' },
@@ -3159,7 +3347,7 @@ canvas#c {
       const nextLv = LEVELS.findIndex((lv, i) => !store.adv[i]);
       html += '<div><div class="pname">Adventure</div><div class="panel advbox"><div class="bar"><i style="width:' + Math.round(cleared / LEVELS.length * 100) + '%"></i></div>' +
         '<p class="ds">' + (nextLv < 0 ? 'Every level cleared!' : 'Next up: level ' + (nextLv + 1) + ' · ' + LEVELS[nextLv].name) + '</p>' +
-        '<div class="dots">' + LEVELS.map((lv, i) => '<span class="dot' + (store.adv[i] ? ' done' : '') + (lv.boss ? ' boss' : '') + '">' + (i + 1) + '</span>').join('') + '</div></div></div>';
+        '<div class="dots">' + LEVELS.map((lv, i) => '<span class="dot' + (store.adv[i] ? ' done' : '') + (isBoss(lv) ? ' boss' : '') + '">' + (i + 1) + '</span>').join('') + '</div></div></div>';
     } else {
       html += '<p class="shop-note">' + got + ' of ' + ACH.length + ' earned. Each one pays coins the first time.</p><div class="grid2">' + ACH.map(a => {
         const open = !!store.ach[a.id], hide = a.secret && !open;
@@ -3191,7 +3379,7 @@ canvas#c {
     let html = '<h2 id="sheetTitle">' + (where === 'sandbox' ? 'Sandbox settings' : 'Settings') + '</h2>';
     if (where === 'sandbox') {
       html += '<div class="sliders">' + SLIDERS.map(([key, label, lo, hi, stepSize]) =>
-        '<div><label for="sl_' + key + '">' + label + ' <output id="out_' + key + '"></output></label>' +
+        '<div><label for="sl_' + key + '">' + label + (DEV ? ' (' + key + ')' : '') + ' <output id="out_' + key + '"></output></label>' +
         '<input type="range" id="sl_' + key + '" min="1" max="10" step="1"></div>').join('') + '</div>' +
         '<p class="note">1 is the lowest, 10 the highest, 5 is normal.</p>' +
         '<div class="row2"><button class="btn ghost" id="optPhysics" type="button">Reset physics</button>' +
@@ -3296,10 +3484,11 @@ canvas#c {
   $('shopBack').addEventListener('click', goHome);
   $('btnGear').addEventListener('click', openSettings);
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { save(); if (audio.ctx) { try { audio.ctx.suspend(); } catch (e) {} } }
-    else if (audio.ctx) { try { audio.ctx.resume().catch(() => {}); } catch (e) {} }
+    if (document.hidden) { save(); quietAudio(); }
+    else wakeAudio();
   });
-  window.addEventListener('pagehide', save);
+  window.addEventListener('pagehide', () => { save(); quietAudio(); });
+  window.addEventListener('pageshow', () => { if (!document.hidden) wakeAudio(); });
 
   // ---------- Loop ----------
   let last = 0, acc = 0;
@@ -3331,7 +3520,7 @@ canvas#c {
     window.addEventListener('resize', refit);
     requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
     if (typeof window.__PS_TEST === 'function') {
-      window.__PS_TEST({ LEVELS, peekBodies: () => bodies.map(b => ({ x: b.x, y: b.y, t: b.t, fly: b.fly, fuse: b.fuse || 0 })), peekCur: () => cur, badge, ACH, MAPS, TRACKS, songPlan, loopSeconds, audio, audioWake, setTrack, scheduleBar, enterGame, enterLevel, openAdventure, openMaps, openProfile, playMap, award, profTab(t) { profTab = t; renderProfile(); }, step, openSettings, openShop, shopTap, store, start() { hideCard(); hold = false; }, peek: () => ({ over, hold, made: made.slice(), shotsLeft, timeLeft, bossHp: boss && boss.hp, done: store.adv.slice(), title: ($('overCard').querySelector('h2') || {}).textContent }), tab(t) { shopTab = t; renderShop(); }, shoot(x) { aimX = x; launch(); }, get: () => ({ score, over, n: bodies.length, best: bestOf(curMap), map: curMap }) });
+      window.__PS_TEST({ armTimer: n => { const b = bodies.filter(p => !p.fly && !p.taken && p.t === 0).sort((p, q) => q.y - p.y)[0]; if (!b) return null; b.fused = true; b.fuse = n; return { x: b.x, y: b.y }; }, setCur: t => { cur = t; ready = true; }, peekGems: () => gems.filter(g => !g.got).map(g => ({ x: g.x, y: g.y })), peekRocks: () => rocks.filter(o => o.brk).map(o => ({ x: o.x, y: o.y, r: o.r })), LEVELS, quietAudio, wakeAudio, toastText: () => $('toast').textContent, toastOn: () => $('toast').classList.contains('go'), toast, peekBodies: () => bodies.map(b => ({ x: b.x, y: b.y, t: b.t, fly: b.fly, fuse: b.fused ? Math.max(0, b.fuse) + 1 : 0 })), peekCur: () => cur, badge, ACH, MAPS, TRACKS, songPlan, loopSeconds, audio, audioWake, setTrack, scheduleBar, enterGame, enterLevel, openAdventure, openMaps, openProfile, playMap, award, profTab(t) { profTab = t; renderProfile(); }, step, openSettings, openShop, shopTap, store, start() { hideCard(); hold = false; }, peek: () => ({ over, hold, made: made.slice(), shotsLeft, timeLeft, bossHp: boss && boss.hp, done: store.adv.slice(), title: ($('overCard').querySelector('h2') || {}).textContent }), tab(t) { shopTab = t; renderShop(); }, shoot(x) { aimX = x; launch(); }, get: () => ({ score, over, n: bodies.length, best: bestOf(curMap), map: curMap }) });
     }
   }
 
