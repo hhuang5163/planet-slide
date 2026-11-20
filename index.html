@@ -357,6 +357,16 @@ canvas#c {
 .grid2 .card .nm { font-size: 13px; }
 .card .st { font-family: var(--display); font-size: 12px; color: var(--sun); white-space: nowrap; }
 .card.on .st { color: var(--star); }
+.card.ltd { position: relative; }
+.card.ltd::after { content: 'Limited'; position: absolute; top: -7px; right: -5px; background: #e8394a; color: #fff; font: 700 9px var(--body); padding: 2px 5px; border-radius: 8px; border: 2px solid var(--ink); }
+.ltd-tag { background: #e8394a; color: #fff; font: 700 10px var(--body); padding: 1px 6px; border-radius: 8px; vertical-align: 2px; }
+.holiday-box { background: linear-gradient(#2f6b3a, #1f4d2a); border: 3px solid var(--ink); border-radius: 18px; padding: 10px 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.holiday-box .pname { color: #ffe9a8; }
+.holiday-box .card.ltd::after { display: none; }
+.card .nm .pl { display: block; font-size: 10px; color: #b9f0c4; font-weight: 500; }
+.card.on .nm .pl { color: var(--star); }   /* everything in here is limited already */
+.holiday-box .shop-note { color: #e6ffe9; margin: 0; }
+.btn.holiday-pill { background: #2f8a45; color: #fff; font-size: 14px; padding: 9px 14px; }
 .card .st.warn { color: var(--pink); }
 .track { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; padding: 10px 12px 12px; }
 .track .nm { font-family: var(--display); font-size: 15px; }
@@ -431,8 +441,9 @@ canvas#c {
         <button class="btn blue" id="btnShop" type="button">Shop</button>
       </div>
       <button class="btn ghost" id="btnHomeSettings" type="button">Settings</button>
+      <button class="btn holiday-pill" id="btnHoliday" type="button" hidden>Holiday shop · open until Dec 26</button>
     </div>
-    <div class="ver">Version 1.17</div>
+    <div class="ver">Version 1.21</div>
   </div>
 </section>
 
@@ -580,7 +591,10 @@ canvas#c {
   let RELOAD = 0.45;             // seconds before the next planet is ready
   const LAUNCH_Y = 62;           // launcher distance from the near edge
   const LINE_Y = 128;            // "full" line distance from the near edge
-  const lineH = () => (TW && TW.line) || LINE_Y;   // a level can raise the line
+  const SHOT_BEND = 1.2, SHOT_DRIFT = 0.3;   // how strongly gravity and wind curve a shot in flight
+  let riseNow = 0;               // how far a rising danger line has crept up so far
+  let quakeLeft = 0;             // seconds of earthquake still to go (the board tips towards you)
+  const lineH = () => ((TW && TW.line) || LINE_Y) + riseNow;   // a level can raise the line, or make it creep up
   let OVER_STILL = 0.8;          // a planet that sits past the line WITHOUT MOVING for this long ends the game
   const STILL_RADIUS = 3;        // "without moving" = it has stayed within this many units of one spot
   const SPAWN_WEIGHTS = [48, 30, 16, 6];  // classic hands out the four smallest planets, small ones far more often
@@ -625,7 +639,7 @@ canvas#c {
   const freshStats = () => ({ made: TIERS.map(() => 0), merges: 0, novas: 0, games: 0, eaten: 0, heard: {} });
   const store = {
     map: 'open', bests: {}, runs: {},       // classic: chosen map, high score per map, game in progress per map
-    opts: { music: true, sfx: true }, sand: { ...DEFAULTS },
+    opts: { music: true, sfx: true, holiday: true }, sand: { ...DEFAULTS },
     coins: 0, owned: {}, adv: [], ach: {}, stats: freshStats(),
     equip: { skins: TIERS.map(() => 'classic'), faces: TIERS.map(() => 'classic'), bg: 'night', track: 'sunny' }
   };
@@ -637,6 +651,7 @@ canvas#c {
   let TW = null;                 // the twists in play: an adventure level or a classic map (rocks, walls, wind, alien, black hole)
   let curMap = 'open';
   let made = [], shotsLeft = 0, shotCount = 0, lastShot = 0, timeLeft = 0, shownSec = -1;
+  let idleT = 0, smashed = 0;   // smashed: icy planets broken this level                 // seconds the launcher has sat loaded; levels with autoFire shoot for you when it runs out
   let rocks = [], bars = [], boss = null, ufos = [];
   let gems = [], pad = 0, quakeT = 0, rainT = 0, shake = 0;   // stars to collect, wall squeeze, earthquake/rain timers
   let P = { ...DEFAULTS };       // physics in use right now
@@ -709,7 +724,7 @@ canvas#c {
       for (const k of ['merges', 'novas', 'games', 'eaten']) store.stats[k] = Math.max(0, st[k] | 0);
       if (st.heard && typeof st.heard === 'object') for (const k in st.heard) if (TRACKS[k]) store.stats.heard[k] = 1;
     }
-    if (saved.opts) { store.opts.music = saved.opts.music !== false; store.opts.sfx = saved.opts.sfx !== false; }
+    if (saved.opts) { store.opts.music = saved.opts.music !== false; store.opts.sfx = saved.opts.sfx !== false; store.opts.holiday = saved.opts.holiday !== false; }
     if (saved.sand) for (const [key, , lo, hi] of SLIDERS) {
       if (Number.isFinite(saved.sand[key])) store.sand[key] = clamp(saved.sand[key], lo, hi);
     }
@@ -943,6 +958,37 @@ canvas#c {
         { bass: 41, pad: [], tune: [84, 81, 77, 81, 86, 84, 81, 77] }]
     }
   };
+  TRACKS.sleigh = {      // holiday only: an original jolly tune in F with sleigh bells
+    name: 'Snowy sleigh', desc: 'Jolly and jingly, for the holidays', price: 300, limited: true, bpm: 108, echo: 0.18, twinkle: 0.12, jingle: 0.05,
+    pad: { mode: 'stab', vol: 0.035, decay: 0.22 }, bass: { beats: [0, 1, 2, 3], len: 0.5, vol: 0.085, alt: 7 },
+    arp: { type: 'triangle', mode: 'tune', decay: 0.4, vol: 0.085 },
+    sections: { B: [
+      { bass: 46, pad: [58, 62, 65], tune: [86, 0, 84, 0, 82, 0, 81, 0] },
+      { bass: 41, pad: [57, 60, 65], tune: [84, 0, 81, 0, 77, 0, 72, 0] },
+      { bass: 43, pad: [58, 62, 67], tune: [79, 0, 82, 0, 86, 84, 82, 0] },
+      { bass: 48, pad: [55, 58, 64], tune: [84, 0, 0, 0, 79, 0, 76, 0] }] },
+    form: [['A', 'full'], ['B', 'full'], ['A', 'up'], ['B', 'sparse']],
+    chords: [
+      { bass: 41, pad: [57, 60, 65], tune: [77, 81, 84, 0, 81, 0, 77, 0] },
+      { bass: 46, pad: [58, 62, 65], tune: [82, 0, 86, 0, 82, 81, 79, 0] },
+      { bass: 48, pad: [55, 58, 64], tune: [79, 0, 76, 79, 84, 0, 79, 0] },
+      { bass: 41, pad: [57, 60, 65], tune: [81, 0, 77, 0, 72, 0, 0, 0] },
+      { bass: 50, pad: [57, 62, 65], tune: [74, 77, 81, 0, 86, 0, 81, 0] },
+      { bass: 43, pad: [58, 62, 67], tune: [79, 82, 86, 0, 82, 0, 79, 0] },
+      { bass: 48, pad: [55, 58, 64], tune: [76, 79, 84, 0, 82, 0, 79, 76] },
+      { bass: 41, pad: [57, 60, 65], tune: [77, 0, 0, 0, 84, 0, 77, 0] }]
+  };
+  function jingle(dest, t, vol) {       // a sleigh-bell shake: a burst of bright noise
+    const c = audio.ctx;
+    if (!audio.noise) {
+      audio.noise = c.createBuffer(1, Math.floor(c.sampleRate * 0.12), c.sampleRate);
+      const d = audio.noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const src = c.createBufferSource(), hp = c.createBiquadFilter(), g = c.createGain();
+    src.buffer = audio.noise; hp.type = 'highpass'; hp.frequency.value = 6500;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+    src.connect(hp); hp.connect(g); g.connect(dest); src.start(t); src.stop(t + 0.12);
+  }
   const UPDOWN = [0, 1, 2, 3, 4, 3, 2, 1];
   // A tune plays as a song: its sections in the order given by `form`, each with a style.
   //  full: as written. up: melody an octave higher and lighter. answer: melody played backwards.
@@ -996,6 +1042,7 @@ canvas#c {
       g.connect(echo);
       if (Math.random() < tr.twinkle) note(echo, 'sine', hz(m + 12), when + beat / 4, 0.01, 0.9, 0.03);
     }
+    if (tr.jingle && style !== 'break') for (let i = 0; i < 8; i++) jingle(dry, t + i * beat / 2, tr.jingle * (i % 4 === 2 ? 1 : i % 2 ? 0.35 : 0.6));
     return bar;
   }
   function setTrack(id) {
@@ -1062,6 +1109,10 @@ canvas#c {
       const now = audio.ctx.currentTime, f = hz(60 + PENTA[clamp(t, 0, 9)]);
       note(audio.sfx, 'sine', f * 0.6, now, 0.01, 0.22, 0.22, f);
       note(audio.sfx, 'triangle', f * 2, now + 0.05, 0.005, 0.18, 0.06);
+      if (mode !== 'sandbox' && holidayLook()) {     // a little sleigh-bell ding on top
+        note(audio.sfx, 'sine', f * 4, now + 0.03, 0.003, 0.45, 0.03);
+        note(audio.sfx, 'sine', f * 4 * 2.76, now + 0.03, 0.002, 0.25, 0.01);
+      }
     },
     sun() {         // a little fanfare
       if (!this.ok()) return;
@@ -1118,6 +1169,7 @@ canvas#c {
     let pic = '';
     if (mode === 'adventure' && L) {
       if (L.goal.survive) { label = 'Goal: survive'; text = Math.max(0, Math.ceil(timeLeft)) + 's left'; }
+      else if (L.goal.smash) { label = 'Goal: smash ice'; text = Math.min(smashed, L.goal.smash) + '/' + L.goal.smash; }
       else if (L.goal.stars) { label = 'Goal: stars'; text = gems.filter(g => g.got).length + '/' + gems.length; }
       else if (L.goal.breakRocks) { const n = breakTotal(L); label = 'Goal: break rocks'; text = (n - rocks.filter(o => o.brk).length) + '/' + n; }
       else if (boss && boss.hpMax) { label = 'Goal: beat boss'; text = 'HP ' + Math.max(0, Math.ceil(boss.hp)); }
@@ -1181,14 +1233,14 @@ canvas#c {
     buildMenu();
   });
 
-  function clearBoardExtras() { rocks = []; bars = []; boss = null; ufos = []; gems = []; pad = 0; hold = false; TW = null; }
+  function clearBoardExtras() { rocks = []; bars = []; boss = null; ufos = []; gems = []; pad = 0; riseNow = 0; quakeLeft = 0; hold = false; TW = null; }
   // Builds the rocks, walls and black hole of an adventure level or a classic map. y is a fraction of the board height.
   function setupTwists(cfg) {
     TW = cfg && Object.keys(cfg).length ? cfg : null;
-    rocks = ((cfg && cfg.rocks) || []).map(o => ({ x0: o.x, x: o.x, y: o.y * H, r: o.r, sway: o.sway || 0, speed: o.speed || 0, brk: !!o.brk, bumper: !!o.bumper }));
+    rocks = ((cfg && cfg.rocks) || []).map(o => ({ x0: o.x, x: o.x, y: o.y * H + (o.dy || 0), r: o.r, sway: o.sway || 0, speed: o.speed || 0, brk: !!o.brk, bumper: !!o.bumper, star: !!o.star }));
     gems = ((cfg && cfg.stars) || []).map(([x, y]) => ({ x, y: y * H, got: false }));
-    pad = 0; quakeT = 0; rainT = 0; shake = 0;
-    bars = ((cfg && cfg.bars) || []).map(o => ({ x: o.x, y: o.y * H, w: o.w, h: o.h }));
+    pad = 0; quakeT = 0; rainT = 0; shake = 0; riseNow = 0; quakeLeft = 0;
+    bars = ((cfg && cfg.bars) || []).map(o => ({ x: o.x, y: o.y * H + (o.dy || 0), w: o.w, h: o.h, trunk: !!o.trunk }));
     boss = cfg && cfg.boss ? { ...cfg.boss, x: W / 2, y: cfg.boss.y * H, hpMax: cfg.boss.hp || 0, flash: 0 } : null;
     ufos = []; shotCount = 0; lastShot = 0; fuseNext = 3;
   }
@@ -1250,6 +1302,7 @@ canvas#c {
     $('homeCoins').textContent = fmt(store.coins);
     const av = $('avatar');
     if (av && sprites[4]) av.src = sprites[4].url;
+    $('btnHoliday').hidden = !holidayLook();
   }
 
   // ---------- Adventure ----------
@@ -1286,52 +1339,52 @@ canvas#c {
     { name: 'The wall', goal: { make: 5, count: 1 }, bars: [{ x: 0, y: 0.44, w: 220, h: 16 }], tip: 'Only one way through.' },
     { name: 'Grumpy asteroid', goal: { boss: true }, boss: { kind: 'rock', hp: 60, r: 56, y: 0.17, toss: 4 }, tip: 'Every merge hurts the boss, and bigger merges hurt more. It throws a Pluto now and then.' },
     { name: 'Handle with care', goal: { score: 350 }, cap: 4, tip: 'Earths will not merge here. They just pile up, so leave room for them.' },
-    { name: 'Count your shots', goal: { make: 5, count: 1 }, shots: 60, tip: 'Make a Neptune before your shots run out.' },
-    { name: 'Beat the clock', goal: { score: 500 }, time: 100, tip: 'Score fast. The clock does not wait.' },
+    { name: 'Count your shots', goal: { make: 5, count: 1 }, shots: 40, tip: 'Make a Neptune before your shots run out.' },
+    { name: 'Beat the clock', goal: { score: 500 }, time: 95, tip: 'Score fast. The clock does not wait.' },
     { name: 'Tick tock', goal: { make: 5, count: 1 }, fuse: { tiers: [0, 1], shots: 9, every: 10 }, tip: 'Now and then a planet gets a timer that counts down with every shot. Merge it before it runs out.' },
-    { name: 'Low ceiling', goal: { make: 5, count: 1 }, time: 130, line: 235, rocks: [{ x: 180, y: 0.36, r: 22, sway: 90, speed: 0.6 }], tip: 'The danger line is much higher, so there is far less room.' },
-    { name: 'Greedy alien', goal: { score: 500 }, shots: 120, alien: { every: 11, target: 'big' }, tip: 'This alien always takes your biggest planet. Keep scoring anyway.' },
-    { name: 'Hungry storm', goal: { make: 5, count: 1 }, time: 170, wind: { a: 380, period: 7 }, alien: { every: 14, target: 'big' }, tip: 'Wind, and an alien that takes your biggest planet.' },
-    { name: 'Meteor shower', goal: { make: 5, count: 1 }, meteors: { every: 8, r: 18 }, tip: 'Every 8 shots a space rock lands somewhere in the upper part of the board and stays. Room runs out, so be quick.' },
+    { name: 'Low ceiling', goal: { make: 6, count: 1 }, time: 120, line: 235, rocks: [{ x: 180, y: 0.36, r: 22, sway: 90, speed: 0.6 }], tip: 'The danger line is much higher, so there is far less room.' },
+    { name: 'Greedy alien', goal: { score: 500 }, shots: 95, alien: { every: 11, target: 'big' }, tip: 'This alien always takes your biggest planet. Keep scoring anyway.' },
+    { name: 'Hungry storm', goal: { make: 5, count: 2 }, time: 90, wind: { a: 380, period: 7 }, alien: { every: 14, target: 'big' }, tip: 'Wind, and an alien that takes your biggest planet.' },
+    { name: 'Meteor shower', goal: { make: 5, count: 2 }, meteors: { every: 8, r: 18 }, tip: 'Every 8 shots a space rock lands somewhere in the upper part of the board and stays. Room runs out, so be quick.' },
     { name: 'Bomb squad', goal: { score: 450 }, shots: 130, line: 140, fuse: { tiers: [0, 1], shots: 12, every: 12 }, tip: 'Timers keep coming and there is less room to work in.' },
     { name: 'Black hole', goal: { boss: true }, shots: 130, boss: { kind: 'hole', hp: 175, r: 46, y: 0.2, eat: 5, heal: 5, g: 520, target: 'big' }, tip: 'It pulls planets in and swallows your biggest one every few shots, which heals it.' },
     // 21-30: new tricks, one at a time, then a moving boss
-    { name: 'Star catcher', goal: { stars: true }, shots: 40, stars: [[60, 0.3], [180, 0.22], [300, 0.3], [110, 0.46], [250, 0.46]], tip: 'Touch every star with a planet. A shot flying past a star collects it too.' },
-    { name: 'Demolition', goal: { breakRocks: true }, shots: 70, rocks: [{ x: 90, y: 0.32, r: 22, brk: 1 }, { x: 270, y: 0.32, r: 22, brk: 1 }, { x: 180, y: 0.48, r: 22, brk: 1 }], tip: 'Cracked rocks break when two planets merge right next to them.' },
-    { name: 'Orbit', goal: { make: 6, count: 1 }, time: 150, gravity: 150, tip: 'Planets pull on each other here, and bigger planets pull harder.' },
-    { name: 'Hold the line', goal: { survive: true }, time: 60, rain: { sec: 3, count: 2, tiers: [0, 1, 2] }, tip: 'Planets fall in every few seconds. Keep merging to make room until the clock runs out.' },
-    { name: 'Mystery box', goal: { make: 6, count: 1 }, shots: 85, hideNext: true, tip: 'You can’t see which planet comes next.' },
-    { name: 'Squeeze', goal: { make: 5, count: 1 }, time: 120, squeeze: { rate: 0.25, max: 55 }, tip: 'The side walls slowly close in.' },
-    { name: 'Alien fleet', goal: { score: 500 }, shots: 120, fleet: { every: 14, count: 3 }, tip: 'Every 14 shots, three aliens each grab a random planet at once.' },
-    { name: 'Earthquake', goal: { make: 6, count: 1 }, time: 150, quake: { every: 7, power: 260 }, tip: 'Every few seconds the board shakes everything around.' },
-    { name: 'Pinball', goal: { score: 450 }, shots: 110, rocks: [{ x: 100, y: 0.35, r: 20, bumper: 1 }, { x: 260, y: 0.35, r: 20, bumper: 1 }, { x: 180, y: 0.52, r: 20, bumper: 1 }], tip: 'Bumpers bounce planets away hard.' },
-    { name: 'Comet king', goal: { boss: true }, shots: 130, boss: { kind: 'rock', hp: 180, r: 50, y: 0.18, toss: 5, sway: 90, speed: 0.7 }, tip: 'It moves side to side and throws Plutos. Every merge hurts it.' },
+    { name: 'Star catcher', goal: { stars: true }, shots: 58, stars: [[60, 0.18], [180, 0.14], [300, 0.18], [110, 0.32], [250, 0.32]], tip: 'Build your planets up towards the stars, then merge two right on top of one.' },
+    { name: 'Demolition', goal: { breakRocks: true }, shots: 72, rocks: [{ x: 90, y: 0.32, r: 22, brk: 1 }, { x: 270, y: 0.32, r: 22, brk: 1 }, { x: 180, y: 0.48, r: 22, brk: 1 }], tip: 'Cracked rocks break when two planets merge right next to them.' },
+    { name: 'Orbit', goal: { make: 7, count: 1 }, time: 135, gravity: 150, tip: 'Planets pull on each other here, and bigger planets pull harder. Your shots curve towards big planets too.' },
+    { name: 'Hold the line', goal: { smash: 8 }, autoFire: 2.5, rain: { sec: 3, count: 2, tiers: [0, 1, 2], ice: true }, tip: 'Aim matching planets at the icy ones. Smash eight before the sky fills up.' },
+    { name: 'Mystery box', goal: { make: 6, count: 1 }, shots: 66, hideNext: true, tip: 'You can’t see which planet comes next.' },
+    { name: 'Squeeze', goal: { make: 6, count: 1 }, time: 85, squeeze: { rate: 0.25, max: 55 }, tip: 'The side walls slowly close in.' },
+    { name: 'Alien fleet', goal: { score: 500 }, shots: 100, fleet: { every: 14, count: 3 }, tip: 'Every 14 shots, three aliens each grab a random planet at once.' },
+    { name: 'Earthquake', goal: { make: 7, count: 1 }, time: 120, quake: { every: 9, dur: 0.7 }, tip: 'Every few seconds an earthquake tips the board towards you. Everything slides down, nothing can merge while it shakes, and your planets come back in a new order.' },
+    { name: 'Pinball', goal: { score: 450 }, shots: 88, rocks: [{ x: 100, y: 0.35, r: 20, bumper: 1 }, { x: 260, y: 0.35, r: 20, bumper: 1 }, { x: 180, y: 0.52, r: 20, bumper: 1 }], tip: 'Bumpers bounce planets away hard.' },
+    { name: 'Comet king', goal: { boss: true }, shots: 130, boss: { kind: 'rock', hp: 300, r: 50, y: 0.18, toss: 5, sway: 90, speed: 0.7 }, tip: 'It moves side to side and throws Plutos. Every merge hurts it.' },
     // 31-40: tricks combine, then the mothership
-    { name: 'Star field', goal: { stars: true }, shots: 55, meteors: { every: 9, r: 16 }, stars: [[50, 0.24], [140, 0.2], [230, 0.2], [310, 0.26], [90, 0.44], [270, 0.44], [180, 0.36]], tip: 'Seven stars, and rocks keep landing between them.' },
-    { name: 'Gravity well', goal: { make: 6, count: 1 }, shots: 180, gravity: 220, alien: { every: 20, target: 'big' }, tip: 'Strong pull between planets, and an alien after your biggest one.' },
+    { name: 'Star field', goal: { stars: true }, shots: 80, meteors: { every: 9, r: 16 }, stars: [[50, 0.2], [140, 0.16], [230, 0.16], [310, 0.22], [90, 0.38], [270, 0.38], [180, 0.3]], tip: 'Seven stars, and rocks keep landing between them. Planets that catch on a rock can merge right there.' },
+    { name: 'Gravity well', goal: { make: 6, count: 1 }, shots: 100, gravity: 220, alien: { every: 20, target: 'big' }, tip: 'Strong pull between planets, and an alien after your biggest one.' },
     { name: 'Chain reaction', goal: { make: 6, count: 1 }, shots: 4, spawn: [100],
       start: [[4, 130, 43], [3, 130, 123], [2, 130, 189], [1, 130, 242], [0, 130, 284], [4, 230, 43], [3, 230, 123], [2, 230, 189], [1, 230, 242], [0, 230, 284]],
       tip: 'Each column is a chain, and the two finished chains will meet. You only have 4 Plutos.' },
-    { name: 'Ticking squeeze', goal: { score: 500 }, shots: 110, fuse: { tiers: [0], shots: 14, every: 15 }, squeeze: { rate: 0.2, max: 45 }, tip: 'Timers, and walls closing in.' },
-    { name: 'Storm front', goal: { survive: true }, time: 75, rain: { sec: 2.2, count: 2, tiers: [0, 1, 2, 3] }, wind: { a: 380, period: 7 }, tip: 'Planets keep falling and the wind keeps blowing. Hang on.' },
-    { name: 'Wandering hole', goal: { make: 6, count: 1 }, shots: 95, boss: { kind: 'hole', r: 40, y: 0.22, eat: 8, g: 450, sway: 110, speed: 0.5 }, tip: 'A black hole drifts back and forth, pulling planets in.' },
-    { name: 'Demolition crew', goal: { breakRocks: true }, shots: 90, quake: { every: 8, power: 240 },
+    { name: 'Ticking squeeze', goal: { score: 500 }, shots: 105, fuse: { tiers: [0], shots: 14, every: 15 }, squeeze: { rate: 0.2, max: 45 }, tip: 'Timers, and walls closing in.' },
+    { name: 'Storm front', goal: { smash: 10 }, autoFire: 2.3, rain: { sec: 2.8, count: 2, tiers: [0, 1, 2], ice: true }, wind: { a: 380, period: 7 }, tip: 'Icy planets in the wind. Smash them before the sky fills up.' },
+    { name: 'Wandering hole', goal: { make: 6, count: 1 }, shots: 76, boss: { kind: 'hole', r: 40, y: 0.22, eat: 8, g: 450, sway: 110, speed: 0.5 }, tip: 'A black hole drifts back and forth, pulling planets in.' },
+    { name: 'Demolition crew', goal: { breakRocks: true }, shots: 70, quake: { every: 9, dur: 0.8 },
       rocks: [{ x: 70, y: 0.3, r: 20, brk: 1 }, { x: 180, y: 0.24, r: 20, brk: 1 }, { x: 290, y: 0.3, r: 20, brk: 1 }, { x: 120, y: 0.5, r: 20, brk: 1 }, { x: 240, y: 0.5, r: 20, brk: 1 }], tip: 'Five cracked rocks, and the ground keeps shaking.' },
-    { name: 'Alien armada', goal: { score: 600 }, shots: 140, fleet: { every: 16, count: 4 }, tip: 'Four aliens at a time now.' },
-    { name: 'Blind ceiling', goal: { make: 6, count: 1 }, time: 170, hideNext: true, line: 190, meteors: { every: 14, r: 16 }, tip: 'Less room, no peeking, and falling rocks.' },
-    { name: 'Mothership', goal: { boss: true }, shots: 140, boss: { kind: 'ship', hp: 220, r: 46, y: 0.17, fleet: { every: 8, count: 2 }, sway: 80, speed: 0.6 }, tip: 'It drifts overhead and sends aliens after your planets.' },
+    { name: 'Alien armada', goal: { score: 600 }, shots: 124, fleet: { every: 16, count: 4 }, tip: 'Four aliens at a time now.' },
+    { name: 'Blind ceiling', goal: { make: 6, count: 1 }, time: 130, hideNext: true, line: 190, meteors: { every: 14, r: 16 }, tip: 'Less room, no peeking, and falling rocks.' },
+    { name: 'Mothership', goal: { boss: true }, shots: 96, boss: { kind: 'ship', hp: 220, r: 46, y: 0.17, fleet: { every: 8, count: 2 }, sway: 80, speed: 0.6 }, tip: 'It drifts overhead and sends aliens after your planets.' },
     // 41-50: everything at once, then the Big Bang
-    { name: 'Starstorm', goal: { stars: true }, shots: 60, wind: { a: 380, period: 6 }, quake: { every: 9, power: 220 },
-      stars: [[45, 0.22], [130, 0.2], [230, 0.2], [315, 0.22], [80, 0.4], [180, 0.34], [280, 0.4], [180, 0.52]], tip: 'Eight stars in the wind, with the ground shaking.' },
-    { name: 'Heavy gravity', goal: { make: 7, count: 1 }, time: 160, gravity: 300, rocks: [{ x: 90, y: 0.45, r: 18, bumper: 1 }, { x: 270, y: 0.45, r: 18, bumper: 1 }], tip: 'Very strong pull between planets. Bumpers fling them apart.' },
-    { name: 'Pressure', goal: { score: 650 }, shots: 120, squeeze: { rate: 0.25, max: 40 }, fuse: { tiers: [0], shots: 14, every: 15 }, tip: 'Walls close in while timers tick.' },
-    { name: 'Last stand', goal: { survive: true }, time: 80, rain: { sec: 3.5, count: 2, tiers: [0, 1, 2] }, meteors: { every: 14, r: 16 }, tip: 'Survive the rain while rocks pile up.' },
-    { name: 'Orbit storm', goal: { make: 7, count: 1 }, time: 260, gravity: 180, fleet: { every: 18, count: 2 }, wind: { a: 360, period: 7 }, tip: 'Gravity, wind and an alien fleet.' },
-    { name: 'Gauntlet', goal: { score: 480 }, shots: 140, fuse: { tiers: [0], shots: 15, every: 17 }, meteors: { every: 20, r: 15 }, tip: 'Timers and meteors together.' },
-    { name: 'Lights out', goal: { make: 6, count: 1 }, shots: 170, hideNext: true, line: 190, alien: { every: 16, target: 'big' }, tip: 'No peeking, less room, and a greedy alien.' },
-    { name: 'Wrecking ball', goal: { breakRocks: true }, shots: 120, squeeze: { rate: 0.2, max: 30 },
+    { name: 'Starstorm', goal: { stars: true }, shots: 86, wind: { a: 380, period: 6 }, quake: { every: 10, dur: 0.9 },
+      stars: [[45, 0.18], [130, 0.15], [230, 0.15], [315, 0.18], [80, 0.34], [180, 0.28], [280, 0.34], [180, 0.44]], tip: 'Eight stars. The wind bends your shots and the ground keeps shaking.' },
+    { name: 'Heavy gravity', goal: { make: 7, count: 1 }, time: 112, gravity: 300, rocks: [{ x: 90, y: 0.45, r: 18, bumper: 1 }, { x: 270, y: 0.45, r: 18, bumper: 1 }], tip: 'Very strong pull between planets. Bumpers fling them apart.' },
+    { name: 'Pressure', goal: { score: 650 }, shots: 130, squeeze: { rate: 0.25, max: 40 }, fuse: { tiers: [0], shots: 18, every: 20 }, tip: 'Walls close in while timers tick.' },
+    { name: 'Last stand', goal: { smash: 12 }, autoFire: 2.1, rain: { sec: 3, count: 2, tiers: [0, 1, 2], ice: true }, meteors: { every: 15, r: 16 }, tip: 'Icy planets fall while space rocks pile up.' },
+    { name: 'Orbit storm', goal: { make: 7, count: 1 }, time: 200, gravity: 180, fleet: { every: 18, count: 2 }, wind: { a: 360, period: 7 }, tip: 'Gravity, wind and an alien fleet.' },
+    { name: 'Gauntlet', goal: { score: 480 }, shots: 120, fuse: { tiers: [0], shots: 15, every: 17 }, meteors: { every: 20, r: 15 }, tip: 'Timers and meteors together.' },
+    { name: 'Lights out', goal: { make: 6, count: 1 }, shots: 125, hideNext: true, line: 190, alien: { every: 16, target: 'big' }, tip: 'No peeking, less room, and a greedy alien.' },
+    { name: 'Wrecking ball', goal: { breakRocks: true }, shots: 110, squeeze: { rate: 0.2, max: 28 },
       rocks: [{ x: 90, y: 0.28, r: 20, brk: 1 }, { x: 270, y: 0.28, r: 20, brk: 1 }, { x: 180, y: 0.4, r: 18, bumper: 1 }, { x: 110, y: 0.52, r: 20, brk: 1 }, { x: 250, y: 0.52, r: 20, brk: 1 }, { x: 180, y: 0.22, r: 20, brk: 1 }], tip: 'Break five rocks around a bumper while the walls close in.' },
-    { name: 'Aftershock', goal: { survive: true }, time: 100, quake: { every: 6, power: 260 }, rain: { sec: 3, count: 2, tiers: [0, 1, 2] }, tip: 'Constant earthquakes and falling planets. Survive.' },
+    { name: 'Aftershock', goal: { smash: 10 }, autoFire: 2, quake: { every: 10, dur: 1 }, rain: { sec: 3, count: 2, tiers: [0, 1, 2, 3], ice: true }, tip: 'Icy planets, Venuses too, and earthquakes. Smash your way out.' },
     { name: 'Big Bang', goal: { make: 9, count: 1 }, big: true, time: 330, spawn: [0, 20, 40, 40], gravity: 260, line: 80, tip: 'The finale. You get bigger planets, they pull together, and there is extra room. Build all the way up to the Sun.' }
   ];
   const reward = i => (30 + 10 * (i + 1)) * (LEVELS[i].boss && LEVELS[i].boss.hp || LEVELS[i].big ? 2 : 1);
@@ -1349,6 +1402,10 @@ canvas#c {
     wind:  { name: 'Solar wind', price: 700, desc: 'The wind swaps sides every few seconds.', cfg: { wind: { a: 430, period: 7 } } },
     alien: { name: 'Alien visitors', price: 800, desc: 'Every 20 shots an alien takes one planet.', cfg: { alien: 20 } },
     hole:  { name: 'Black hole', price: 1000, desc: 'It pulls planets in and swallows one every 14 shots.', cfg: { boss: { kind: 'hole', r: 46, y: 0.2, eat: 14, g: 520 } } },
+    xmas:  { name: 'Christmas tree', price: 600, limited: true, desc: 'A snowy tree in the middle and snow falling all game. Holiday only.',
+             cfg: { tree: true, snow: true,      // tiers of branches, top to bottom; dy is an exact offset so they always stack
+                    bars: [{ x: 148, y: 0.3, dy: 0, w: 64, h: 28 }, { x: 122, y: 0.3, dy: 28, w: 116, h: 28 }, { x: 96, y: 0.3, dy: 56, w: 168, h: 28 }, { x: 166, y: 0.3, dy: 84, w: 28, h: 20, trunk: 1 }],
+                    rocks: [{ x: 180, y: 0.3, dy: -17, r: 16, star: 1 }] } },
     storm: { name: 'Asteroid storm', price: 1500, desc: 'Two swinging rocks and an alien. Good luck!',
              cfg: { rocks: [{ x: 110, y: 0.34, r: 24, sway: 70, speed: 1.1 }, { x: 250, y: 0.52, r: 24, sway: 70, speed: 0.8 }], alien: 8 } }
   };
@@ -1356,7 +1413,7 @@ canvas#c {
     showScreen('maps');
     over = true;
     $('mapsCoins').textContent = fmt(store.coins);
-    $('mapList').innerHTML = Object.keys(MAPS).map(id => {
+    $('mapList').innerHTML = Object.keys(MAPS).filter(id => showInShop('map:' + id)).map(id => {
       const m = MAPS[id], have = owned('map:' + id), run = store.runs[id];
       const line = have ? (run ? 'Continue · ' + fmt(run.score | 0) + ' points' : 'Best ' + fmt(bestOf(id))) : '<i class="coin"></i>' + fmt(m.price) + ' in the shop';
       return '<button type="button" class="card' + (have ? '' : ' locked') + (id === store.map ? ' on' : '') + '" id="map_' + id + '" data-map="' + id + '">' +
@@ -1376,16 +1433,20 @@ canvas#c {
     if (lv.time && !lv.goal.survive) r.push('You have ' + lv.time + ' seconds');
     if (lv.cap !== undefined) r.push(TIERS[lv.cap].n + 's do not merge here, so they pile up');
     if (lv.fuse) r.push('Merge timer planets within ' + lv.fuse.shots + ' shots');
-    if (lv.rain) r.push(lv.rain.count + ' ' + (lv.rain.tiers ? 'planets' : TIERS[lv.rain.tier].n + 's') + ' fall in every ' + (lv.rain.sec ? lv.rain.sec + ' seconds' : lv.rain.every + ' shots'));
+    if (lv.rain) r.push(lv.rain.count + (lv.rain.ice ? ' icy ' : ' ') + (lv.rain.tiers ? 'planets' : TIERS[lv.rain.tier].n + 's') + ' fall in every ' + (lv.rain.sec ? lv.rain.sec + ' seconds' : lv.rain.every + ' shots'));
+    if (lv.rain && lv.rain.ice) r.push('Icy planets can’t merge. Shoot one to crack its ice, or hit it with a match to smash both');
     if (lv.alien && lv.alien.target === 'big') r.push('The alien takes your biggest planet');
     if (lv.boss && lv.boss.target === 'big') r.push('It eats your biggest planet');
     if (lv.boss && lv.boss.fleet) r.push('It sends ' + lv.boss.fleet.count + ' aliens every ' + lv.boss.fleet.every + ' shots');
     if (lv.meteors) r.push('A space rock lands every ' + lv.meteors.every + ' shots and stays');
     if (lv.fleet) r.push(lv.fleet.count + ' aliens come every ' + lv.fleet.every + ' shots');
-    if (lv.gravity) r.push('Planets pull on each other');
+    if (lv.gravity) r.push('Planets pull on each other, and bend your shots towards them');
+    if (lv.wind) r.push('The wind pushes your shots sideways');
     if (lv.squeeze) r.push('The side walls close in');
-    if (lv.quake) r.push('An earthquake every ' + lv.quake.every + ' seconds');
+    if (lv.quake) r.push('Every ' + lv.quake.every + ' seconds an earthquake tips the board and shuffles your planets');
     if (lv.hideNext) r.push('You can’t see the next planet');
+    if (lv.autoFire) r.push('Wait ' + lv.autoFire + ' seconds and the planet shoots by itself');
+    if (lv.goal.stars) r.push('Catch a star by merging two planets on top of it');
     if (lv.rocks && lv.rocks.some(o => o.bumper)) r.push('Bumpers bounce planets away');
     if (lv.boss && !lv.boss.hp) r.push('A black hole drifts and eats a planet every ' + lv.boss.eat + ' shots');
     if (lv.line) r.push(lv.line > LINE_Y ? 'The danger line is higher, so there is less room' : 'The danger line is lower, so there is more room');
@@ -1393,6 +1454,7 @@ canvas#c {
   }
   function goalBox(lv) {          // the framed "GOAL" card used on the level intro and the try-again screen
     const what = lv.goal.survive ? 'Survive for ' + lv.time + ' seconds'
+      : lv.goal.smash ? 'Smash ' + lv.goal.smash + ' icy planets'
       : lv.goal.stars ? 'Collect ' + lv.stars.length + ' stars'
       : lv.goal.breakRocks ? 'Break ' + breakTotal(lv) + ' cracked rocks'
       : lv.goal.make === SUN ? 'Make the Sun'
@@ -1427,7 +1489,7 @@ canvas#c {
     fit();
     bodies = []; score = 0; madeSun = false;
     made = TIERS.map(() => 0);
-    shotsLeft = L.shots || 0; timeLeft = L.time || 0; shownSec = -1;
+    shotsLeft = L.shots || 0; timeLeft = L.time || 0; shownSec = -1; idleT = 0; smashed = 0;
     setupTwists(L);
     for (const [t, x, y] of L.start || []) { const nb = makeBody(x, y <= 1 ? y * H : y, t); nb.age = 5; bodies.push(nb); }   // preset board (y: fraction of the board, or exact)
     cur = randomTier(); next = randomTier(); ready = true; aimX = W / 2;
@@ -1442,6 +1504,7 @@ canvas#c {
   const breakTotal = lv => (lv.rocks || []).filter(o => o.brk).length;
   function goalMet() {
     if (L.goal.survive) return timeLeft <= 0;
+    if (L.goal.smash) return smashed >= L.goal.smash;
     if (L.goal.stars) return gems.length > 0 && gems.every(g => g.got);
     if (L.goal.breakRocks) return !rocks.some(o => o.brk);
     if (boss && boss.hpMax) return boss.hp <= 0;
@@ -1488,7 +1551,7 @@ canvas#c {
     for (let i = 0; i < TW.rain.count; i++) {
       const tiers = TW.rain.tiers || [TW.rain.tier], tier = tiers[Math.floor(Math.random() * tiers.length)], T = TIERS[tier];
       const nb = makeBody(pad + T.left + Math.random() * (W - 2 * pad - T.left - T.right), T.top + 2 + i * 6, tier);
-      nb.age = 5; nb.s = reduceMotion ? 1 : 0.5; bodies.push(nb);
+      nb.age = 5; nb.s = reduceMotion ? 1 : 0.5; nb.ice = !!TW.rain.ice; bodies.push(nb);   // icy ones only merge with a planet you shoot
     }
     sfx.hit();
   }
@@ -1598,7 +1661,7 @@ canvas#c {
   $('toast').addEventListener('animationend', clearToast);
   function sparkle(x, y, count, speed) {
     if (reduceMotion) return;
-    const colors = ['#ffd45e', '#ff7eb6', '#fdf6ff', '#7fd0ff'];
+    const colors = mode !== 'sandbox' && holidayLook() ? ['#ff4f6a', '#5fd07a', '#ffffff', '#ffd23f'] : ['#ffd45e', '#ff7eb6', '#fdf6ff', '#7fd0ff'];
     for (let i = 0; i < count; i++) {
       const a = Math.random() * TAU, v = speed * (0.4 + Math.random() * 0.8);
       particles.push({ kind: 'dot', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0, max: 0.5 + Math.random() * 0.5, r: 2 + Math.random() * 3, c: colors[i % 4] });
@@ -1614,20 +1677,41 @@ canvas#c {
     if (mode === 'adventure' && L.shots && shotsLeft <= 0) return;
     const T = TIERS[cur];
     const b = makeBody(clamp(aimX, pad + T.left, W - pad - T.right), launchY(), cur);
-    b.fly = true;
+    b.fly = true; b.fresh = clock + 3;
     bodies.push(b);
-    ready = false; readyAt = clock + RELOAD;
+    ready = false; readyAt = clock + RELOAD; idleT = 0;
     dirty = true;
     sfx.launch();
     if (mode !== 'sandbox') award('pluto');
     if (TW) afterShot();
   }
 
+  function iceBurst(x, y, n) {
+    if (reduceMotion) return;
+    for (let i = 0; i < n; i++) {
+      const ang = Math.random() * TAU, v = 120 + Math.random() * 260;
+      particles.push({ kind: 'dot', x, y, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, life: 0, max: 0.6 + Math.random() * 0.4, r: 2 + Math.random() * 3, c: i % 2 ? '#d6f1ff' : '#ffffff' });
+    }
+    sfx.hit();
+  }
+  function shatter(a, b) {        // a matching shot smashes an icy planet: both are gone
+    a.dead = b.dead = true;
+    iceBurst((a.x + b.x) / 2, (a.y + b.y) / 2, 26);
+    score += 10 * (a.t + 1); dirty = true;
+    if (mode === 'adventure') { smashed++; hud(); }
+  }
+  function catchStars(x, y, r) {   // stars are only caught by a merge that happens on top of them
+    for (const g of gems) {
+      if (g.got || Math.hypot(g.x - x, g.y - y) > r + 14) continue;
+      g.got = true; sparkle(g.x, g.y, 24, 220); hud();
+    }
+  }
   function merge(a, b, born) {
     a.dead = b.dead = true;
     const A = TIERS[a.t];
     const x = (a.x + b.x) / 2, y = (a.y + b.y) / 2;
     const t = a.t + 1;
+    if (gems.length) catchStars(x, y, TIERS[Math.min(t, SUN)].r);
     if (t < TIERS.length) {
       const nb = makeBody(x, y, t);
       nb.px = x - ((a.x - a.px) + (b.x - b.px)) / 2;
@@ -1682,7 +1766,14 @@ canvas#c {
     if (ov <= 0) return;
     land(a); land(b);
     const capped = mode === 'adventure' && L && L.cap !== undefined && a.t >= L.cap;   // at the cap, matching planets just bump
-    if (a.t === b.t && !capped) { merge(a, b, born); return; }
+    // icy planets only merge with a matching planet you have just shot (not with ones already on the board)
+    // Icy planets never merge. A matching planet you have just shot shatters one: both disappear.
+    // Any other planet you shoot cracks the ice off the first icy planet it hits, so it can merge again.
+    const shotIce = (a.ice && b.fresh > clock) ? [a, b] : (b.ice && a.fresh > clock) ? [b, a] : null;
+    if (shotIce && a.t === b.t) { shatter(a, b); return; }
+    if (shotIce) { shotIce[0].ice = false; shotIce[1].fresh = 0; iceBurst(shotIce[0].x, shotIce[0].y, 12); }
+    const rattled = quakeLeft > 0 && !(a.fresh > clock || b.fresh > clock);   // no merging while the ground shakes, except your own shot
+    if (a.t === b.t && !capped && !a.ice && !b.ice && !rattled) { merge(a, b, born); return; }
 
     // heavier planets give way less
     const wa = B.mass / (A.mass + B.mass), wb = 1 - wa;
@@ -1716,12 +1807,12 @@ canvas#c {
       if (G) {                       // planets pull on each other: heavier planets pull harder
         for (const b of bodies) { b.gx = 0; b.gy = 0; }
         for (let i = 0; i < bodies.length; i++) {
-          const a = bodies[i]; if (a.fly || a.taken) continue;
+          const a = bodies[i]; if (a.taken) continue;
           for (let j = i + 1; j < bodies.length; j++) {
-            const b = bodies[j]; if (b.fly || b.taken) continue;
+            const b = bodies[j]; if (b.taken || (a.fly && b.fly)) continue;
             const dx = b.x - a.x, dy = b.y - a.y, rr = TIERS[a.t].r + TIERS[b.t].r;
             const d2 = Math.max(dx * dx + dy * dy, rr * rr), d = Math.sqrt(d2), f = G * 10000 / d2;
-            const ma = TIERS[a.t].mass / 900, mb = TIERS[b.t].mass / 900;
+            const ma = a.fly ? 0 : TIERS[a.t].mass / 900, mb = b.fly ? 0 : TIERS[b.t].mass / 900;   // a shot is pulled but pulls nothing
             a.gx += dx / d * f * mb; a.gy += dy / d * f * mb;
             b.gx -= dx / d * f * ma; b.gy -= dy / d * f * ma;
           }
@@ -1738,6 +1829,9 @@ canvas#c {
         }
         if (b.fly) {                                  // the shot itself: steady glide, no pull, no friction
           b.px = b.x; b.py = b.y; b.y -= Math.max(GLIDE, P.launch) * h;
+          // ...but wind and gravity bend its path sideways
+          b.vx = (b.vx || 0) + ((G ? b.gx * SHOT_BEND : 0) + windNow * SHOT_DRIFT) * h;
+          b.x = clamp(b.x + b.vx * h, pad + TIERS[b.t].left, W - pad - TIERS[b.t].right);
           continue;
         }
         let vx = b.x - b.px, vy = b.y - b.py;
@@ -1747,7 +1841,7 @@ canvas#c {
           vx *= k; vy *= k;
         }
         b.px = b.x; b.py = b.y;
-        b.x += vx; b.y += vy - P.pull * h * h;
+        b.x += vx; b.y += vy - (quakeLeft > 0 ? -900 : P.pull) * h * h;
         if (G) { b.x += b.gx * h * h; b.y += b.gy * h * h; }
         if (windNow) b.x += windNow * h * h;
         if (boss && boss.g) {
@@ -1786,9 +1880,9 @@ canvas#c {
       const lineY = H - lineH();
       for (const b of bodies) {
         b.age += DT;
-        if (Math.hypot(b.x - b.ax, b.y - b.ay) > STILL_RADIUS) { b.ax = b.x; b.ay = b.y; b.stillT = 0; }
+        if (quakeLeft > 0 || Math.hypot(b.x - b.ax, b.y - b.ay) > STILL_RADIUS) { b.ax = b.x; b.ay = b.y; b.stillT = 0; }   // shaking counts as moving
         else b.stillT += DT;
-        const past = !b.fly && !b.taken && b.age > 0.8 && b.y + TIERS[b.t].bottom * b.s > lineY;
+        const past = !b.fly && !b.taken && b.age > 0.8 && quakeLeft <= 0 && b.y + TIERS[b.t].bottom * b.s > lineY;
         b.overT = past ? b.stillT : 0;
         if (past && b.stillT > OVER_STILL && !over) fail('full');
         if (past && b.stillT > 0.5) b.close = true;                       // nearly lost...
@@ -1817,20 +1911,20 @@ canvas#c {
       }
       if (boss && boss.sway) boss.x = W / 2 + Math.sin(clock * boss.speed) * boss.sway;   // moving bosses
       if (TW.squeeze) pad = Math.min(TW.squeeze.max, pad + TW.squeeze.rate * 60 * DT);    // walls close in
+      if (TW.rise) riseNow = Math.min(TW.rise.max, riseNow + TW.rise.rate * DT);        // the danger line creeps up
+      if (quakeLeft > 0) quakeLeft = Math.max(0, quakeLeft - DT);
       if (TW.quake && (quakeT += DT) >= TW.quake.every) {                                    // earthquake
-        quakeT = 0; shake = 0.45; toast('Earthquake!'); sfx.hit();
+        // The board tips towards you: everything slides down, rattles around without merging,
+        // then slides back up in a new order. Planets past the line while it shakes don't count.
+        quakeT = 0; quakeLeft = TW.quake.dur; shake = TW.quake.dur + 0.3; toast('Earthquake!'); sfx.hit();
         const hq = DT / SUBSTEPS;
-        for (const b of bodies) if (!b.fly && !b.taken) {
-          b.px -= (Math.random() * 2 - 1) * TW.quake.power * hq; b.py -= (Math.random() * 1.6 - 0.4) * TW.quake.power * hq;
-        }
+        for (const b of bodies) if (!b.fly && !b.taken) { b.px -= (Math.random() * 2 - 1) * 220 * hq; b.py -= 260 * hq; }
       }
       if (TW.rain && TW.rain.sec && (rainT += DT) >= TW.rain.sec) { rainT = 0; dropRain(); }
-      for (const g of gems) {          // stars: touched by any planet, even a shot flying past
-        if (g.got) continue;
-        if (bodies.some(b => !b.taken && Math.hypot(b.x - g.x, b.y - g.y) < TIERS[b.t].r * b.s + 12)) {
-          g.got = true; sparkle(g.x, g.y, 24, 220); sfx.merge(4); hud();
-        }
-      }
+    }
+    if (mode === 'adventure' && !over && TW && TW.autoFire && ready) {   // the launcher won't wait forever
+      idleT += DT;
+      if (idleT >= TW.autoFire) launch();
     }
     if (mode === 'adventure' && !over) {
       if (L.time) {
@@ -1902,9 +1996,34 @@ canvas#c {
     frost: { name: 'Frosty', extra: 10, ring: '#ffffff', shine: '#d6f1ff', ink: INK,
       bases: ['#dff3ff', '#e6e9ff', '#cfeaff', '#d6fff6', '#bfe4ff', '#cdd6ff', '#c2f5f0', '#d9ecff', '#b8dcff', '#eef9ff'] },
     galaxy: { name: 'Galaxy', extra: 25, ring: '#b79bff', shine: '#e6dcff', ink: '#fdf6ff',
-      bases: ['#3b2a6e', '#2a2f6e', '#4a2a6a', '#2f3f7a', '#243a6b', '#3a2a7a', '#27456e', '#44306f', '#2c2f63', '#4b2f7f'] }
+      bases: ['#3b2a6e', '#2a2f6e', '#4a2a6a', '#2f3f7a', '#243a6b', '#3a2a7a', '#27456e', '#44306f', '#2c2f63', '#4b2f7f'] },
+    // ----- Holiday skins: limited edition, only sold during the holiday season (see holidaySeason) -----
+    // `tall`: the skin adds a hat, antlers or a bow that pokes out past the planet's edge.
+    xmas: { extra: 0, limited: true, tall: true,
+      names: ['Snowman', 'Elf', 'Reindeer', 'Ornament', 'Wreath', 'Snow globe', 'Present', 'Fairy lights', 'Santa', 'Plum pudding'],
+      bases: ['#f8fbff', '#ffe0c7', '#b9784a', '#e8394a', '#3f9a4a', '#bfe6ff', '#4fb3e8', '#2e3a6e', '#ffe0c7', '#7a4426'],
+      inks: [INK, INK, INK, INK, INK, INK, INK, '#fdf6ff', INK, '#fff3e6'],
+      ring: '#ff4f6a', shine: '#ffd0d8', rings: { 7: '#2f6b3a' }, shines: { 7: '#4f8f5a' }, bulbs: { 7: true } },
+    xmas2: { extra: 0, limited: true, tall: true,
+      names: ['Snowflake', 'Penguin', 'Holly berry', 'Jingle bell', 'Nutcracker', 'Northern lights', 'Candy cane', 'Hot cocoa', 'Cozy sweater', 'Star topper'],
+      bases: ['#cfeaff', '#2d2f4a', '#f04a52', '#ffd23f', '#ffe0c7', '#14284a', '#ffffff', '#9a5f3a', '#d63a4a', '#ffd84a'],
+      inks: [INK, INK, INK, INK, INK, '#fdf6ff', INK, '#fff3d6', INK, INK],
+      ring: '#ff4f6a', shine: '#ffffff', rings: { 7: '#f6e3c8' }, shines: { 7: '#fffaf0' } },
+    santahat: { name: 'Santa hat', extra: 0, limited: true, tall: true, hat: 'santa' },   // the normal planet, plus a hat
+    gingerbread: { name: 'Gingerbread', extra: 15, limited: true, ring: '#fff6ea', shine: '#ffffff', ink: INK,
+      bases: ['#d9a066', '#cf9558', '#c4864a', '#d39a5c', '#c98a4e', '#bd7e44', '#d6a26a', '#c88b50', '#c17f45', '#cf9050'] },
+    giftwrap: { name: 'Gift wrap', extra: 15, limited: true, tall: true, ring: '#ffd23f', shine: '#fff3b0', ink: INK, bow: true,
+      bases: ['#ff6f8a', '#5fc27a', '#6fb7ff', '#b07cff', '#ff8f5a', '#3fb3a8', '#ff5f6d', '#4fa36a', '#5a8cff', '#e8394a'] }
   };
-  const SETS = { candy: 900, frost: 990, galaxy: 1100 };   // a whole skin for all ten planets, cheaper than one by one
+  const SETS = { candy: 900, frost: 990, galaxy: 1100, santahat: 700, gingerbread: 950, giftwrap: 950 };   // a whole skin for all ten planets, cheaper than one by one
+  // The holiday shop is open from Nov 15 to the end of Dec 26, every year. Items bought stay yours after that.
+  let devHoliday = null;         // dev panel override: null = follow the calendar, true or false = force it
+  function holidaySeason() {
+    if (devHoliday !== null) return devHoliday;
+    const d = new Date(), m = d.getMonth(), day = d.getDate();
+    return (m === 10 && day >= 15) || (m === 11 && day <= 26);
+  }
+  const holidayLook = () => holidaySeason() && store.opts.holiday !== false;   // decorations on the home screen and the board
   const skinName = (t, id) => SKINS[id].names ? SKINS[id].names[t] : SKINS[id].name;
   const FACES = {      // cheapest to rarest
     classic: { name: 'Classic', price: 0 },
@@ -2074,6 +2193,148 @@ canvas#c {
       g.fillStyle = '#e2674a'; g.beginPath(); g.ellipse(0.46 * r, 0.56 * r, 0.19 * r, 0.11 * r, 0, 0, TAU); g.fill();
     }
   }
+  // ----- Holiday art helpers -----
+  function ribbons(g, r, x, y, color) {          // a wrapped-present ribbon, crossing away from the face
+    g.fillStyle = color; g.fillRect((x - 0.12) * r, -r, 0.24 * r, 2 * r); g.fillRect(-r, (y - 0.12) * r, 2 * r, 0.24 * r);
+    g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect((x - 0.03) * r, -r, 0.06 * r, 2 * r); g.fillRect(-r, (y - 0.03) * r, 2 * r, 0.06 * r);
+  }
+  function bow(g, x, y, s, color) {              // two loops, two tails and a knot
+    g.save(); g.translate(x, y); g.fillStyle = color;
+    for (const side of [-1, 1]) {
+      g.beginPath(); g.moveTo(0, 0); g.lineTo(side * 0.35 * s, 0.75 * s); g.lineTo(side * 0.12 * s, 0.7 * s); g.closePath(); g.fill();
+      g.beginPath(); g.ellipse(side * 0.5 * s, -0.12 * s, 0.5 * s, 0.3 * s, side * -0.35, 0, TAU); g.fill();
+      blob(g, side * 0.52 * s, -0.12 * s, 0.16 * s, 'rgba(0,0,0,0.18)');
+    }
+    blob(g, 0, 0, 0.2 * s, color); blob(g, -0.05 * s, -0.05 * s, 0.07 * s, 'rgba(255,255,255,0.5)');
+    g.restore();
+  }
+  function snowflake(g, x, y, q, color) {
+    g.strokeStyle = color; g.lineWidth = Math.max(1, q * 0.22); g.lineCap = 'round';
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3, c = Math.cos(a), s = Math.sin(a);
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + c * q, y + s * q);
+      const bx = x + c * q * 0.55, by = y + s * q * 0.55;
+      g.moveTo(bx, by); g.lineTo(bx + Math.cos(a + 0.8) * q * 0.3, by + Math.sin(a + 0.8) * q * 0.3);
+      g.moveTo(bx, by); g.lineTo(bx + Math.cos(a - 0.8) * q * 0.3, by + Math.sin(a - 0.8) * q * 0.3);
+      g.stroke();
+    }
+  }
+  function hollyLeaf(g, x, y, len, rot) {
+    g.save(); g.translate(x, y); g.rotate(rot); g.fillStyle = '#3f9a4a';
+    g.beginPath(); g.moveTo(0, -len / 2);
+    for (let i = 1; i <= 3; i++) g.quadraticCurveTo(0.12 * len, -len / 2 + (i - 0.5) * len / 3, 0.28 * len * (i === 2 ? 1.1 : 1), -len / 2 + i * len / 3 - 0.02 * len);
+    for (let i = 3; i >= 1; i--) g.quadraticCurveTo(-0.12 * len, -len / 2 + (i - 0.5) * len / 3, -0.28 * len, -len / 2 + (i - 1) * len / 3 + 0.02 * len);
+    g.closePath(); g.fill();
+    g.strokeStyle = '#2f7a3a'; g.lineWidth = 0.05 * len; g.beginPath(); g.moveTo(0, -len / 2); g.lineTo(0, len / 2); g.stroke();
+    g.restore();
+  }
+  function zigzag(g, r, y, color) {
+    g.strokeStyle = color; g.lineWidth = 0.06 * r; g.lineJoin = 'round'; g.beginPath();
+    for (let i = 0; i <= 12; i++) g.lineTo((-1.1 + i * 0.2) * r, (y + (i % 2 ? -0.07 : 0.07)) * r);
+    g.stroke();
+  }
+  function gingerIcing(g, r, scatter) {          // wavy white icing round the edge, sugar dots and gumdrops
+    g.strokeStyle = '#fff6ea'; g.lineWidth = 0.07 * r; g.lineJoin = 'round'; g.beginPath();
+    for (let i = 0; i <= 96; i++) { const a = i / 96 * TAU, d = (0.84 + Math.sin(a * 14) * 0.04) * r; g.lineTo(Math.cos(a) * d, Math.sin(a) * d); }
+    g.stroke();
+    scatter(6, (x, y, k) => blob(g, x, y, 0.035 * r, '#fff6ea'));
+    scatter(3, (x, y, k) => blob(g, x, y, 0.07 * r, k < 0.5 ? '#e8394a' : '#4fbf6a'));
+  }
+  function santaHat(g, r, color) {               // a floppy hat with a fur trim and a pompom
+    g.fillStyle = color || '#e8394a';
+    g.beginPath(); g.moveTo(-0.84 * r, -0.5 * r);
+    g.quadraticCurveTo(-0.72 * r, -1.2 * r, 0.05 * r, -1.22 * r);
+    g.quadraticCurveTo(0.78 * r, -1.24 * r, 1.0 * r, -0.86 * r);
+    g.quadraticCurveTo(0.74 * r, -0.98 * r, 0.6 * r, -0.86 * r);
+    g.quadraticCurveTo(0.8 * r, -0.7 * r, 0.84 * r, -0.5 * r);
+    g.closePath(); g.fill();
+    g.fillStyle = 'rgba(0,0,0,0.12)'; g.beginPath(); g.moveTo(0.2 * r, -1.2 * r); g.quadraticCurveTo(0.78 * r, -1.22 * r, 1.0 * r, -0.86 * r); g.quadraticCurveTo(0.7 * r, -1.05 * r, 0.2 * r, -1.2 * r); g.fill();
+    g.strokeStyle = '#ffffff'; g.lineWidth = 0.2 * r; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(-0.84 * r, -0.52 * r); g.quadraticCurveTo(0, -0.66 * r, 0.84 * r, -0.52 * r); g.stroke();
+    blob(g, 1.0 * r, -0.86 * r, 0.15 * r, '#ffffff');
+  }
+  function skinBack(g, t, r, id) {               // bits drawn behind the planet: antlers, ears, star points
+    if (id === 'xmas' && (t === 1 || t === 2)) {
+      for (const side of [-1, 1]) {
+        if (t === 2) {
+          g.strokeStyle = '#7a4a2a'; g.lineWidth = 0.1 * r; g.lineCap = 'round';
+          g.beginPath(); g.moveTo(side * 0.35 * r, -0.7 * r); g.quadraticCurveTo(side * 0.45 * r, -1.22 * r, side * 0.78 * r, -1.4 * r);
+          g.moveTo(side * 0.48 * r, -1.1 * r); g.lineTo(side * 0.82 * r, -1.08 * r);
+          g.moveTo(side * 0.42 * r, -0.98 * r); g.lineTo(side * 0.2 * r, -1.24 * r); g.stroke();
+        }
+        g.fillStyle = t === 1 ? '#ffe0c7' : '#9a6038';
+        g.beginPath(); g.moveTo(side * 0.8 * r, -0.3 * r); g.quadraticCurveTo(side * 1.25 * r, -0.62 * r, side * 1.34 * r, -0.62 * r);
+        g.quadraticCurveTo(side * 1.12 * r, -0.05 * r, side * 0.82 * r, 0.12 * r); g.closePath(); g.fill();
+        g.fillStyle = t === 1 ? '#ffb3b8' : '#e8c39e';
+        g.beginPath(); g.moveTo(side * 0.92 * r, -0.2 * r); g.quadraticCurveTo(side * 1.18 * r, -0.48 * r, side * 1.22 * r, -0.5 * r); g.quadraticCurveTo(side * 1.05 * r, -0.1 * r, side * 0.92 * r, 0.02 * r); g.closePath(); g.fill();
+      }
+    }
+    if (id === 'xmas2' && t === SUN) {
+      starPath(g, 0, 0, 1.52 * r); g.fillStyle = '#ffc21a'; g.fill();
+      g.strokeStyle = '#f29a1f'; g.lineWidth = 0.04 * r; g.lineJoin = 'round'; g.stroke();
+    }
+  }
+  function skinFront(g, t, r, id, look) {        // hats, noses and bows on top of everything else
+    const cx = (look.dx || 0) * r, cy = (look.dy || 0) * r;
+    if (id === 'santahat') { santaHat(g, r); return; }
+    if (id === 'giftwrap') { bow(g, -0.5 * r, -0.6 * r, 0.32 * r, '#ffd23f'); return; }
+    if (id === 'xmas') {
+      if (t === 0) {          // carrot nose and a top hat
+        g.fillStyle = '#ff8a2c'; g.beginPath(); g.moveTo(cx - 0.02 * r, cy + 0.05 * r); g.lineTo(cx + 0.26 * r, cy + 0.1 * r); g.lineTo(cx - 0.02 * r, cy + 0.13 * r); g.closePath(); g.fill();
+        g.fillStyle = '#2b2233'; g.fillRect(-0.48 * r, -1.44 * r, 0.96 * r, 0.7 * r);
+        g.beginPath(); g.ellipse(0, -0.76 * r, 0.74 * r, 0.1 * r, 0, 0, TAU); g.fill();
+        g.fillStyle = '#e8394a'; g.fillRect(-0.48 * r, -0.98 * r, 0.96 * r, 0.13 * r);
+        hollyLeaf(g, 0.28 * r, -0.94 * r, 0.26 * r, 1.2); blob(g, 0.16 * r, -0.91 * r, 0.06 * r, '#e8394a');
+      } else if (t === 1) {   // elf hat with a bell on the tip
+        g.fillStyle = '#3f9a4a'; g.beginPath(); g.moveTo(-0.84 * r, -0.5 * r);
+        g.quadraticCurveTo(-0.6 * r, -1.15 * r, -1.0 * r, -1.44 * r); g.quadraticCurveTo(0.3 * r, -1.2 * r, 0.84 * r, -0.5 * r); g.closePath(); g.fill();
+        g.strokeStyle = '#e8394a'; g.lineWidth = 0.18 * r; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(-0.84 * r, -0.52 * r); g.quadraticCurveTo(0, -0.66 * r, 0.84 * r, -0.52 * r); g.stroke();
+        for (const x of [-0.5, 0, 0.5]) blob(g, x * r, -0.6 * r, 0.04 * r, '#ffffff');
+        blob(g, -1.0 * r, -1.44 * r, 0.13 * r, '#ffd23f'); blob(g, -1.0 * r, -1.4 * r, 0.04 * r, '#9a7414');
+      } else if (t === 2) {   // shiny red nose
+        blob(g, cx, cy + 0.07 * r, 0.11 * r, '#ff3b4a'); blob(g, cx - 0.035 * r, cy + 0.035 * r, 0.035 * r, '#ffd0d8');
+      } else if (t === 3) {   // ornament cap and hook
+        g.fillStyle = '#d9a51f'; g.fillRect(-0.2 * r, -1.12 * r, 0.4 * r, 0.24 * r);
+        g.fillStyle = '#ffe27a'; g.fillRect(-0.2 * r, -1.12 * r, 0.4 * r, 0.05 * r);
+        g.strokeStyle = '#9aa0b8'; g.lineWidth = 0.04 * r; g.beginPath(); g.arc(0, -1.2 * r, 0.08 * r, Math.PI * 0.9, Math.PI * 2.1); g.stroke();
+      } else if (t === 4) bow(g, 0, 0.86 * r, 0.34 * r, '#e8394a');
+      else if (t === 5) {     // wooden snow globe stand
+        g.fillStyle = '#8a5232'; g.beginPath(); g.moveTo(-0.6 * r, 0.8 * r); g.lineTo(0.6 * r, 0.8 * r); g.lineTo(0.76 * r, 1.12 * r); g.lineTo(-0.76 * r, 1.12 * r); g.closePath(); g.fill();
+        g.fillStyle = '#ffd23f'; g.fillRect(-0.68 * r, 0.93 * r, 1.36 * r, 0.05 * r);
+      } else if (t === 6) bow(g, -0.45 * r, -0.58 * r, 0.32 * r, '#ff4f6a');
+      else if (t === 8) santaHat(g, r);
+    } else if (id === 'xmas2') {
+      if (t === 1) {          // orange beak and a bobble hat
+        g.fillStyle = '#ff9a2c'; g.beginPath(); g.moveTo(cx - 0.11 * r, cy + 0.03 * r); g.lineTo(cx + 0.11 * r, cy + 0.03 * r); g.lineTo(cx, cy + 0.15 * r); g.closePath(); g.fill();
+        g.fillStyle = '#e8394a'; g.beginPath(); g.moveTo(-0.86 * r, -0.5 * r); g.quadraticCurveTo(0, -1.42 * r, 0.86 * r, -0.5 * r); g.closePath(); g.fill();
+        g.strokeStyle = '#ffffff'; g.lineWidth = 0.18 * r; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(-0.84 * r, -0.52 * r); g.quadraticCurveTo(0, -0.66 * r, 0.84 * r, -0.52 * r); g.stroke();
+        blob(g, 0, -1.04 * r, 0.17 * r, '#ffffff');
+      } else if (t === 3) {   // bell loop
+        g.strokeStyle = '#d9a51f'; g.lineWidth = 0.08 * r; g.beginPath(); g.arc(0, -1.06 * r, 0.12 * r, 0, TAU); g.stroke();
+      } else if (t === 4) {   // tall soldier hat with a plume
+        g.fillStyle = '#2b2233'; g.beginPath(); g.moveTo(-0.5 * r, -0.62 * r); g.lineTo(-0.46 * r, -1.36 * r); g.quadraticCurveTo(0, -1.46 * r, 0.46 * r, -1.36 * r); g.lineTo(0.5 * r, -0.62 * r); g.closePath(); g.fill();
+        g.fillStyle = '#ffd23f'; g.fillRect(-0.52 * r, -0.74 * r, 1.04 * r, 0.12 * r);
+        starPath(g, 0, -1.04 * r, 0.14 * r); g.fill();
+        blob(g, 0.28 * r, -1.46 * r, 0.12 * r, '#e8394a'); blob(g, 0.36 * r, -1.56 * r, 0.08 * r, '#e8394a');
+      }
+    }
+  }
+  function lightBulbs(g, r, ring, front) {       // fairy lights strung along the back or front half of a ring
+    g.save(); g.rotate(ring.tilt);
+    const rx = (ring.reach - ring.lw / 2) * r, ry = ring.ry * r, cols = ['#ff4f6a', '#ffd23f', '#5fd07a', '#6fb7ff'];
+    for (let i = 0; i < 14; i++) {
+      const a = (i + 0.5) / 14 * TAU, sinA = Math.sin(a);
+      if ((sinA >= 0) !== front) continue;
+      const x = Math.cos(a) * rx, y = sinA * ry, c = cols[i % 4];
+      const gl = g.createRadialGradient(x, y, 0, x, y, 0.2 * r);
+      gl.addColorStop(0, c + 'aa'); gl.addColorStop(1, c + '00');
+      g.fillStyle = gl; g.beginPath(); g.arc(x, y, 0.2 * r, 0, TAU); g.fill();
+      blob(g, x, y, 0.08 * r, c); blob(g, x - 0.02 * r, y - 0.025 * r, 0.025 * r, '#ffffff');
+    }
+    g.restore();
+  }
   function skinPattern(g, t, r, id) {
     const rnd = seeded(101 + t * 13 + id.length * 7);
     const look = LOOK[t];
@@ -2084,7 +2345,116 @@ canvas#c {
         if (offFace(x, y)) { fn(x * r, y * r, rnd()); i++; }
       }
     };
-    if (id === 'unique2') {
+    if (id === 'xmas') {
+      if (t === 0) {            // Snowman: striped scarf and a coal button
+        band(g, r, 0.66, 0.2, '#e8394a', -0.1);
+        g.setLineDash([0.1 * r, 0.16 * r]); band(g, r, 0.66, 0.2, '#ffffff', -0.1); g.setLineDash([]);
+        blob(g, 0, 0.92 * r, 0.07 * r, '#2b2233');
+        scatter(6, (x, y, k) => { if (y < 0.4 * r) blob(g, x, y, (0.025 + k * 0.02) * r, '#cfe6ff'); });
+      } else if (t === 1) {     // Elf: pointy collar and a bell
+        g.fillStyle = '#3f9a4a'; g.fillRect(-r, 0.7 * r, 2 * r, 0.4 * r);
+        for (let i = -5; i <= 5; i++) {
+          g.fillStyle = i % 2 ? '#e8394a' : '#3f9a4a';
+          g.beginPath(); g.moveTo((i * 0.2 - 0.1) * r, 0.74 * r); g.lineTo(i * 0.2 * r, 0.56 * r); g.lineTo((i * 0.2 + 0.1) * r, 0.74 * r); g.closePath(); g.fill();
+        }
+        blob(g, 0, 0.84 * r, 0.09 * r, '#ffd23f');
+      } else if (t === 2) {     // Reindeer: a soft muzzle and light spots
+        g.fillStyle = '#e8c39e'; g.beginPath(); g.ellipse(0, 0.2 * r, 0.36 * r, 0.21 * r, 0, 0, TAU); g.fill();
+        scatter(5, (x, y, k) => blob(g, x, y, (0.05 + k * 0.04) * r, '#d39a68'));
+      } else if (t === 3) {     // Ornament: gold bands with dots
+        band(g, r, -0.52, 0.13, '#ffd23f', 0.08); band(g, r, 0.56, 0.13, '#ffd23f', -0.08);
+        for (let x = -0.75; x <= 0.76; x += 0.3) { blob(g, x * r, -0.73 * r, 0.05 * r, '#ffffff'); blob(g, x * r, 0.76 * r, 0.05 * r, '#ffffff'); }
+      } else if (t === 4) {     // Wreath: leaves all round, berries, and the face peeking out of the middle
+        blob(g, 0, 0.06 * r, 0.6 * r, '#fdf2dc');
+        for (let i = 0; i < 28; i++) {
+          const a = i / 28 * TAU, d = (i % 2 ? 0.74 : 0.86) * r;
+          g.save(); g.translate(Math.cos(a) * d, 0.06 * r + Math.sin(a) * d); g.rotate(a + (i % 2 ? 0.6 : -0.6));
+          g.fillStyle = i % 2 ? '#5fbf6a' : '#2f7a3a'; g.beginPath(); g.ellipse(0, 0, 0.17 * r, 0.075 * r, 0, 0, TAU); g.fill(); g.restore();
+        }
+        for (const a of [0.5, 1.8, 2.9, 4.1, 5.3]) for (const [ox, oy] of [[0, 0], [0.07, 0.05], [-0.06, 0.06]]) blob(g, (Math.cos(a) * 0.8 + ox) * r, (0.06 + Math.sin(a) * 0.8 + oy) * r, 0.065 * r, '#e8394a');
+        g.strokeStyle = 'rgba(30,80,40,0.5)'; g.lineWidth = 0.05 * r; g.beginPath(); g.arc(0, 0.06 * r, 0.61 * r, 0, TAU); g.stroke();
+      } else if (t === 5) {     // Snow globe: snowy ground, a little tree, falling snow
+        blob(g, 0, 1.25 * r, 0.76 * r, '#ffffff');
+        g.fillStyle = '#3f9a4a';
+        g.beginPath(); g.moveTo(-0.64 * r, 0.62 * r); g.lineTo(-0.5 * r, 0.3 * r); g.lineTo(-0.36 * r, 0.62 * r); g.closePath(); g.fill();
+        blob(g, -0.5 * r, 0.3 * r, 0.04 * r, '#ffd23f');
+        scatter(14, (x, y, k) => blob(g, x, y, (0.02 + k * 0.025) * r, '#ffffff'));
+        g.strokeStyle = 'rgba(255,255,255,0.75)'; g.lineWidth = 0.06 * r; g.lineCap = 'round';
+        g.beginPath(); g.arc(0, 0, 0.8 * r, -0.9, -0.3); g.stroke();
+      } else if (t === 6) {     // Present: polka dots and a ribbon
+        scatter(10, (x, y) => blob(g, x, y, 0.06 * r, 'rgba(255,255,255,0.8)'));
+        ribbons(g, r, -0.45, -0.58, '#ff4f6a');
+      } else if (t === 7) {     // Fairy lights: a glowing night planet
+        for (const [x, y, c] of [[-0.5, -0.5, '255,212,94'], [0.55, 0.45, '255,126,182'], [-0.4, 0.6, '127,208,255']]) {
+          const gl = g.createRadialGradient(x * r, y * r, 0, x * r, y * r, 0.6 * r);
+          gl.addColorStop(0, 'rgba(' + c + ',0.35)'); gl.addColorStop(1, 'rgba(' + c + ',0)');
+          g.fillStyle = gl; g.fillRect(-r, -r, 2 * r, 2 * r);
+        }
+        scatter(12, (x, y, k) => blob(g, x, y, (0.015 + k * 0.02) * r, '#ffffff'));
+      } else if (t === 8) {     // Santa: a fluffy white beard below the smile
+        for (const [x, y, q] of [[0, 0.98, 0.6], [-0.42, 0.74, 0.3], [0.42, 0.74, 0.3], [-0.74, 0.52, 0.22], [0.74, 0.52, 0.22], [-0.2, 0.64, 0.28], [0.2, 0.64, 0.28]]) blob(g, x * r, y * r, q * r, '#ffffff');
+        for (const [x, y, q] of [[-0.3, 0.86, 0.12], [0.34, 0.9, 0.1], [0, 0.78, 0.1]]) blob(g, x * r, y * r, q * r, '#eef2fa');
+      } else {                  // Plum pudding: drippy white icing, raisins and a sprig of holly
+        scatter(10, (x, y, k) => { if (y > 0.2 * r) blob(g, x, y, (0.04 + k * 0.03) * r, '#4a2414'); });
+        g.fillStyle = '#fffaf2'; g.fillRect(-r, -r, 2 * r, 0.5 * r);
+        for (const [x, d] of [[-0.85, 0.2], [-0.55, 0.36], [-0.22, 0.24], [0.12, 0.42], [0.45, 0.26], [0.78, 0.34]]) {
+          g.fillRect((x - 0.11) * r, -0.52 * r, 0.22 * r, d * r); blob(g, x * r, (-0.52 + d) * r, 0.11 * r, '#fffaf2');
+        }
+        hollyLeaf(g, -0.16 * r, -0.8 * r, 0.36 * r, -1.1); hollyLeaf(g, 0.16 * r, -0.8 * r, 0.36 * r, 1.1);
+        for (const [x, y] of [[0, -0.86], [-0.07, -0.78], [0.07, -0.78]]) blob(g, x * r, y * r, 0.06 * r, '#e8394a');
+      }
+    } else if (id === 'xmas2') {
+      if (t === 0) {            // Snowflake
+        scatter(7, (x, y, k) => snowflake(g, x, y, (0.1 + k * 0.08) * r, '#ffffff'));
+      } else if (t === 1) {     // Penguin: white tummy and face
+        g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(0, 0.16 * r, 0.68 * r, 0.64 * r, 0, 0, TAU); g.fill();
+      } else if (t === 2) {     // Holly berry: two spiky leaves on top
+        scatter(6, (x, y, k) => blob(g, x, y, (0.03 + k * 0.03) * r, '#ff8a8f'));
+        hollyLeaf(g, -0.34 * r, -0.72 * r, 0.62 * r, -1.0); hollyLeaf(g, 0.34 * r, -0.72 * r, 0.62 * r, 1.0);
+        blob(g, 0, -0.84 * r, 0.1 * r, '#b8222e'); blob(g, -0.03 * r, -0.87 * r, 0.03 * r, '#ff9aa0');
+      } else if (t === 3) {     // Jingle bell: groove, slot and little stars
+        band(g, r, 0.42, 0.08, '#d9a51f', -0.06);
+        blob(g, 0, 0.78 * r, 0.13 * r, '#6a4a14'); g.fillStyle = '#6a4a14'; g.fillRect(-0.035 * r, 0.78 * r, 0.07 * r, 0.3 * r);
+        g.fillStyle = '#fff2a8'; scatter(5, (x, y, k) => { if (y < 0.2 * r) { starPath(g, x, y, (0.06 + k * 0.04) * r); g.fill(); } });
+      } else if (t === 4) {     // Nutcracker: red jacket, gold buttons, white hair
+        g.fillStyle = '#e8394a'; g.fillRect(-r, 0.64 * r, 2 * r, 0.4 * r);
+        g.fillStyle = '#ffd23f'; g.fillRect(-r, 0.62 * r, 2 * r, 0.06 * r);
+        for (const x of [-0.18, 0.18]) blob(g, x * r, 0.84 * r, 0.06 * r, '#ffd23f');
+        for (const side of [-1, 1]) for (const [x, y, q] of [[0.7, -0.42, 0.16], [0.82, -0.18, 0.14], [0.86, 0.06, 0.12]]) blob(g, side * x * r, y * r, q * r, '#ffffff');
+      } else if (t === 5) {     // Northern lights
+        g.globalAlpha = 0.5; g.lineCap = 'round';
+        for (const [y, c, ph] of [[-0.62, '#5fffb0', 0], [-0.4, '#5fd0ff', 1.3], [0.66, '#ff7ed6', 2.1]]) {
+          g.strokeStyle = c; g.lineWidth = 0.2 * r; g.beginPath();
+          for (let x = -1.1; x <= 1.1; x += 0.1) g.lineTo(x * r, (y + Math.sin(x * 4 + ph) * 0.08) * r);
+          g.stroke();
+        }
+        g.globalAlpha = 1;
+        scatter(12, (x, y, k) => blob(g, x, y, (0.015 + k * 0.02) * r, '#ffffff'));
+      } else if (t === 6) {     // Candy cane stripes
+        g.save(); g.rotate(-0.7);
+        for (let i = -4; i <= 4; i++) { g.fillStyle = '#e8394a'; g.fillRect((i * 0.5 - 0.11) * r, -1.5 * r, 0.22 * r, 3 * r); g.fillStyle = '#5fbf6a'; g.fillRect((i * 0.5 + 0.17) * r, -1.5 * r, 0.06 * r, 3 * r); }
+        g.restore();
+      } else if (t === 7) {     // Hot cocoa: foam and marshmallows on top
+        g.fillStyle = '#f6e3c8'; g.fillRect(-r, -r, 2 * r, 0.42 * r);
+        for (const x of [-0.8, -0.4, 0, 0.4, 0.8]) blob(g, x * r, -0.58 * r, 0.2 * r, '#f6e3c8');
+        for (const [x, y, rot, c] of [[-0.4, -0.78, 0.3, '#ffffff'], [-0.05, -0.86, -0.4, '#ffd0e0'], [0.3, -0.76, 0.6, '#ffffff'], [0.6, -0.6, -0.2, '#ffd0e0'], [-0.68, -0.56, 0.5, '#ffffff']]) {
+          g.save(); g.translate(x * r, y * r); g.rotate(rot); g.fillStyle = c; g.fillRect(-0.09 * r, -0.07 * r, 0.18 * r, 0.14 * r); g.restore();
+        }
+      } else if (t === 8) {     // Cozy sweater: knitted zigzags and snow dots
+        band(g, r, -0.74, 0.12, '#3f9a4a', 0.1); band(g, r, 0.74, 0.12, '#3f9a4a', -0.1);
+        zigzag(g, r, -0.55, '#ffffff'); zigzag(g, r, 0.56, '#ffffff');
+        for (let x = -0.8; x <= 0.81; x += 0.2) { blob(g, x * r, -0.9 * r, 0.035 * r, '#ffffff'); blob(g, x * r, 0.9 * r, 0.035 * r, '#ffffff'); }
+      } else {                  // Star topper: little sparkles
+        g.fillStyle = '#fff8d0'; scatter(7, (x, y, k) => { starPath(g, x, y, (0.05 + k * 0.05) * r); g.fill(); });
+      }
+    } else if (id === 'gingerbread') {
+      gingerIcing(g, r, scatter);
+    } else if (id === 'giftwrap') {
+      g.save(); g.rotate(0.6); g.fillStyle = 'rgba(255,255,255,0.28)';
+      for (let i = -3; i <= 3; i++) g.fillRect((i * 0.5 - 0.08) * r, -1.5 * r, 0.16 * r, 3 * r);
+      g.restore();
+      ribbons(g, r, -0.5, -0.6, '#ffd23f');
+    } else if (id === 'unique2') {
       if (t === 0) {            // Snowball
         g.strokeStyle = '#bfe0ff'; g.lineWidth = Math.max(1, 0.035 * r); g.lineCap = 'round';
         scatter(9, (x, y, k) => { const q = (0.05 + k * 0.04) * r; g.beginPath(); g.moveTo(x - q, y); g.lineTo(x + q, y); g.moveTo(x, y - q); g.lineTo(x, y + q); g.stroke(); });
@@ -2281,11 +2651,14 @@ canvas#c {
     const ink = classic ? INK : (sk.inks ? sk.inks[t] : sk.ink);
     const ringColor = classic ? (t === 7 ? '#e3b96a' : '#eafcff') : ((sk.rings && sk.rings[t]) || sk.ring);
     const ringShine = classic ? '#fbe9bd' : ((sk.shines && sk.shines[t]) || sk.shine);
-    if (T.ring) ringHalf(g, r, T.ring, false, ringColor, ringShine);
-    const rim = { unique: [14, 0.18, '#ffd23f', '#ffbf2e'], unique2: [12, 0.2, '#c9792b', '#b5651f'], unique3: [12, 0.2, '#ffffff', '#eef0ff'] }[skinId];
+    const bulbs = sk.bulbs && sk.bulbs[t];
+    if (T.ring) { ringHalf(g, r, T.ring, false, ringColor, ringShine); if (bulbs) lightBulbs(g, r, T.ring, false); }
+    skinBack(g, t, r, skinId);
+    const rim = { unique: [14, 0.18, '#ffd23f', '#ffbf2e'], unique2: [12, 0.2, '#c9792b', '#b5651f'], unique3: [12, 0.2, '#ffffff', '#eef0ff'],
+                  xmas: [16, 0.13, '#7a4426', '#5a301a'], gingerbread: [18, 0.14, '#cf9050', '#fff6ea'] }[skinId];
     if (t === SUN && rim) {                          // petals or a mane instead of plain rays
       for (let i = 0; i < rim[0]; i++) blob(g, Math.cos(i / rim[0] * TAU) * r * 0.97, Math.sin(i / rim[0] * TAU) * r * 0.97, r * rim[1], i % 2 ? rim[2] : rim[3]);
-    } else if (t === SUN) for (let i = 0; i < 16; i++) blob(g, Math.cos(i / 16 * TAU) * r * 0.95, Math.sin(i / 16 * TAU) * r * 0.95, r * 0.13, classic ? '#ffab2e' : line);
+    } else if (t === SUN && skinId !== 'xmas2') for (let i = 0; i < 16; i++) blob(g, Math.cos(i / 16 * TAU) * r * 0.95, Math.sin(i / 16 * TAU) * r * 0.95, r * 0.13, classic ? '#ffab2e' : line);
 
     g.save();
     g.beginPath(); g.arc(0, 0, r, 0, TAU); g.clip();
@@ -2303,32 +2676,40 @@ canvas#c {
     g.strokeStyle = line; g.lineWidth = Math.max(1.2, r * 0.05);
     g.beginPath(); g.arc(0, 0, r - g.lineWidth / 2, 0, TAU); g.stroke();
     face(g, r, look, faceId, ink);
-    if (T.ring) ringHalf(g, r, T.ring, true, ringColor, ringShine);
+    if (T.ring) { ringHalf(g, r, T.ring, true, ringColor, ringShine); if (bulbs) lightBulbs(g, r, T.ring, true); }
+    if (sk.tall) skinFront(g, t, r, skinId, look);
   }
+  // How far past its edge a planet's picture can reach: hats and antlers poke out on some holiday skins.
+  const reachOf = (t, skinId) => (SKINS[skinId] || {}).tall ? Math.max(TIERS[t].bound, 1.6 * TIERS[t].r) : TIERS[t].bound;
   const thumbs = new Map();
   function thumb(t, skinId, faceId) {      // small picture of one planet in one skin and face
     const key = t + ':' + skinId + ':' + faceId;
     if (!thumbs.has(key)) {
       const c = document.createElement('canvas');
       c.width = c.height = 96;
-      const g = c.getContext('2d'), q = 42 / TIERS[t].bound;
-      g.setTransform(q, 0, 0, q, 48, 48);
+      const g = c.getContext('2d'), T = TIERS[t], tall = (SKINS[skinId] || {}).tall;
+      const q = tall ? 44 / Math.max(T.bound, 1.5 * T.r) : 42 / T.bound;
+      g.setTransform(q, 0, 0, q, 48, 48 + (tall && !(skinId === 'xmas2' && t === SUN) ? 0.12 * T.r * q : 0));
       drawPlanet(g, t, skinId, faceId);
       thumbs.set(key, c.toDataURL());
     }
     return thumbs.get(key);
   }
-  function buildSprites() {                // full-size pictures of the ten planets as currently dressed
+  function spriteSet(skins, faces) {        // full-size pictures of the ten planets in the given skins and faces
     const k = Math.min(3, (window.devicePixelRatio || 1) * 1.3);
-    sprites = TIERS.map((T, t) => {
-      const half = T.bound + 18;
+    return TIERS.map((T, t) => {
+      const half = reachOf(t, skins[t]) + 18;
       const c = document.createElement('canvas');
       c.width = c.height = Math.ceil(half * 2 * k);
       const g = c.getContext('2d');
       g.setTransform(k, 0, 0, k, c.width / 2, c.height / 2);
-      drawPlanet(g, t, store.equip.skins[t], store.equip.faces[t]);
-      return { c, half, url: thumb(t, store.equip.skins[t], store.equip.faces[t]) };
+      drawPlanet(g, t, skins[t], faces[t]);
+      return { c, half, url: thumb(t, skins[t], faces[t]) };
     });
+  }
+  let homeSprites = null;                  // the home screen's festive planets, made when first needed
+  function buildSprites() {                // the planets as currently dressed
+    sprites = spriteSet(store.equip.skins, store.equip.faces);
   }
 
   // ---------- Drawing ----------
@@ -2480,6 +2861,26 @@ canvas#c {
       }
     } };
 
+  BGS.snowy = { name: 'Snowy night', price: 300, limited: true, line: '#ff6f8a', soft: 'rgba(255,255,255,0.75)', guide: 'rgba(255,255,255,0.35)',
+    draw(g, w, h, now) {                          // holiday only: a snowy hillside with pine trees and slow snow
+      g.fillStyle = grad(g, h, [[0, '#14244f'], [0.7, '#2c4a86'], [1, '#4a6fae']]); g.fillRect(0, 0, w, h);
+      starField(g, w, h, now, 0.8, 0.6);
+      const u = w / 360, t = reduceMotion ? 0 : now / 1000;
+      g.fillStyle = '#1f3d6e';
+      for (const [x, s] of [[0.08, 1], [0.2, 0.7], [0.83, 1.1], [0.94, 0.75]]) {
+        const tx = x * w, by = h - 30 * u, th = 70 * s * u;
+        for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(tx - (26 - k * 6) * s * u, by - k * th * 0.28); g.lineTo(tx, by - th - k * th * 0.12); g.lineTo(tx + (26 - k * 6) * s * u, by - k * th * 0.28); g.closePath(); g.fill(); }
+      }
+      g.fillStyle = '#eaf4ff';
+      g.beginPath(); g.moveTo(0, h); g.lineTo(0, h - 34 * u); g.quadraticCurveTo(w * 0.3, h - 62 * u, w * 0.55, h - 36 * u); g.quadraticCurveTo(w * 0.8, h - 14 * u, w, h - 44 * u); g.lineTo(w, h); g.closePath(); g.fill();
+      g.fillStyle = '#ffffff';
+      for (let i = 0; i < 46; i++) {
+        const x = ((i * 0.618034) % 1) * w + Math.sin(t * 0.6 + i) * 8 * u, sp = (10 + (i % 5) * 5) * u;
+        const y = ((i * 53 * u + t * sp) % (h + 10)) - 5;
+        g.globalAlpha = 0.5 + (i % 3) * 0.2; g.beginPath(); g.arc(x, y, (1 + (i % 4) * 0.5) * u, 0, TAU); g.fill();
+      }
+      g.globalAlpha = 1;
+    } };
   // Wallpapers: phone-sized pictures built from the game's own art. The top third stays
   // mostly empty so the lock-screen clock has room.
   function put(g, t, skin, faceId, cx, cy, size) {
@@ -2574,6 +2975,29 @@ canvas#c {
       BGS.retro.draw(g, w, h, 0);
       for (const [t, x, y, size] of [[9, 0.5, 0.86, 0.17], [8, 0.2, 0.74, 0.1], [7, 0.78, 0.735, 0.075], [5, 0.3, 0.62, 0.08], [6, 0.71, 0.615, 0.062], [4, 0.39, 0.525, 0.062], [3, 0.62, 0.525, 0.058], [2, 0.5, 0.44, 0.045]]) put(g, t, 'classic', 'cool', w * x, h * y, w * size);
     } };
+  WALLS.holiday = { name: 'Holiday tree', price: 1600, limited: true,     // holiday only: a tree decorated with planets
+    draw(g, w, h) {
+      BGS.snowy.draw(g, w, h, 0);
+      const cx = w * 0.5;
+      g.fillStyle = '#6b4325'; g.fillRect(cx - w * 0.05, h * 0.84, w * 0.1, h * 0.06);
+      for (const [top, base, half, c] of [[0.58, 0.86, 0.4, '#256f38'], [0.45, 0.71, 0.31, '#2f8a45'], [0.35, 0.56, 0.21, '#3a9e52']]) {
+        g.fillStyle = c; g.beginPath(); g.moveTo(cx, h * top); g.quadraticCurveTo(cx - w * half * 0.5, h * (base - 0.04), cx - w * half, h * base);
+        g.quadraticCurveTo(cx, h * (base + 0.025), cx + w * half, h * base); g.quadraticCurveTo(cx + w * half * 0.5, h * (base - 0.04), cx, h * top); g.fill();
+      }
+      const cols = ['#ff4f6a', '#ffd23f', '#6fb7ff', '#5fd07a'];      // garlands of lights across the branches
+      [[0.49, 0.1, 0.05], [0.64, 0.18, 0.06], [0.79, 0.27, 0.07]].forEach(([y, half, drop], row) => {
+        for (let i = 0; i <= 10; i++) {
+          const u = i / 10, x = cx + (u * 2 - 1) * w * half, yy = h * (y + (u - 0.5) * drop * 0.6 + Math.sin(u * Math.PI) * 0.02);
+          g.globalAlpha = 0.35; blob(g, x, yy, w * 0.014, cols[(i + row) % 4]); g.globalAlpha = 1; blob(g, x, yy, w * 0.007, cols[(i + row) % 4]);
+        }
+      });
+      for (const [t, skin, x, y, size] of [
+        [9, 'xmas2', 0.5, 0.345, 0.05],
+        [3, 'xmas', 0.43, 0.5, 0.036], [0, 'xmas', 0.58, 0.525, 0.032],
+        [1, 'xmas', 0.37, 0.645, 0.04], [5, 'xmas', 0.51, 0.6, 0.036], [2, 'xmas', 0.64, 0.655, 0.04],
+        [4, 'xmas', 0.3, 0.8, 0.045], [3, 'xmas2', 0.49, 0.765, 0.04], [2, 'xmas2', 0.69, 0.8, 0.04],
+        [8, 'xmas', 0.19, 0.905, 0.07], [6, 'xmas', 0.5, 0.925, 0.045], [1, 'xmas2', 0.81, 0.91, 0.06]]) put(g, t, skin, 'classic', w * x, h * y, w * size);
+    } };
   const wallThumbs = new Map();
   function wallThumb(id) {
     if (!wallThumbs.has(id)) {
@@ -2593,8 +3017,8 @@ canvas#c {
     return bgThumbs.get(id);
   }
   function sky(g, w, h, now) { (BGS[store.equip.bg] || BGS.night).draw(g, w, h, now); }
-  function planet(g, x, y, t, s, rot) {
-    const sp = sprites[t];
+  function planet(g, x, y, t, s, rot, set) {
+    const sp = (set || sprites)[t];
     if (!sp) return;
     const d = sp.half * 2 * s;
     if (rot) { g.save(); g.translate(x, y); g.rotate(rot); g.drawImage(sp.c, -d / 2, -d / 2, d, d); g.restore(); }
@@ -2611,6 +3035,55 @@ canvas#c {
     g.beginPath(); g.ellipse(-0.42 * r, -0.6 * r, 0.18 * r, 0.08 * r, -0.7, 0, TAU); g.fill();
     face(g, r, {}, mood, INK);
     g.restore();
+  }
+  function snowCap(g, x, y, r) {                 // snow resting on top of a rock
+    g.save(); g.beginPath(); g.arc(x, y, r + 1, 0, TAU); g.clip();
+    g.fillStyle = '#ffffff';
+    g.beginPath(); g.moveTo(x - r, y - 0.5 * r);
+    for (let i = 0; i <= 8; i++) g.lineTo(x - r + i * r / 4, y - (i % 2 ? 0.42 : 0.56) * r);
+    g.lineTo(x + r, y - r - 2); g.lineTo(x - r, y - r - 2); g.closePath(); g.fill();
+    g.restore();
+  }
+  function drawLightString(g, y, now, danger, bg) {   // the danger line as a string of fairy lights
+    const cols = ['#ff4f6a', '#ffd23f', '#5fd07a', '#6fb7ff'], span = 60;
+    g.strokeStyle = danger ? bg.line : '#2f6b3a'; g.lineWidth = danger ? 3 : 2; g.setLineDash([]);
+    g.beginPath(); g.moveTo(0, y);
+    for (let x = 0; x < W; x += span) g.quadraticCurveTo(x + span / 2, y + 9, x + span, y);
+    g.stroke();
+    for (let i = 0; i * 20 + 10 < W; i++) {
+      const x = i * 20 + 10, u = (x % span) / span, by = y + 18 * u * (1 - u) + 5;   // hangs just under the sagging wire
+      const on = reduceMotion || Math.sin(now / (danger ? 90 : 500) + i * 1.7) > -0.3;
+      const c = cols[i % 4];
+      if (on) { g.globalAlpha = 0.35; blob(g, x, by, 7, c); g.globalAlpha = 1; }
+      blob(g, x, by, 3.6, on ? c : 'rgba(255,255,255,0.35)');
+      g.fillStyle = '#2f6b3a'; g.fillRect(x - 1.5, by - 6, 3, 3);
+    }
+  }
+  function drawTree(g, bars, rocks, now) {     // the Christmas tree map: branches, snow, ornaments, lights and a star
+    const cols = ['#ff4f6a', '#ffd23f', '#6fb7ff', '#5fd07a'];
+    for (const o of bars) {
+      if (o.trunk) { g.fillStyle = '#7a4a2a'; g.fillRect(o.x, o.y - 4, o.w, o.h + 4); g.fillStyle = '#5a3420'; g.fillRect(o.x, o.y + o.h - 5, o.w, 5); continue; }
+      const r = o.h / 2;
+      g.fillStyle = '#1f6b34'; g.beginPath(); g.roundRect(o.x, o.y + 3, o.w, o.h, r); g.fill();
+      g.fillStyle = '#2f8a45'; g.beginPath(); g.roundRect(o.x, o.y, o.w, o.h - 2, r); g.fill();
+      g.fillStyle = '#ffffff';                     // snow resting on the branches
+      g.beginPath(); g.roundRect(o.x + 3, o.y - 2, o.w - 6, 8, 4); g.fill();
+      for (let x = o.x + 8; x < o.x + o.w - 6; x += 13) blob(g, x, o.y + 4, 4.5, '#ffffff');
+      const n = Math.max(2, Math.floor(o.w / 26));
+      for (let i = 0; i < n; i++) {                // ornaments and twinkling lights
+        const x = o.x + (i + 0.5) * o.w / n, y = o.y + o.h * 0.62, c = cols[(i + Math.round(o.w)) % 4];
+        const on = reduceMotion || Math.sin(now / 420 + i * 2.1 + o.w) > -0.2;
+        if (on) { g.globalAlpha = 0.35; blob(g, x, y, 8, c); g.globalAlpha = 1; }
+        blob(g, x, y, 4.5, c); blob(g, x - 1.5, y - 1.5, 1.4, 'rgba(255,255,255,0.8)');
+      }
+    }
+    for (const o of rocks) if (o.star) {
+      const glow = reduceMotion ? 1 : 1 + Math.sin(now / 300) * 0.08;
+      const gl = g.createRadialGradient(o.x, o.y, 0, o.x, o.y, o.r * 2 * glow);
+      gl.addColorStop(0, 'rgba(255,226,122,0.6)'); gl.addColorStop(1, 'rgba(255,226,122,0)');
+      g.fillStyle = gl; g.beginPath(); g.arc(o.x, o.y, o.r * 2 * glow, 0, TAU); g.fill();
+      cuteStar(g, o.x, o.y, o.r * 1.25, '#ffd23f');
+    }
   }
   function drawHole(g, x, y, r, now, flash) {
     g.save(); g.translate(x, y);
@@ -2641,6 +3114,11 @@ canvas#c {
     g.save(); g.translate(u.x, u.y);
     g.fillStyle = '#bfefff'; g.beginPath(); g.arc(0, -4, 17, Math.PI, 0); g.closePath(); g.fill();
     blob(g, 0, -8, 8, '#8be28b'); blob(g, -3, -9, 1.6, INK); blob(g, 3, -9, 1.6, INK);
+    if (mode !== 'sandbox' && holidayLook()) {      // the alien gets into the spirit too
+      g.fillStyle = '#e8394a'; g.beginPath(); g.moveTo(-7, -13); g.quadraticCurveTo(0, -26, 9, -22); g.lineTo(6, -13); g.closePath(); g.fill();
+      g.strokeStyle = '#fff'; g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); g.moveTo(-7, -13); g.lineTo(7, -13); g.stroke();
+      blob(g, 9, -22, 2.6, '#fff');
+    }
     g.fillStyle = '#c9a6ff'; g.beginPath(); g.ellipse(0, 0, 34, 11, 0, 0, TAU); g.fill();
     g.strokeStyle = '#120d2e'; g.lineWidth = 2.5; g.stroke();
     for (const lx of [-22, -8, 8, 22]) blob(g, lx, 3, 3, '#ffd45e');
@@ -2654,14 +3132,23 @@ canvas#c {
     }
     sky(ctx, W, H, now);
     const bg = BGS[store.equip.bg] || BGS.night;
+    const festive = mode !== 'sandbox' && holidayLook();
+    if (festive || (TW && TW.snow)) {
+      snowfall(ctx, W, H, now, dt, gameSnow, 0.6);
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';               // a soft snowdrift along the near edge
+      for (let x = -10; x < W + 30; x += 34) { ctx.beginPath(); ctx.arc(x, H + 6, 16 + (x % 3) * 3, 0, TAU); ctx.fill(); }
+    }
     if (mode !== 'sandbox') {
       const lineY = H - lineH();
       ctx.fillStyle = 'rgba(255,126,182,0.07)'; ctx.fillRect(0, lineY, W, H - lineY);
       const danger = bodies.some(b => b.overT > 0.15);
-      ctx.strokeStyle = danger ? bg.line : bg.soft;
-      ctx.lineWidth = danger ? 3 : 2;
-      ctx.setLineDash([10, 8]);
-      ctx.beginPath(); ctx.moveTo(0, lineY); ctx.lineTo(W, lineY); ctx.stroke();
+      if (festive) drawLightString(ctx, lineY, now, danger, bg);
+      else {
+        ctx.strokeStyle = danger ? bg.line : bg.soft;
+        ctx.lineWidth = danger ? 3 : 2;
+        ctx.setLineDash([10, 8]);
+        ctx.beginPath(); ctx.moveTo(0, lineY); ctx.lineTo(W, lineY); ctx.stroke();
+      }
     }
     if (TW) {
       if (TW.wind) {                // streaks that drift the way the wind is blowing
@@ -2672,14 +3159,22 @@ canvas#c {
           ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 26 * dir, y); ctx.stroke();
         }
       }
-      for (const o of bars) {
+      if (TW.tree) drawTree(ctx, bars, rocks, now);
+      else for (const o of bars) {
         ctx.fillStyle = '#55526e'; ctx.fillRect(o.x - 2, o.y + 3, o.w + 4, o.h + 2);
         ctx.fillStyle = '#8d8aa3'; ctx.fillRect(o.x - 2, o.y - 2, o.w + 4, o.h + 2);
         ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(o.x, o.y, o.w, 3);
+        if (festive) {                               // a layer of snow on top, with icicles under
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(o.x - 3, o.y - 6, o.w + 6, 6);
+          for (let x = o.x; x < o.x + o.w; x += 14) { blob(ctx, x + 4, o.y - 4, 5, '#ffffff'); }
+          ctx.fillStyle = '#d6f1ff';
+          for (let x = o.x + 6; x < o.x + o.w - 4; x += 19) { ctx.beginPath(); ctx.moveTo(x - 3, o.y + o.h + 3); ctx.lineTo(x + 3, o.y + o.h + 3); ctx.lineTo(x, o.y + o.h + 11); ctx.closePath(); ctx.fill(); }
+        }
       }
       for (const o of rocks) {
+        if (o.star) continue;                          // the tree's star is drawn with the tree
         if (o.bumper) drawBumper(ctx, o.x, o.y, o.r, now);
-        else drawRock(ctx, o.x, o.y, o.r, o.brk ? 'wow' : 'snooze', false);
+        else { drawRock(ctx, o.x, o.y, o.r, o.brk ? 'wow' : 'snooze', false); if (festive) snowCap(ctx, o.x, o.y, o.r); }
         if (o.brk) {                                // cracks on rocks that can be broken
           ctx.strokeStyle = '#3a3550'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
           ctx.beginPath(); ctx.moveTo(o.x - o.r * 0.1, o.y - o.r * 0.95); ctx.lineTo(o.x + o.r * 0.12, o.y - o.r * 0.55); ctx.lineTo(o.x - o.r * 0.05, o.y - o.r * 0.38);
@@ -2694,7 +3189,7 @@ canvas#c {
       if (boss) {
         if (boss.kind === 'hole') drawHole(ctx, boss.x, boss.y, boss.r, now, boss.flash > 0);
         else if (boss.kind === 'ship') { ctx.save(); ctx.translate(boss.x, boss.y); ctx.scale(boss.r / 34, boss.r / 34); if (boss.flash > 0) ctx.globalAlpha = 0.6; drawUfo(ctx, { x: 0, y: 0, beam: false }); ctx.restore(); }
-        else drawRock(ctx, boss.x, boss.y, boss.r, 'grumpy', boss.flash > 0);
+        else { drawRock(ctx, boss.x, boss.y, boss.r, 'grumpy', boss.flash > 0); if (festive) snowCap(ctx, boss.x, boss.y, boss.r); }
         if (boss.hpMax) {
         const bw = 130, bx = boss.x - bw / 2, by = boss.y + boss.r + 12, k = clamp(boss.hp / boss.hpMax, 0, 1);
         ctx.fillStyle = '#120d2e'; ctx.fillRect(bx - 3, by - 3, bw + 6, 16);
@@ -2712,7 +3207,17 @@ canvas#c {
       ctx.beginPath(); ctx.moveTo(lx, ly - T.top); ctx.lineTo(lx, 4); ctx.stroke();
     }
     ctx.setLineDash([]);
-    for (const b of bodies) planet(ctx, b.x, b.y, b.t, b.s);
+    for (const b of bodies) {
+      planet(ctx, b.x, b.y, b.t, b.s);
+      if (b.ice) {                     // frozen in a shell of ice
+        const r = TIERS[b.t].r * b.s;
+        ctx.fillStyle = 'rgba(190,235,255,0.45)'; ctx.beginPath(); ctx.arc(b.x, b.y, r + 2, 0, TAU); ctx.fill();
+        ctx.strokeStyle = 'rgba(235,250,255,0.95)'; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(b.x, b.y, r * 0.72, 3.6, 4.4); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(b.x + r * 0.2, b.y + r * 0.45); ctx.lineTo(b.x + r * 0.5, b.y + r * 0.2); ctx.stroke();
+      }
+    }
     for (const b of bodies) {          // timer planets: a pulsing ring and the shots left
       if (!b.fused || b.dead || b.taken) continue;
       const r = TIERS[b.t].r * b.s, pulse = reduceMotion ? 0 : Math.sin(now / 120) * 2;
@@ -2724,6 +3229,13 @@ canvas#c {
       ctx.fillText(String(Math.max(0, b.fuse)), b.x, ty + 1);
     }
     if (showLauncher) planet(ctx, lx, ly, cur, 1);
+    if (showLauncher && TW && TW.autoFire && mode === 'adventure') {      // auto-fire countdown around the loaded planet
+      const k = clamp(idleT / TW.autoFire, 0, 1), rr = T.r + 7;
+      ctx.lineWidth = 4; ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.beginPath(); ctx.arc(lx, ly, rr, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = k > 0.7 ? '#ff3b5c' : '#ffd45e';
+      ctx.beginPath(); ctx.arc(lx, ly, rr, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - k)); ctx.stroke();
+    }
 
     for (const u of ufos) if (u.t >= 0) drawUfo(ctx, u);
     for (const p of particles) {
@@ -2760,11 +3272,28 @@ canvas#c {
       }));
     }
   }
+  // Falling snow for the holiday look. Flake positions are fractions of the area, so any size works.
+  const makeFlakes = (n, big) => Array.from({ length: n }, () => ({ x: Math.random(), y: Math.random(), v: (big ? 0.06 : 0.035) + Math.random() * 0.04, s: big ? 2.2 + Math.random() * 1.8 : 1 + Math.random() * 1.5, ph: Math.random() * TAU }));
+  const homeSnow = makeFlakes(55, false), homeSnowFront = makeFlakes(14, true), gameSnow = makeFlakes(42, false);
+  function snowfall(g, w, h, now, dt, flakes, alpha) {
+    const u = Math.min(w, 480) / 360;
+    g.fillStyle = '#ffffff';
+    for (const f of flakes) {
+      if (!reduceMotion) { f.y += f.v * dt; if (f.y > 1.03) { f.y = -0.03; f.x = Math.random(); } }
+      const x = (f.x + (reduceMotion ? 0 : Math.sin(now / 1600 + f.ph) * 0.02)) * w;
+      g.globalAlpha = alpha * (0.6 + 0.4 * Math.sin(f.ph * 3));
+      g.beginPath(); g.arc(x, f.y * h, f.s * u, 0, TAU); g.fill();
+    }
+    g.globalAlpha = 1;
+  }
   function drawHome(now, dt) {
     if (!hw) return;
     const g = hctx;
     g.setTransform(hdpr, 0, 0, hdpr, 0, 0);
     sky(g, hw, hh, now);
+    const festive = holidayLook();
+    if (festive && !homeSprites) homeSprites = spriteSet(TIERS.map(() => 'xmas'), TIERS.map(() => 'classic'));
+    if (festive) snowfall(g, hw, hh, now, dt, homeSnow, 0.7);
     const u = Math.min(hw, 480) / 360;
     for (const f of floaters) {
       const size = TIERS[f.t].bound * f.k * u;
@@ -2775,9 +3304,10 @@ canvas#c {
       f.dx = f.x + sway * 16; f.dy = f.y; f.dr = TIERS[f.t].r * f.k * u;
       if (f.boop > 0) f.boop = Math.max(0, f.boop - dt);
       const squish = f.boop > 0 ? 1 + Math.sin(f.boop * 30) * 0.12 * (f.boop / 0.5) : 1;
-      planet(g, f.dx, f.dy, f.t, f.k * u * squish, sway * 0.2);
+      planet(g, f.dx, f.dy, f.t, f.k * u * squish, sway * 0.2, festive ? homeSprites : null);
     }
     g.globalAlpha = 1;
+    if (festive) snowfall(g, hw, hh, now, dt, homeSnowFront, 1);
   }
 
   // ---------- Sizing ----------
@@ -2807,7 +3337,8 @@ canvas#c {
   const TEN = TIERS.map((T, t) => t);
   function price(id) {
     const [kind, a, b] = id.split(':');
-    if (kind === 'skin') return b === 'classic' ? 0 : b === 'unique' ? 120 + 20 * (+a) : b === 'unique2' ? 150 + 22 * (+a) : b === 'unique3' ? 180 + 25 * (+a) : 40 + 15 * (+a) + SKINS[b].extra;
+    if (kind === 'skin') return b === 'classic' ? 0 : b === 'unique' ? 120 + 20 * (+a) : b === 'unique2' ? 150 + 22 * (+a) : b === 'unique3' ? 180 + 25 * (+a)
+      : b === 'xmas' ? 140 + 20 * (+a) : b === 'xmas2' ? 160 + 22 * (+a) : 40 + 15 * (+a) + SKINS[b].extra;
     if (kind === 'set') return SETS[a];
     if (kind === 'face') return FACES[a].price;
     if (kind === 'bg') return BGS[a].price;
@@ -2820,6 +3351,12 @@ canvas#c {
     if (kind === 'set') return TEN.every(t => owned('skin:' + t + ':' + a));
     return price(id) === 0 || !!store.owned[id];
   }
+  function limited(id) {          // holiday items: only sold during the holiday season
+    const [kind, a, b] = id.split(':');
+    const src = kind === 'skin' ? SKINS[b] : kind === 'set' ? SKINS[a] : kind === 'bg' ? BGS[a] : kind === 'wall' ? WALLS[a] : kind === 'music' ? TRACKS[a] : kind === 'map' ? MAPS[a] : null;
+    return !!(src && src.limited);
+  }
+  const showInShop = id => !limited(id) || holidaySeason() || owned(id);   // after the season, only what you bought stays listed
   function inUse(id) {
     const [kind, a, b] = id.split(':');
     if (kind === 'skin') return store.equip.skins[+a] === b;
@@ -2854,8 +3391,8 @@ canvas#c {
     if (armed.id === id && Date.now() - armed.at < 3000) return 'Buy?';
     return '<i class="coin"></i>' + fmt(price(id));
   }
-  function card(id, img, name, imgClass) {
-    return '<button type="button" class="card' + (inUse(id) ? ' on' : '') + '" id="it_' + id.replace(/:/g, '_') + '" data-id="' + id + '">' +
+  function card(id, img, name, imgClass, idTag) {   // idTag: keeps ids unique when an item is listed twice
+    return '<button type="button" class="card' + (inUse(id) ? ' on' : '') + (limited(id) && holidaySeason() ? ' ltd' : '') + '" id="it_' + id.replace(/:/g, '_') + (idTag || '') + '" data-id="' + id + '">' +
       '<img src="' + img + '" alt=""' + (imgClass ? ' class="' + imgClass + '"' : '') + '><span class="nm">' + name + '</span><span class="st">' + statusText(id) + '</span></button>';
   }
   function renderShop() {
@@ -2865,12 +3402,20 @@ canvas#c {
     const eq = store.equip;
     let html = '';
     if (shopTab === 'planets') {
-      html = '<p class="shop-note">You earn 1 coin for every ' + COIN_EVERY + ' points in the normal game.</p>' +
-        '<div><div class="pname">Sets</div><div class="grid3">' +
-        Object.keys(SETS).map(sk => card('set:' + sk, thumb(7, sk, eq.faces[7]), SKINS[sk].name + ' set')).join('') + '</div></div>' +
+      const season = holidaySeason(), friends = ['xmas', 'xmas2'];
+      html = '<p class="shop-note">You earn 1 coin for every ' + COIN_EVERY + ' points in the normal game.</p>';
+      if (season) html += '<div class="holiday-box"><div class="pname">Holiday shop</div>' +
+        '<p class="shop-note">Limited edition: these leave the shop after December 26. Anything you buy is yours to keep.</p>' +
+        '<div class="grid3">' + Object.keys(SETS).filter(sk => SKINS[sk].limited).map(sk => card('set:' + sk, thumb(sk === 'santahat' ? 4 : 7, sk, eq.faces[7]), SKINS[sk].name + ' set')).join('') + '</div>' +
+        '<div class="pname">Holiday friends</div><div class="grid4">' +
+        TEN.flatMap(t => friends.map(sk => card('skin:' + t + ':' + sk, thumb(t, sk, eq.faces[t]), skinName(t, sk) + '<span class="pl">' + TIERS[t].n + '</span>', null, '_h'))).join('') + '</div>' +
+        '<p class="shop-note">Each one is also listed with its planet below. Buy it in either place.</p></div>';
+      html += '<div><div class="pname">Sets</div><div class="grid3">' +
+        Object.keys(SETS).filter(sk => !SKINS[sk].limited || (!season && owned('set:' + sk))).map(sk => card('set:' + sk, thumb(7, sk, eq.faces[7]), SKINS[sk].name + ' set')).join('') + '</div></div>' +
         '<p class="shop-note">A set dresses all ten planets and costs less than buying the ten skins one by one. The set price stays the same even if you already own some of them.</p>' +
         TIERS.map((T, t) => '<div><div class="pname">' + T.n + '</div><div class="grid4">' +
-          Object.keys(SKINS).map(sk => card('skin:' + t + ':' + sk, thumb(t, sk, eq.faces[t]), skinName(t, sk))).join('') + '</div></div>').join('');
+          Object.keys(SKINS).filter(sk => showInShop('skin:' + t + ':' + sk))
+            .map(sk => card('skin:' + t + ':' + sk, thumb(t, sk, eq.faces[t]), skinName(t, sk))).join('') + '</div></div>').join('');
     } else if (shopTab === 'faces') {
       const show = faceTarget === 'all' ? 4 : faceTarget;
       html = '<p class="shop-note">Buy a face once, then put it on any planet. Pick a planet (or All), then tap a face.</p>' +
@@ -2881,18 +3426,18 @@ canvas#c {
         Object.keys(FACES).map(f => card('face:' + f, thumb(show, eq.skins[show], f), FACES[f].name)).join('') + '</div>';
     } else if (shopTab === 'skies') {
       html = '<p class="shop-note">A sky changes the game board and the home screen.</p><div class="grid2">' +
-        Object.keys(BGS).map(b => card('bg:' + b, bgThumb(b), BGS[b].name, 'wide')).join('') + '</div>';
+        Object.keys(BGS).filter(b => showInShop('bg:' + b)).map(b => card('bg:' + b, bgThumb(b), BGS[b].name, 'wide')).join('') + '</div>';
     } else if (shopTab === 'maps') {
       html = '<p class="shop-note">New boards for Classic, each with its own high score. Buy one, then pick it from the Classic screen.</p><div class="grid2">' +
-        Object.keys(MAPS).map(m => card('map:' + m, mapThumb(m), MAPS[m].name, 'board')).join('') + '</div>';
+        Object.keys(MAPS).filter(m => showInShop('map:' + m)).map(m => card('map:' + m, mapThumb(m), MAPS[m].name, 'board')).join('') + '</div>';
     } else if (shopTab === 'walls') {
       html = '<p class="shop-note">Wallpapers for your phone, sized for a tall iPhone screen. Buy one, then save it to your photos.</p><div class="grid2">' +
-        Object.keys(WALLS).map(wl => card('wall:' + wl, wallThumb(wl), WALLS[wl].name, 'tall')).join('') + '</div>';
+        Object.keys(WALLS).filter(wl => showInShop('wall:' + wl)).map(wl => card('wall:' + wl, wallThumb(wl), WALLS[wl].name, 'tall')).join('') + '</div>';
     } else {
       html = '<p class="shop-note">Tap Listen to hear a tune before you buy it.</p>' +
-        Object.keys(TRACKS).map(m => {
+        Object.keys(TRACKS).filter(m => showInShop('music:' + m)).map(m => {
           const id = 'music:' + m, playing = audio.preview === m;
-          return '<div class="panel track' + (inUse(id) ? ' on' : '') + '"><div><div class="nm">' + TRACKS[m].name + '</div><div class="ds">' + TRACKS[m].desc + '</div></div>' +
+          return '<div class="panel track' + (inUse(id) ? ' on' : '') + '"><div><div class="nm">' + TRACKS[m].name + (limited(id) && holidaySeason() ? ' <span class="ltd-tag">Limited</span>' : '') + '</div><div class="ds">' + TRACKS[m].desc + '</div></div>' +
             '<button type="button" class="btn ghost" id="hear_' + m + '" data-listen="' + m + '">' + (playing ? 'Stop' : 'Listen') + '</button>' +
             '<button type="button" class="btn" id="it_music_' + m + '" data-id="' + id + '">' + statusText(id) + '</button></div>';
         }).join('');
@@ -2925,7 +3470,7 @@ canvas#c {
   function previewTrack(id) {
     audio.preview = id;
     store.stats.heard[id] = 1;
-    if (Object.keys(TRACKS).every(k => store.stats.heard[k])) award('dj');
+    if (Object.keys(TRACKS).every(k => TRACKS[k].limited || store.stats.heard[k])) award('dj');
     audioWake();
     if (!audio.ctx) return;
     audio.music.gain.setTargetAtTime(1, audio.ctx.currentTime, 0.05);
@@ -2940,6 +3485,7 @@ canvas#c {
   }
   function shopTap(id) {
     if (inUse(id)) return;
+    if (!owned(id) && limited(id) && !holidaySeason()) return;     // the holiday shop has closed
     if (owned(id)) { if (id.startsWith('map:')) { playMap(id.slice(4)); return; } equip(id); }
     else if (store.coins < price(id)) { short.id = id; short.at = Date.now(); sfx.nope(); setTimeout(() => { if (screen === 'shop') renderShop(); }, 1900); }
     else if (armed.id === id && Date.now() - armed.at < 3000) {
@@ -2969,6 +3515,7 @@ canvas#c {
     const item = ev.target.closest('[data-id]');
     if (item) shopTap(item.dataset.id);
   });
+  $('btnHoliday').addEventListener('click', () => { shopTab = 'planets'; openShop(); $('shopList').scrollTop = 0; });
   $('shopTabs').addEventListener('click', ev => {
     const tab = ev.target.closest('[data-tab]');
     if (!tab) return;
@@ -3048,7 +3595,7 @@ canvas#c {
     if (v >= 6000) award('score3');
   }
   function nightOwl() { if (new Date().getHours() < 4) award('owl'); }
-  function shopItems() {          // every item that costs coins
+  function shopItems(withLimited) {   // every item that costs coins (holiday items only if asked: they can't count towards badges)
     const ids = [];
     TEN.forEach(t => Object.keys(SKINS).forEach(sk => ids.push('skin:' + t + ':' + sk)));
     Object.keys(FACES).forEach(k => ids.push('face:' + k));
@@ -3056,7 +3603,7 @@ canvas#c {
     Object.keys(TRACKS).forEach(k => ids.push('music:' + k));
     Object.keys(WALLS).forEach(k => ids.push('wall:' + k));
     Object.keys(MAPS).forEach(k => ids.push('map:' + k));
-    return ids.filter(id => price(id) > 0);
+    return ids.filter(id => price(id) > 0 && (withLimited || !limited(id)));
   }
   function checkShopAll() { if (shopItems().every(owned)) award('all'); }
   function checkOutfits() {
@@ -3305,12 +3852,15 @@ canvas#c {
           g.moveTo(x0 + 80 * dir, y0); g.lineTo(x0 + 66 * dir, y0 - 12); g.moveTo(x0 + 80 * dir, y0); g.lineTo(x0 + 66 * dir, y0 + 12); g.stroke();
         }
       }
-      for (const o of cfg.bars || []) {
+      if (cfg.snow) { const rnd = seeded(5); for (let i = 0; i < 40; i++) { g.globalAlpha = 0.5 + (i % 3) * 0.2; blob(g, rnd() * W, rnd() * h, 1.5 + (i % 3), '#ffffff'); } g.globalAlpha = 1; }
+      if (cfg.tree) drawTree(g, cfg.bars.map(o => ({ ...o, y: o.y * h + (o.dy || 0) })), cfg.rocks.map(o => ({ ...o, y: o.y * h + (o.dy || 0) })), 0);
+      else for (const o of cfg.bars || []) {
         const y = o.y * h;
         g.fillStyle = '#55526e'; g.fillRect(o.x - 2, y + 3, o.w + 4, o.h + 2);
         g.fillStyle = '#8d8aa3'; g.fillRect(o.x - 2, y - 2, o.w + 4, o.h + 2);
       }
       for (const o of cfg.rocks || []) {
+        if (o.star) continue;
         if (o.sway) {
           g.strokeStyle = bg.guide; g.lineWidth = 4; g.setLineDash([8, 8]);
           g.beginPath(); g.moveTo(o.x - o.sway, o.y * h); g.lineTo(o.x + o.sway, o.y * h); g.stroke(); g.setLineDash([]);
@@ -3338,7 +3888,7 @@ canvas#c {
       const tiles = [['Top score', fmt(topScore())], ['Adventure', cleared + '/' + LEVELS.length], ['Badges', got + '/' + ACH.length],
                      ['Suns made', fmt(st.made[SUN])], ['Supernovas', fmt(st.novas)], ['Merges', fmt(st.merges)]];
       html += '<div class="stats">' + tiles.map(([k, v]) => '<div class="panel stat"><span class="lbl">' + k + '</span><b>' + v + '</b></div>').join('') + '</div>';
-      html += '<div><div class="pname">Classic high scores</div><div class="maprows">' + Object.keys(MAPS).map(id => {
+      html += '<div><div class="pname">Classic high scores</div><div class="maprows">' + Object.keys(MAPS).filter(id => showInShop('map:' + id)).map(id => {
         const have = owned('map:' + id);
         return '<div class="panel maprow' + (have ? '' : ' locked') + '"><img src="' + mapThumb(id) + '" alt=""><div><div class="nm">' + MAPS[id].name + '</div>' +
           '<div class="ds">' + (have ? 'Best <b>' + fmt(bestOf(id)) + '</b>' : '🔒 Locked · <i class="coin"></i>' + fmt(MAPS[id].price)) + '</div></div>' +
@@ -3387,6 +3937,8 @@ canvas#c {
     }
     html += '<div class="row2"><button class="btn ghost" id="optMusic" type="button"></button>' +
             '<button class="btn ghost" id="optSfx" type="button"></button></div>';
+    if (holidaySeason()) html += '<button class="btn ghost" id="optHoliday" type="button"></button>' +
+      (where === 'home' ? '<p class="note">Snow, festive planets on this screen, and holiday touches in Classic and Adventure.</p>' : '');
     if (where === 'home') {
       html += '<button class="btn ghost" id="optReset" type="button">Reset high scores</button>' +
               '<p class="note">Clears the high score on every map, and any Classic game in progress.</p>' +
@@ -3404,10 +3956,12 @@ canvas#c {
       $('optSfx').textContent = 'Sounds: ' + (store.opts.sfx ? 'On' : 'Off');
       $('optMusic').setAttribute('aria-pressed', store.opts.music);
       $('optSfx').setAttribute('aria-pressed', store.opts.sfx);
+      if ($('optHoliday')) { $('optHoliday').textContent = 'Holiday look: ' + (store.opts.holiday !== false ? 'On' : 'Off'); $('optHoliday').setAttribute('aria-pressed', store.opts.holiday !== false); }
     };
     labelToggles();
     $('optMusic').addEventListener('click', () => { setMusic(!store.opts.music); labelToggles(); save(); });
     $('optSfx').addEventListener('click', () => { setSfx(!store.opts.sfx); labelToggles(); save(); });
+    if ($('optHoliday')) $('optHoliday').addEventListener('click', () => { store.opts.holiday = store.opts.holiday === false; labelToggles(); save(); refreshHome(); });
     $('optClose').addEventListener('click', closeSettings);
     if ($('optHome')) $('optHome').addEventListener('click', goHome);
     if ($('optRestart')) twoTap($('optRestart'), () => { newGame(); closeSettings(); });
@@ -3520,7 +4074,7 @@ canvas#c {
     window.addEventListener('resize', refit);
     requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
     if (typeof window.__PS_TEST === 'function') {
-      window.__PS_TEST({ armTimer: n => { const b = bodies.filter(p => !p.fly && !p.taken && p.t === 0).sort((p, q) => q.y - p.y)[0]; if (!b) return null; b.fused = true; b.fuse = n; return { x: b.x, y: b.y }; }, setCur: t => { cur = t; ready = true; }, peekGems: () => gems.filter(g => !g.got).map(g => ({ x: g.x, y: g.y })), peekRocks: () => rocks.filter(o => o.brk).map(o => ({ x: o.x, y: o.y, r: o.r })), LEVELS, quietAudio, wakeAudio, toastText: () => $('toast').textContent, toastOn: () => $('toast').classList.contains('go'), toast, peekBodies: () => bodies.map(b => ({ x: b.x, y: b.y, t: b.t, fly: b.fly, fuse: b.fused ? Math.max(0, b.fuse) + 1 : 0 })), peekCur: () => cur, badge, ACH, MAPS, TRACKS, songPlan, loopSeconds, audio, audioWake, setTrack, scheduleBar, enterGame, enterLevel, openAdventure, openMaps, openProfile, playMap, award, profTab(t) { profTab = t; renderProfile(); }, step, openSettings, openShop, shopTap, store, start() { hideCard(); hold = false; }, peek: () => ({ over, hold, made: made.slice(), shotsLeft, timeLeft, bossHp: boss && boss.hp, done: store.adv.slice(), title: ($('overCard').querySelector('h2') || {}).textContent }), tab(t) { shopTab = t; renderShop(); }, shoot(x) { aimX = x; launch(); }, get: () => ({ score, over, n: bodies.length, best: bestOf(curMap), map: curMap }) });
+      window.__PS_TEST({ setHoliday: v => { devHoliday = v; homeSprites = null; refreshHome(); }, holidayLook, art: (t, sk, f) => { const c = document.createElement('canvas'); c.width = c.height = 240; const g = c.getContext('2d'), q = 64 / TIERS[t].r; g.setTransform(q, 0, 0, q, 120, 130); drawPlanet(g, t, sk, f || 'classic'); return c.toDataURL(); }, armTimer: n => { const b = bodies.filter(p => !p.fly && !p.taken && p.t === 0).sort((p, q) => q.y - p.y)[0]; if (!b) return null; b.fused = true; b.fuse = n; return { x: b.x, y: b.y }; }, setCur: t => { cur = t; ready = true; }, peekGems: () => gems.filter(g => !g.got).map(g => ({ x: g.x, y: g.y })), peekRocks: () => rocks.filter(o => o.brk).map(o => ({ x: o.x, y: o.y, r: o.r })), LEVELS, quietAudio, wakeAudio, toastText: () => $('toast').textContent, toastOn: () => $('toast').classList.contains('go'), toast, peekBodies: () => bodies.map(b => ({ x: b.x, y: b.y, t: b.t, fly: b.fly, ice: !!b.ice, fuse: b.fused ? Math.max(0, b.fuse) + 1 : 0 })), peekCur: () => cur, badge, ACH, MAPS, TRACKS, songPlan, loopSeconds, audio, audioWake, setTrack, scheduleBar, enterGame, enterLevel, openAdventure, openMaps, openProfile, playMap, award, profTab(t) { profTab = t; renderProfile(); }, step, openSettings, openShop, shopTap, store, start() { hideCard(); hold = false; }, peek: () => ({ over, hold, made: made.slice(), shotsLeft, timeLeft, bossHp: boss && boss.hp, done: store.adv.slice(), title: ($('overCard').querySelector('h2') || {}).textContent }), tab(t) { shopTab = t; renderShop(); }, shoot(x) { aimX = x; launch(); }, aim(x) { aimX = x; }, get: () => ({ score, over, n: bodies.length, best: bestOf(curMap), map: curMap }) });
     }
   }
 
