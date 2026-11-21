@@ -33,6 +33,8 @@
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
+html { background: var(--space); }
+#safeProbe { position: fixed; left: 0; bottom: 0; width: 0; height: env(safe-area-inset-bottom); visibility: hidden; pointer-events: none; }
 body {
   background: var(--space);
   color: var(--star);
@@ -44,7 +46,7 @@ body {
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
 }
-.screen { position: absolute; inset: 0; display: none; }
+.screen { position: fixed; inset: 0; display: none; }
 .screen.on { display: block; }
 
 /* ---------- sticker controls ---------- */
@@ -141,9 +143,11 @@ body {
   white-space: nowrap;
   overflow: hidden;
 }
-.score.mid { font-size: 25px; }
-.score.long { font-size: 19px; }
-.mini { width: 78px; align-items: center; text-align: center; }
+.score { flex: 1; min-width: 0; display: block; }
+.mini b { display: block; max-width: 100%; overflow: hidden; }
+html.zh { --display: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; --body: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif; }
+html.zh h1, html.zh h2, html.zh .btn, html.zh .score, html.zh .mini b, html.zh .nm, html.zh .ach-n, html.zh .what, html.zh .lvname, html.zh .tag, html.zh .pname { font-weight: 700; }
+.mini { width: clamp(56px, 19vw, 78px); align-items: center; text-align: center; }
 .mini b { font-family: var(--display); font-weight: 400; font-size: 15px; line-height: 38px; height: 38px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .mini b.long { font-size: 11px; }
 .mini img { width: 38px; height: 38px; display: block; }
@@ -167,12 +171,14 @@ body {
   min-height: 0;
   position: relative;
   display: grid;
-  place-items: center;
-  padding-bottom: 6px;
+  justify-items: center;
 }
+#game .app { padding-bottom: 0; max-width: 760px; }      /* the board reaches the bottom of the screen; wider on tablets and computers */
+#rotate { display: none; position: fixed; inset: 0; z-index: 60; background: var(--space); place-items: center; text-align: center; padding: 24px; font-family: var(--display); font-size: 20px; color: var(--sun); }
+@media (orientation: landscape) and (max-height: 500px) { #rotate { display: grid; } }
 canvas#c {
   display: block;
-  border-radius: 20px;
+  border-radius: 20px 20px 0 0;
   touch-action: none;
   background: #1d1648;
   box-shadow: 0 0 0 3px var(--ink), 0 6px 0 3px var(--ink);
@@ -202,7 +208,7 @@ canvas#c {
 }
 .over {
   position: absolute;
-  inset: 0 0 6px 0;
+  inset: 0;
   display: none;
   place-items: center;
   background: rgba(23, 18, 56, 0.82);
@@ -265,7 +271,8 @@ canvas#c {
 .scorerow { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .scorerow img { width: 36px; height: 36px; flex: none; }
 .scorerow img[hidden] { display: none; }
-.lbl.goal { color: var(--sun); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lbl.goal { color: var(--sun); font-size: 11.5px; white-space: nowrap; overflow: hidden; }
+#scoreLabel { display: block; white-space: nowrap; overflow: hidden; }
 .goalbox {
   background: var(--panel); border: 3px solid var(--sun); border-radius: 18px; box-shadow: 0 4px 0 var(--ink);
   padding: 16px 16px 12px; margin: 14px auto 12px; max-width: 280px; position: relative;
@@ -414,7 +421,7 @@ canvas#c {
   padding: 6px 16px 6px 6px; background: var(--panel); border: 3px solid var(--sun); border-radius: 20px;
   box-shadow: 0 5px 0 var(--ink); width: max-content; max-width: calc(100% - 32px); pointer-events: none;
 }
-.ach-banner.show { transform: translate(-50%, 0); }
+.ach-banner.show { transform: translate(-50%, 0); pointer-events: auto; cursor: pointer; }
 .ach-banner img { width: 58px; height: 58px; flex: none; }
 .ach-k { font-size: 11px; color: var(--sun); letter-spacing: 0.08em; }
 .ach-n { font-family: var(--display); font-size: 16px; }
@@ -443,10 +450,12 @@ canvas#c {
       <button class="btn ghost" id="btnHomeSettings" type="button">Settings</button>
       <button class="btn holiday-pill" id="btnHoliday" type="button" hidden>Holiday shop · open until Dec 26</button>
     </div>
-    <div class="ver">Version 1.21</div>
+    <div class="ver">Version 1.24</div>
   </div>
 </section>
 
+<div id="safeProbe"></div>
+<div id="rotate" role="alert"><div>Turn your phone upright to play</div></div>
 <section class="screen" id="game">
   <div class="app">
     <header class="hud">
@@ -639,7 +648,7 @@ canvas#c {
   const freshStats = () => ({ made: TIERS.map(() => 0), merges: 0, novas: 0, games: 0, eaten: 0, heard: {} });
   const store = {
     map: 'open', bests: {}, runs: {},       // classic: chosen map, high score per map, game in progress per map
-    opts: { music: true, sfx: true, holiday: true }, sand: { ...DEFAULTS },
+    opts: { music: true, sfx: true, holiday: true, lang: null }, sand: { ...DEFAULTS },
     coins: 0, owned: {}, adv: [], ach: {}, stats: freshStats(),
     equip: { skins: TIERS.map(() => 'classic'), faces: TIERS.map(() => 'classic'), bg: 'night', track: 'sunny' }
   };
@@ -655,7 +664,11 @@ canvas#c {
   let rocks = [], bars = [], boss = null, ufos = [];
   let gems = [], pad = 0, quakeT = 0, rainT = 0, shake = 0;   // stars to collect, wall squeeze, earthquake/rain timers
   let P = { ...DEFAULTS };       // physics in use right now
-  let H = 640;
+  // The board is always the same size in game units on every screen, so every phone plays the same game.
+  // It is scaled to fit; any spare room below it (down to the bottom of the screen) is drawn as more of
+  // the launch area, so there is never an empty strip. VH is that full drawn height.
+  const WORLD_H = 600;
+  let H = WORLD_H, VH = WORLD_H;
   let bodies = [];
   let particles = [];
   let score = 0;
@@ -724,7 +737,7 @@ canvas#c {
       for (const k of ['merges', 'novas', 'games', 'eaten']) store.stats[k] = Math.max(0, st[k] | 0);
       if (st.heard && typeof st.heard === 'object') for (const k in st.heard) if (TRACKS[k]) store.stats.heard[k] = 1;
     }
-    if (saved.opts) { store.opts.music = saved.opts.music !== false; store.opts.sfx = saved.opts.sfx !== false; store.opts.holiday = saved.opts.holiday !== false; }
+    if (saved.opts) { store.opts.music = saved.opts.music !== false; store.opts.sfx = saved.opts.sfx !== false; store.opts.holiday = saved.opts.holiday !== false; if (saved.opts.lang === 'zh' || saved.opts.lang === 'en') store.opts.lang = saved.opts.lang; }
     if (saved.sand) for (const [key, , lo, hi] of SLIDERS) {
       if (Number.isFinite(saved.sand[key])) store.sand[key] = clamp(saved.sand[key], lo, hi);
     }
@@ -1188,10 +1201,11 @@ canvas#c {
     if (pic) { if (gi.getAttribute('src') !== pic) gi.src = pic; gi.hidden = false; } else gi.hidden = true;
     $('scoreLabel').textContent = label;
     s.textContent = text;
-    s.className = 'score' + (text.length > 7 ? ' long' : text.length > 5 ? ' mid' : '');
+    s.className = 'score';
     $('bestLabel').textContent = sideLabel;
     const b = $('best');
-    b.textContent = side; b.className = side.length > 7 ? 'long' : '';
+    b.textContent = side; b.className = '';
+    fitHud();
     const hidden = mode === 'adventure' && L && L.hideNext;
     if (hidden) { $('next').src = mysteryPic(); $('next').alt = 'Hidden'; }
     else if (sprites[next]) { $('next').src = sprites[next].url; $('next').alt = TIERS[next].n; }
@@ -1349,18 +1363,18 @@ canvas#c {
     { name: 'Bomb squad', goal: { score: 450 }, shots: 130, line: 140, fuse: { tiers: [0, 1], shots: 12, every: 12 }, tip: 'Timers keep coming and there is less room to work in.' },
     { name: 'Black hole', goal: { boss: true }, shots: 130, boss: { kind: 'hole', hp: 175, r: 46, y: 0.2, eat: 5, heal: 5, g: 520, target: 'big' }, tip: 'It pulls planets in and swallows your biggest one every few shots, which heals it.' },
     // 21-30: new tricks, one at a time, then a moving boss
-    { name: 'Star catcher', goal: { stars: true }, shots: 58, stars: [[60, 0.18], [180, 0.14], [300, 0.18], [110, 0.32], [250, 0.32]], tip: 'Build your planets up towards the stars, then merge two right on top of one.' },
-    { name: 'Demolition', goal: { breakRocks: true }, shots: 72, rocks: [{ x: 90, y: 0.32, r: 22, brk: 1 }, { x: 270, y: 0.32, r: 22, brk: 1 }, { x: 180, y: 0.48, r: 22, brk: 1 }], tip: 'Cracked rocks break when two planets merge right next to them.' },
+    { name: 'Star catcher', goal: { stars: true }, shots: 74, stars: [[60, 0.18], [180, 0.14], [300, 0.18], [110, 0.32], [250, 0.32]], tip: 'Build your planets up towards the stars, then merge two right on top of one.' },
+    { name: 'Demolition', goal: { breakRocks: true }, shots: 78, rocks: [{ x: 90, y: 0.32, r: 22, brk: 1 }, { x: 270, y: 0.32, r: 22, brk: 1 }, { x: 180, y: 0.48, r: 22, brk: 1 }], tip: 'Cracked rocks break when two planets merge right next to them.' },
     { name: 'Orbit', goal: { make: 7, count: 1 }, time: 135, gravity: 150, tip: 'Planets pull on each other here, and bigger planets pull harder. Your shots curve towards big planets too.' },
     { name: 'Hold the line', goal: { smash: 8 }, autoFire: 2.5, rain: { sec: 3, count: 2, tiers: [0, 1, 2], ice: true }, tip: 'Aim matching planets at the icy ones. Smash eight before the sky fills up.' },
     { name: 'Mystery box', goal: { make: 6, count: 1 }, shots: 66, hideNext: true, tip: 'You can’t see which planet comes next.' },
     { name: 'Squeeze', goal: { make: 6, count: 1 }, time: 85, squeeze: { rate: 0.25, max: 55 }, tip: 'The side walls slowly close in.' },
-    { name: 'Alien fleet', goal: { score: 500 }, shots: 100, fleet: { every: 14, count: 3 }, tip: 'Every 14 shots, three aliens each grab a random planet at once.' },
+    { name: 'Alien fleet', goal: { score: 500 }, shots: 106, fleet: { every: 14, count: 3 }, tip: 'Every 14 shots, three aliens each grab a random planet at once.' },
     { name: 'Earthquake', goal: { make: 7, count: 1 }, time: 120, quake: { every: 9, dur: 0.7 }, tip: 'Every few seconds an earthquake tips the board towards you. Everything slides down, nothing can merge while it shakes, and your planets come back in a new order.' },
     { name: 'Pinball', goal: { score: 450 }, shots: 88, rocks: [{ x: 100, y: 0.35, r: 20, bumper: 1 }, { x: 260, y: 0.35, r: 20, bumper: 1 }, { x: 180, y: 0.52, r: 20, bumper: 1 }], tip: 'Bumpers bounce planets away hard.' },
     { name: 'Comet king', goal: { boss: true }, shots: 130, boss: { kind: 'rock', hp: 300, r: 50, y: 0.18, toss: 5, sway: 90, speed: 0.7 }, tip: 'It moves side to side and throws Plutos. Every merge hurts it.' },
     // 31-40: tricks combine, then the mothership
-    { name: 'Star field', goal: { stars: true }, shots: 80, meteors: { every: 9, r: 16 }, stars: [[50, 0.2], [140, 0.16], [230, 0.16], [310, 0.22], [90, 0.38], [270, 0.38], [180, 0.3]], tip: 'Seven stars, and rocks keep landing between them. Planets that catch on a rock can merge right there.' },
+    { name: 'Star field', goal: { stars: true }, shots: 120, meteors: { every: 11, r: 16 }, stars: [[50, 0.2], [140, 0.16], [230, 0.16], [310, 0.22], [90, 0.38], [270, 0.38], [180, 0.3]], tip: 'Seven stars, and rocks keep landing between them. Planets that catch on a rock can merge right there.' },
     { name: 'Gravity well', goal: { make: 6, count: 1 }, shots: 100, gravity: 220, alien: { every: 20, target: 'big' }, tip: 'Strong pull between planets, and an alien after your biggest one.' },
     { name: 'Chain reaction', goal: { make: 6, count: 1 }, shots: 4, spawn: [100],
       start: [[4, 130, 43], [3, 130, 123], [2, 130, 189], [1, 130, 242], [0, 130, 284], [4, 230, 43], [3, 230, 123], [2, 230, 189], [1, 230, 242], [0, 230, 284]],
@@ -1370,22 +1384,22 @@ canvas#c {
     { name: 'Wandering hole', goal: { make: 6, count: 1 }, shots: 76, boss: { kind: 'hole', r: 40, y: 0.22, eat: 8, g: 450, sway: 110, speed: 0.5 }, tip: 'A black hole drifts back and forth, pulling planets in.' },
     { name: 'Demolition crew', goal: { breakRocks: true }, shots: 70, quake: { every: 9, dur: 0.8 },
       rocks: [{ x: 70, y: 0.3, r: 20, brk: 1 }, { x: 180, y: 0.24, r: 20, brk: 1 }, { x: 290, y: 0.3, r: 20, brk: 1 }, { x: 120, y: 0.5, r: 20, brk: 1 }, { x: 240, y: 0.5, r: 20, brk: 1 }], tip: 'Five cracked rocks, and the ground keeps shaking.' },
-    { name: 'Alien armada', goal: { score: 600 }, shots: 124, fleet: { every: 16, count: 4 }, tip: 'Four aliens at a time now.' },
+    { name: 'Alien armada', goal: { score: 600 }, shots: 140, fleet: { every: 16, count: 4 }, tip: 'Four aliens at a time now.' },
     { name: 'Blind ceiling', goal: { make: 6, count: 1 }, time: 130, hideNext: true, line: 190, meteors: { every: 14, r: 16 }, tip: 'Less room, no peeking, and falling rocks.' },
     { name: 'Mothership', goal: { boss: true }, shots: 96, boss: { kind: 'ship', hp: 220, r: 46, y: 0.17, fleet: { every: 8, count: 2 }, sway: 80, speed: 0.6 }, tip: 'It drifts overhead and sends aliens after your planets.' },
     // 41-50: everything at once, then the Big Bang
-    { name: 'Starstorm', goal: { stars: true }, shots: 86, wind: { a: 380, period: 6 }, quake: { every: 10, dur: 0.9 },
+    { name: 'Starstorm', goal: { stars: true }, shots: 122, wind: { a: 380, period: 6 }, quake: { every: 10, dur: 0.9 },
       stars: [[45, 0.18], [130, 0.15], [230, 0.15], [315, 0.18], [80, 0.34], [180, 0.28], [280, 0.34], [180, 0.44]], tip: 'Eight stars. The wind bends your shots and the ground keeps shaking.' },
     { name: 'Heavy gravity', goal: { make: 7, count: 1 }, time: 112, gravity: 300, rocks: [{ x: 90, y: 0.45, r: 18, bumper: 1 }, { x: 270, y: 0.45, r: 18, bumper: 1 }], tip: 'Very strong pull between planets. Bumpers fling them apart.' },
     { name: 'Pressure', goal: { score: 650 }, shots: 130, squeeze: { rate: 0.25, max: 40 }, fuse: { tiers: [0], shots: 18, every: 20 }, tip: 'Walls close in while timers tick.' },
     { name: 'Last stand', goal: { smash: 12 }, autoFire: 2.1, rain: { sec: 3, count: 2, tiers: [0, 1, 2], ice: true }, meteors: { every: 15, r: 16 }, tip: 'Icy planets fall while space rocks pile up.' },
-    { name: 'Orbit storm', goal: { make: 7, count: 1 }, time: 200, gravity: 180, fleet: { every: 18, count: 2 }, wind: { a: 360, period: 7 }, tip: 'Gravity, wind and an alien fleet.' },
+    { name: 'Orbit storm', goal: { make: 7, count: 1 }, time: 215, gravity: 180, fleet: { every: 18, count: 2 }, wind: { a: 360, period: 7 }, tip: 'Gravity, wind and an alien fleet.' },
     { name: 'Gauntlet', goal: { score: 480 }, shots: 120, fuse: { tiers: [0], shots: 15, every: 17 }, meteors: { every: 20, r: 15 }, tip: 'Timers and meteors together.' },
-    { name: 'Lights out', goal: { make: 6, count: 1 }, shots: 125, hideNext: true, line: 190, alien: { every: 16, target: 'big' }, tip: 'No peeking, less room, and a greedy alien.' },
-    { name: 'Wrecking ball', goal: { breakRocks: true }, shots: 110, squeeze: { rate: 0.2, max: 28 },
+    { name: 'Lights out', goal: { make: 6, count: 1 }, shots: 145, hideNext: true, line: 190, alien: { every: 16, target: 'big' }, tip: 'No peeking, less room, and a greedy alien.' },
+    { name: 'Wrecking ball', goal: { breakRocks: true }, shots: 110, squeeze: { rate: 0.2, max: 40 },
       rocks: [{ x: 90, y: 0.28, r: 20, brk: 1 }, { x: 270, y: 0.28, r: 20, brk: 1 }, { x: 180, y: 0.4, r: 18, bumper: 1 }, { x: 110, y: 0.52, r: 20, brk: 1 }, { x: 250, y: 0.52, r: 20, brk: 1 }, { x: 180, y: 0.22, r: 20, brk: 1 }], tip: 'Break five rocks around a bumper while the walls close in.' },
-    { name: 'Aftershock', goal: { smash: 10 }, autoFire: 2, quake: { every: 10, dur: 1 }, rain: { sec: 3, count: 2, tiers: [0, 1, 2, 3], ice: true }, tip: 'Icy planets, Venuses too, and earthquakes. Smash your way out.' },
-    { name: 'Big Bang', goal: { make: 9, count: 1 }, big: true, time: 330, spawn: [0, 20, 40, 40], gravity: 260, line: 80, tip: 'The finale. You get bigger planets, they pull together, and there is extra room. Build all the way up to the Sun.' }
+    { name: 'Aftershock', goal: { smash: 10 }, autoFire: 2, quake: { every: 10, dur: 1 }, rain: { sec: 2.8, count: 2, tiers: [0, 1, 2, 3], ice: true }, tip: 'Icy planets, Venuses too, and earthquakes. Smash your way out.' },
+    { name: 'Big Bang', goal: { make: 9, count: 1 }, big: true, time: 170, spawn: [0, 20, 40, 40], gravity: 260, line: 80, tip: 'The finale. You get bigger planets, they pull together, and there is extra room. Build all the way up to the Sun.' }
   ];
   const reward = i => (30 + 10 * (i + 1)) * (LEVELS[i].boss && LEVELS[i].boss.hp || LEVELS[i].big ? 2 : 1);
 
@@ -3130,17 +3144,17 @@ canvas#c {
       shake = Math.max(0, shake - dt);
       ctx.translate((Math.random() - 0.5) * 10 * shake, (Math.random() - 0.5) * 10 * shake);
     }
-    sky(ctx, W, H, now);
+    sky(ctx, W, VH, now);
     const bg = BGS[store.equip.bg] || BGS.night;
     const festive = mode !== 'sandbox' && holidayLook();
     if (festive || (TW && TW.snow)) {
-      snowfall(ctx, W, H, now, dt, gameSnow, 0.6);
+      snowfall(ctx, W, VH, now, dt, gameSnow, 0.6);
       ctx.fillStyle = 'rgba(255,255,255,0.85)';               // a soft snowdrift along the near edge
-      for (let x = -10; x < W + 30; x += 34) { ctx.beginPath(); ctx.arc(x, H + 6, 16 + (x % 3) * 3, 0, TAU); ctx.fill(); }
+      for (let x = -10; x < W + 30; x += 34) { ctx.beginPath(); ctx.arc(x, VH + 6, 16 + (x % 3) * 3, 0, TAU); ctx.fill(); }
     }
     if (mode !== 'sandbox') {
       const lineY = H - lineH();
-      ctx.fillStyle = 'rgba(255,126,182,0.07)'; ctx.fillRect(0, lineY, W, H - lineY);
+      ctx.fillStyle = 'rgba(255,126,182,0.07)'; ctx.fillRect(0, lineY, W, VH - lineY);
       const danger = bodies.some(b => b.overT > 0.15);
       if (festive) drawLightString(ctx, lineY, now, danger, bg);
       else {
@@ -3312,11 +3326,12 @@ canvas#c {
 
   // ---------- Sizing ----------
   function fit() {
-    const w = stage.clientWidth, h = stage.clientHeight - 6;
+    const w = stage.clientWidth, h = stage.clientHeight;
     if (!w || h <= 0) return;
-    const newH = clamp(W * h / w, 500, 780);
-    const cssW = Math.min(w, h * W / newH), cssH = cssW * newH / W;
-    H = newH;
+    const safe = $('safeProbe').offsetHeight || 0;          // the iPhone home bar: keep the launcher above it
+    const k = Math.min(w / W, (h - safe - 6) / WORLD_H);    // screen pixels per game unit
+    const cssW = W * k, cssH = h;                           // full height: the board runs to the bottom edge
+    H = WORLD_H; VH = cssH / k;
     canvas.style.width = cssW + 'px';
     canvas.style.height = cssH + 'px';
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
@@ -3566,18 +3581,33 @@ canvas#c {
     if (!achBusy) nextBanner();
     if (screen === 'home') refreshHome();
   }
+  // The badge banner slides down for a few seconds. It is put away by a timer set before anything else
+  // can go wrong, checked again every frame, and tapping it or leaving the app also puts it away, so it
+  // can never get stuck on screen.
+  let bannerUntil = 0, bannerTimer = 0;
+  function hideBanner() {
+    clearTimeout(bannerTimer); bannerTimer = 0; bannerUntil = 0;
+    $('achBanner').classList.remove('show');
+    setTimeout(nextBanner, 450);
+  }
   function nextBanner() {
+    if (bannerUntil) return;                       // one is showing; it calls back when it goes
     const id = achQueue.shift();
     if (!id) { achBusy = false; return; }
     achBusy = true;
-    const a = ACH_BY[id];
-    $('achImg').src = badge(id, true);
-    $('achName').textContent = a.name;
-    $('achCoins').innerHTML = '<i class="coin"></i>+' + fmt(a.coins) + ' coins';
-    $('achBanner').classList.add('show');
-    sfx.ach();
-    setTimeout(() => { $('achBanner').classList.remove('show'); setTimeout(nextBanner, 450); }, 2600);
+    bannerUntil = performance.now() + 2600;
+    bannerTimer = setTimeout(hideBanner, 2600);
+    try {
+      const a = ACH_BY[id];
+      $('achImg').src = badge(id, true);
+      $('achName').textContent = a.name;
+      $('achCoins').innerHTML = '<i class="coin"></i>+' + fmt(a.coins) + ' coins';
+      $('achBanner').classList.add('show');
+      sfx.ach();
+    } catch (e) { hideBanner(); }
   }
+  $('achBanner').addEventListener('click', () => { if (bannerUntil) hideBanner(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && bannerUntil) { achQueue.length = 0; hideBanner(); } });
   const recentMerges = [];
   function onMerge(t) {
     const st = store.stats;
@@ -3876,6 +3906,289 @@ canvas#c {
     return mapThumbs.get(key);
   }
 
+  // ---------- Chinese (Traditional, as used in Taiwan) ----------
+  // Every piece of text the game shows, in English, with its Chinese. Text with numbers in it is matched
+  // by the patterns below the word list. Anything missing here simply stays in English.
+  const ZH_PLANETS = { Pluto: '冥王星', Moon: '月球', Mars: '火星', Venus: '金星', Earth: '地球', Neptune: '海王星', Uranus: '天王星', Saturn: '土星', Jupiter: '木星', Sun: '太陽' };
+  const ZH = {
+    ...ZH_PLANETS,
+    // home, menus and buttons
+    'Classic': '經典', 'Adventure': '冒險', 'Sandbox': '沙盒', 'Shop': '商店', 'Settings': '設定', 'Profile': '個人資料', 'Home': '主頁',
+    'Play': '開始', 'play': '開始', 'Start': '開始', 'Levels': '關卡', 'Next level': '下一關', 'Try again': '再試一次', 'Play again': '再玩一次',
+    'Go home': '回到主頁', 'Back to the game': '回到遊戲', 'Close': '關閉', 'Done': '完成', 'Save': '儲存', 'Listen': '試聽', 'Stop': '停止',
+    'Restart game': '重新開始', 'Turn your phone upright to play': '請把手機轉成直的來玩', 'Restart level': '重新開始本關', 'Clear board': '清空棋盤', 'Reset physics': '重置物理設定', 'Reset high scores': '清除最高分', 'Reset entire game': '重置整個遊戲',
+    'Tap again to confirm': '再點一次確認', 'High scores reset': '最高分已清除', 'Everything reset': '已全部重置',
+    'Music: On': '音樂：開', 'Music: Off': '音樂：關', 'Sounds: On': '音效：開', 'Sounds: Off': '音效：關',
+    'Holiday look: On': '節日裝飾：開', 'Holiday look: Off': '節日裝飾：關',
+    'Snow, festive planets on this screen, and holiday touches in Classic and Adventure.': '雪花、主頁上的節日星球，以及經典和冒險模式裡的節日裝飾。',
+    'Clears the high score on every map, and any Classic game in progress.': '清除每張地圖的最高分，以及正在進行的經典模式遊戲。',
+    'Erases your high scores, coins, everything you bought, your achievements and your adventure progress.': '清除你的最高分、金幣、買過的所有東西、成就和冒險進度。',
+    'Sandbox settings': '沙盒設定', '1 is the lowest, 10 the highest, 5 is normal.': '1 最低，10 最高，5 是正常。',
+    'How hard shots hit': '發射的力度', 'How strongly planets slide up': '星球向上滑的力度', 'How quickly planets slow down': '星球減速的快慢',
+    'Air resistance': '空氣阻力', 'Bounciness': '彈性', 'Springiness when squashed': '擠壓時的回彈', 'Stickiness between planets': '星球之間的黏性',
+    'Tap a planet above to choose what you shoot': '點上面的星球，選擇要發射哪一個',
+    'Score': '分數', 'Sandbox score': '沙盒分數', 'Best': '最高', 'Next': '下一個', 'Shots': '發射', 'Time': '時間', 'Level': '關卡', 'Hidden': '隱藏',
+    'Merge order, smallest to largest': '合並順序，從小到大', 'You scored': '你的得分', 'GOAL': '目標', 'BOSS': '首領', 'DEV': 'DEV',
+    'Night sky. Drag left or right to aim, release to slide the planet.': '夜空。左右拖動瞄準，鬆手讓星球滑出去。',
+    'Pick a map. Each one keeps its own high score. New maps are in the shop.': '選一張地圖。每張地圖都有自己的最高分。新地圖在商店裡。',
+    'Clear a level to open the next one. The first time you clear a level, you win coins.': '過關後會解鎖下一關。第一次過關可以贏得金幣。',
+    'Every level cleared!': '所有關卡都通過了！', 'locked': '未解鎖', '★ done': '★ 完成', '🔒 Locked ·': '🔒 未解鎖 ·',
+    'Holiday shop · open until Dec 26': '節日商店 · 開到 12 月 26 日',
+    // game messages
+    'Level clear!': '過關！', 'Boss beaten!': '打敗首領！', 'Out of shots!': '發射次數用完了！', 'Time is up!': '時間到！',
+    'Boom! A timer ran out': '砰！計時器時間到了', 'Too big!': '太大了！', 'The sky is full!': '天空滿了！',
+    'That was the last level for now. More are on the way.': '這是目前的最後一關，更多關卡即將推出。',
+    'You made the Sun!': '你合成了太陽！', 'Another Sun!': '又一個太陽！', 'Supernova!': '超新星！',
+    'An alien!': '外星人來了！', 'Alien fleet!': '外星艦隊！', 'Here they come!': '它們來了！', 'Gulp!': '咕嚕！', 'Tick tock!': '滴答滴答！',
+    'Defused!': '拆除成功！', 'Earthquake!': '地震了！', 'Combo!': '連擊！', 'ACHIEVEMENT!': '獲得成就！',
+    'Goal: points': '目標：分數', 'Goal: survive': '目標：堅持', 'Goal: smash ice': '目標：擊碎冰塊', 'Goal: stars': '目標：星星',
+    'Goal: break rocks': '目標：打碎岩石', 'Goal: beat boss': '目標：打敗首領', 'Make the Sun': '合成太陽',
+    'Beat the black hole': '打敗黑洞', 'Beat the grumpy asteroid': '打敗暴躁小行星', 'Beat the mothership': '打敗母艦',
+    // level rules
+    'The alien takes your biggest planet': '外星人會拿走你最大的星球', 'It eats your biggest planet': '它會吃掉你最大的星球',
+    'Planets pull on each other, and bend your shots towards them': '星球會互相吸引，還會把你發射的星球吸彎',
+    'The wind pushes your shots sideways': '風會把你發射的星球吹偏', 'The side walls close in': '兩邊的牆會慢慢靠近',
+    'You can’t see the next planet': '你看不到下一個星球', 'Catch a star by merging two planets on top of it': '在星星上合並兩個星球就能抓住它',
+    'Bumpers bounce planets away': '彈板會把星球彈開',
+    'The danger line is higher, so there is less room': '危險線更高了，所以空間更小',
+    'The danger line is lower, so there is more room': '危險線更低了，所以空間更大',
+    'Icy planets can’t merge. Shoot one to crack its ice, or hit it with a match to smash both': '冰凍星球不能合並。打中它可以敲碎冰殼，用相同的星球打中它就能把兩個一起擊碎',
+    // level names and tips
+    'First steps': '第一步', 'Warm up': '熱身', 'Blue marble': '藍色彈珠', 'Rocky road': '岩石之路', 'Slippery ice': '滑溜溜的冰', 'Solar wind': '太陽風',
+    'Space visitors': '太空訪客', 'Sticky syrup': '黏黏的糖漿', 'The wall': '一堵牆', 'Grumpy asteroid': '暴躁小行星',
+    'Handle with care': '小心輕放', 'Count your shots': '數著發射', 'Beat the clock': '和時間賽跑', 'Tick tock': '滴答滴答', 'Low ceiling': '低矮的天花板',
+    'Greedy alien': '貪心的外星人', 'Hungry storm': '飢餓風暴', 'Meteor shower': '流星雨', 'Bomb squad': '拆彈小隊', 'Black hole': '黑洞',
+    'Star catcher': '摘星星', 'Demolition': '拆除', 'Orbit': '軌道', 'Hold the line': '守住防線', 'Mystery box': '神秘盒子', 'Squeeze': '擠壓',
+    'Alien fleet': '外星艦隊', 'Earthquake': '地震', 'Pinball': '彈珠台', 'Comet king': '彗星之王', 'Star field': '星空', 'Gravity well': '引力井',
+    'Chain reaction': '連鎖反應', 'Ticking squeeze': '滴答擠壓', 'Storm front': '風暴前線', 'Wandering hole': '遊蕩的黑洞', 'Demolition crew': '拆除隊',
+    'Alien armada': '外星大軍', 'Blind ceiling': '盲目的天花板', 'Mothership': '母艦', 'Starstorm': '星星風暴', 'Heavy gravity': '超強引力', 'Pressure': '壓力',
+    'Last stand': '最後一搏', 'Orbit storm': '軌道風暴', 'Gauntlet': '重重挑戰', 'Lights out': '熄燈', 'Wrecking ball': '破壞球', 'Aftershock': '餘震', 'Big Bang': '宇宙大爆炸',
+    'Slide two matching planets together and they merge into the next one.': '讓兩個相同的星球滑到一起，它們會合並成下一個星球。',
+    'Space rocks never move and never merge.': '太空岩石不會動，也不會合並。',
+    'Almost no friction. Everything keeps sliding.': '幾乎沒有摩擦力，所有東西都會一直滑。',
+    'The wind swaps sides every few seconds.': '風每隔幾秒就會換個方向吹。',
+    'Every few shots an alien takes one planet. It might help. It might not.': '每隔幾次發射，外星人會拿走一個星球。可能幫到你，也可能不會。',
+    'Thick and gloopy. Planets stop short.': '又稠又黏，星球很快就停下來。',
+    'Only one way through.': '只有一條路能過去。',
+    'Every merge hurts the boss, and bigger merges hurt more. It throws a Pluto now and then.': '每次合並都會傷害首領，越大的合並傷害越高。它時不時會扔一個冥王星過來。',
+    'Earths will not merge here. They just pile up, so leave room for them.': '地球在這裡不會合並，只會越堆越多，所以要給它們留出空間。',
+    'Make a Neptune before your shots run out.': '在發射次數用完之前合成一個海王星。',
+    'Score fast. The clock does not wait.': '快點得分，時間不等人。',
+    'Now and then a planet gets a timer that counts down with every shot. Merge it before it runs out.': '時不時會有星球帶上計時器，每發射一次就少一格。在時間用完之前合並它。',
+    'The danger line is much higher, so there is far less room.': '危險線高了很多，所以空間小了很多。',
+    'This alien always takes your biggest planet. Keep scoring anyway.': '這個外星人總是拿走你最大的星球。不管怎樣繼續得分吧。',
+    'Wind, and an alien that takes your biggest planet.': '有風，還有一個會拿走你最大星球的外星人。',
+    'Every 8 shots a space rock lands somewhere in the upper part of the board and stays. Room runs out, so be quick.': '每發射 8 次，就有一塊太空岩石落在棋盤上方並留在那裡。空間會越來越少，所以要快。',
+    'Timers keep coming and there is less room to work in.': '計時器不斷出現，空間也更小了。',
+    'It pulls planets in and swallows your biggest one every few shots, which heals it.': '它會把星球吸過去，每隔幾次發射吞掉你最大的星球來恢復生命。',
+    'Build your planets up towards the stars, then merge two right on top of one.': '把星球一路堆到星星那裡，然後在星星上面合並兩個星球。',
+    'Cracked rocks break when two planets merge right next to them.': '在裂開的岩石旁邊合並兩個星球，岩石就會碎掉。',
+    'Planets pull on each other here, and bigger planets pull harder. Your shots curve towards big planets too.': '這裡的星球會互相吸引，越大的星球吸力越強。你發射的星球也會彎向大星球。',
+    'Aim matching planets at the icy ones. Smash eight before the sky fills up.': '用相同的星球瞄準冰凍星球。在天空滿之前擊碎八個。',
+    'You can’t see which planet comes next.': '你看不到下一個是什麼星球。',
+    'The side walls slowly close in.': '兩邊的牆會慢慢靠近。',
+    'Every 14 shots, three aliens each grab a random planet at once.': '每發射 14 次，三個外星人會同時各抓走一個隨機星球。',
+    'Every few seconds an earthquake tips the board towards you. Everything slides down, nothing can merge while it shakes, and your planets come back in a new order.': '每隔幾秒就會地震，棋盤向你傾斜。所有星球都會滑下來，搖晃時不能合並，然後星球會以新的順序回去。',
+    'Bumpers bounce planets away hard.': '彈板會把星球用力彈開。',
+    'It moves side to side and throws Plutos. Every merge hurts it.': '它會左右移動並扔冥王星過來。每次合並都會傷害它。',
+    'Seven stars, and rocks keep landing between them. Planets that catch on a rock can merge right there.': '七顆星星，岩石還會不斷落在它們中間。卡在岩石上的星球可以在那裡合並。',
+    'Strong pull between planets, and an alien after your biggest one.': '星球之間吸力很強，還有一個外星人盯著你最大的星球。',
+    'Each column is a chain, and the two finished chains will meet. You only have 4 Plutos.': '每一列都是一條鏈，兩條完成的鏈會碰到一起。你只有 4 個冥王星。',
+    'Timers, and walls closing in.': '計時器，還有慢慢靠近的牆。',
+    'Icy planets in the wind. Smash them before the sky fills up.': '風中的冰凍星球。在天空滿之前擊碎它們。',
+    'A black hole drifts back and forth, pulling planets in.': '黑洞來回飄動，把星球吸過去。',
+    'Five cracked rocks, and the ground keeps shaking.': '五塊裂開的岩石，地面還一直在搖晃。',
+    'Four aliens at a time now.': '現在一次來四個外星人。',
+    'Less room, no peeking, and falling rocks.': '空間更小，不能偷看，還有落下的岩石。',
+    'It drifts overhead and sends aliens after your planets.': '它在上方飄來飄去，派外星人來抓你的星球。',
+    'Eight stars. The wind bends your shots and the ground keeps shaking.': '八顆星星。風會吹偏你的發射，地面還一直在搖晃。',
+    'Very strong pull between planets. Bumpers fling them apart.': '星球之間的吸力非常強，彈板會把它們彈開。',
+    'Walls close in while timers tick.': '計時器滴答作響時，牆在慢慢靠近。',
+    'Icy planets fall while space rocks pile up.': '冰凍星球不斷落下，太空岩石也越堆越多。',
+    'Gravity, wind and an alien fleet.': '引力、風，還有外星艦隊。',
+    'Timers and meteors together.': '計時器和流星一起來。',
+    'No peeking, less room, and a greedy alien.': '不能偷看，空間更小，還有一個貪心的外星人。',
+    'Break five rocks around a bumper while the walls close in.': '在牆慢慢靠近時，打碎彈板周圍的五塊岩石。',
+    'Icy planets, Venuses too, and earthquakes. Smash your way out.': '冰凍星球（還有金星），再加上地震。一路擊碎衝出去吧。',
+    'The finale. You get bigger planets, they pull together, and there is extra room. Build all the way up to the Sun.': '最終關！你會拿到更大的星球，它們會互相吸引，空間也更大。一路合成到太陽吧。',
+    // classic maps
+    'Open space': '開闊太空', 'Rocky middle': '中間的岩石', 'Twin rocks': '雙子岩石', 'Swinging rock': '搖擺的岩石', 'Alien visitors': '外星訪客',
+    'Christmas tree': '聖誕樹', 'Asteroid storm': '小行星風暴',
+    'The classic board. Nothing in the way.': '經典棋盤，沒有任何障礙。', 'A sleepy space rock sits in the middle.': '一塊愛睡覺的太空岩石待在中間。',
+    'Two rocks split the board.': '兩塊岩石把棋盤分開了。', 'A wall with one gap. Pick your lane.': '一堵只有一個缺口的牆。選好你的路線。',
+    'A rock sweeps back and forth across the middle.': '一塊岩石在中間來回掃動。', 'Every 20 shots an alien takes one planet.': '每發射 20 次，外星人會拿走一個星球。',
+    'It pulls planets in and swallows one every 14 shots.': '它會把星球吸過去，每發射 14 次吞掉一個。',
+    'A snowy tree in the middle and snow falling all game. Holiday only.': '中間有一棵積雪的樹，整局都在下雪。僅限節日期間。',
+    'Two swinging rocks and an alien. Good luck!': '兩塊搖擺的岩石和一個外星人。祝你好運！',
+    // shop
+    'Planets': '星球', 'Faces': '表情', 'Skies': '天空', 'Maps': '地圖', 'Music': '音樂', 'Wallpapers': '壁紙', 'Sets': '套裝', 'All': '全部',
+    'In use': '使用中', 'Use': '使用', 'Wear all': '全部穿上', 'View': '查看', 'Buy?': '買嗎？', 'Limited': '限定', 'Every planet': '所有星球',
+    'You earn 1 coin for every 20 points in the normal game.': '在普通遊戲中每得 20 分可以賺 1 個金幣。',
+    'A set dresses all ten planets and costs less than buying the ten skins one by one. The set price stays the same even if you already own some of them.': '套裝可以給十個星球全部換裝，比一個一個買便宜。就算你已經有其中幾個，套裝價格也不變。',
+    'Holiday shop': '節日商店', 'Holiday friends': '節日夥伴',
+    'Limited edition: these leave the shop after December 26. Anything you buy is yours to keep.': '限定款：12 月 26 日之後會從商店下架。買到的東西永遠歸你。',
+    'Each one is also listed with its planet below. Buy it in either place.': '每一個也都列在下面對應的星球裡，在哪裡買都可以。',
+    'Buy a face once, then put it on any planet. Pick a planet (or All), then tap a face.': '表情買一次就能給任何星球用。先選一個星球（或"全部"），再點一個表情。',
+    'A sky changes the game board and the home screen.': '天空會改變遊戲棋盤和主頁的樣子。',
+    'New boards for Classic, each with its own high score. Buy one, then pick it from the Classic screen.': '經典模式的新棋盤，每張都有自己的最高分。買下後在經典模式頁面選擇它。',
+    'Tap Listen to hear a tune before you buy it.': '買之前可以點"試聽"聽一聽。',
+    'Wallpapers for your phone, sized for a tall iPhone screen. Buy one, then save it to your photos.': '手機壁紙，適合 iPhone 的長螢幕。買下後可以保存到相簿。',
+    'Press and hold the picture, then choose Save to Photos.': '長按圖片，然後選擇"儲存到照片"。',
+    'Saving from a button is not available here. Press and hold the picture, then choose Save to Photos.': '這裡不能用按鈕保存。長按圖片，然後選擇"儲存到照片"。',
+    'Wallpaper': '壁紙',
+    // skins
+    'Snowball': '雪球', 'Pearl': '珍珠', 'Tomato': '番茄', 'Lemon': '檸檬', 'Blueberry': '藍莓', 'Strawberry': '草莓', 'Watermelon': '西瓜', 'Cookie': '餅乾',
+    'Donut': '甜甜圈', 'Cheese': '奶酪', 'Egg': '雞蛋', 'Pancake': '鬆餅', 'Latte': '拿鐵', 'Bubble tea': '珍珠奶茶', 'Mint chip': '薄荷巧克力', 'Peppermint': '薄荷糖',
+    'Cotton candy': '棉花糖', 'Bubblegum dots': '泡泡糖點點', 'Basketball': '籃球', 'Beach ball': '沙灘球', 'Button': '紐扣', 'Yarn ball': '毛線球', 'Fishbowl': '魚缸',
+    'Bubble': '泡泡', 'Ladybug': '瓢蟲', 'Bumblebee': '小蜜蜂', 'Kitty': '小貓', 'Tiger': '老虎', 'Lion': '獅子', 'Daisy': '雛菊', 'Sunflower': '向日葵',
+    'Cherry blossom': '櫻花', 'Rainbow': '彩虹', 'Candy': '糖果', 'Frosty': '冰霜', 'Galaxy': '銀河',
+    'Candy set': '糖果套裝', 'Frosty set': '冰霜套裝', 'Galaxy set': '銀河套裝', 'Santa hat set': '聖誕帽套裝', 'Gingerbread set': '薑餅套裝', 'Gift wrap set': '禮物包裝套裝',
+    'Snowman': '雪人', 'Elf': '小精靈', 'Reindeer': '馴鹿', 'Ornament': '聖誕掛球', 'Wreath': '花環', 'Snow globe': '水晶球', 'Present': '禮物', 'Fairy lights': '彩燈',
+    'Santa': '聖誕老人', 'Plum pudding': '葡萄乾布丁', 'Snowflake': '雪花', 'Penguin': '企鵝', 'Holly berry': '冬青果', 'Jingle bell': '鈴鐺', 'Nutcracker': '胡桃夾子',
+    'Northern lights': '北極光', 'Candy cane': '拐杖糖', 'Hot cocoa': '熱可可', 'Cozy sweater': '暖暖毛衣', 'Star topper': '樹頂星', 'Santa hat': '聖誕帽',
+    'Gingerbread': '薑餅', 'Gift wrap': '禮物包裝',
+    // faces
+    'Wink': '眨眼', 'Grumpy': '生氣', 'Squee': '尖叫', 'Snooze': '打瞌睡', 'Wow': '哇', 'Heart eyes': '愛心眼', 'Star eyes': '星星眼', 'Sparkle eyes': '閃亮眼',
+    'Cool shades': '酷墨鏡', 'Angel': '天使',
+    // skies and wallpapers
+    'Night sky': '夜空', 'Sunset clouds': '晚霞', 'Deep sea': '深海', 'Aurora': '極光', 'Neon grid': '霓虹網格', 'Rainbow day': '彩虹天', 'Milky way': '銀河系',
+    'Bubble dive': '泡泡潛水', 'Snowy night': '雪夜', 'Planet parade': '星球遊行', 'Candy cosmos': '糖果宇宙', 'Sleepy Saturn': '愛睡覺的土星',
+    'Galaxy friends': '銀河朋友', 'Cool crew': '酷酷小隊', 'Sweet stack': '甜蜜一疊', 'Holiday tree': '節日樹',
+    // music
+    'Sunny stroll': '陽光散步', 'Cloud nap': '雲上小睡', 'Chill drift': '悠閒漂流', 'Picnic': '野餐', 'Music box': '音樂盒', 'Bubble bounce': '泡泡彈跳',
+    'Stardust': '星塵', 'Tiny arcade': '迷你街機', 'Snowy sleigh': '雪橇',
+    'Calm, bright and gently bouncy': '平靜、明亮，輕輕跳動', 'Very slow and sleepy': '很慢，很想睡', 'Floaty and a little mysterious': '輕飄飄的，有點神秘',
+    'A cheerful skipping tune': '歡快的蹦蹦跳跳小曲', 'A tinkly bedtime tune': '叮叮當當的睡前曲', 'Upbeat and bouncy': '輕快又活潑',
+    'Dreamy, sparkly and a little wistful': '夢幻、閃亮，有點惆悵', 'Fast, bleepy video-game fun': '快節奏的嗶嗶電子遊戲風',
+    'Jolly and jingly, for the holidays': '歡樂的鈴鐺聲，節日專屬',
+    // profile and achievements
+    'Records': '記錄', 'Achievements': '成就', 'Top score': '最高分', 'Badges': '徽章', 'Suns made': '合成的太陽', 'Supernovas': '超新星', 'Merges': '合並次數',
+    'Classic high scores': '經典模式最高分', 'Secret': '秘密', 'Keep exploring to find this one.': '繼續探索就能發現這個。', 'Earned ✓': '已獲得 ✓',
+    'Hello, Pluto': '你好，冥王星', 'Launch your first planet': '發射你的第一個星球',
+    'Moonwalk': '月球漫步', 'Red rover': '紅色漫遊者', 'Morning star': '啟明星', 'Home sweet home': '溫暖的家', 'Deep blue': '深藍', 'Sideways spin': '側著轉',
+    'Put a ring on it': '戴上光環', 'King of the planets': '星球之王', 'Let there be light': '要有光',
+    'Smash two Suns together': '讓兩個太陽撞在一起', 'Rising star': '新星', 'Star player': '明星選手', 'Superstar': '超級巨星',
+    'Make 3 merges within one second': '一秒内合並 3 次', 'Close call': '好險', 'Save a planet that was about to sink past the line': '救回一個快要掉過危險線的星球',
+    'Merge machine': '合並機器', 'Merge 500 times': '合並 500 次', 'Frequent flyer': '常客', 'Finish 25 Classic games': '完成 25 局經典模式',
+    'Rock breaker': '岩石粉碎者', 'Beat the Grumpy asteroid in Adventure': '在冒險模式中打敗暴躁小行星', 'Space explorer': '太空探險家',
+    'Clear every Adventure level': '通過所有冒險關卡', 'Abducted!': '被抓走啦！', 'Watch the alien steal a planet': '看著外星人偷走一個星球',
+    'First purchase': '第一次購物', 'Buy anything in the shop': '在商店裡買任何東西', 'New horizons': '新視野', 'Unlock a new Classic map': '解鎖一張新的經典地圖',
+    'Matching outfits': '一樣的衣服', 'Dress all ten planets in the same skin': '讓十個星球都穿上同一種皮膚', 'Party of ten': '十人派對',
+    'Give every planet a different face': '給每個星球都換上不同的表情', 'Big spender': '大手筆', 'Buy everything in the shop': '買下商店裡的所有東西',
+    'Boop!': '戳一下！', 'Tap a planet floating on the home screen': '點一下主頁上飄著的星球', 'Night owl': '夜貓子', 'Play between midnight and 4 a.m.': '在午夜到凌晨 4 點之間玩',
+    'DJ': 'DJ', 'Listen to every tune in the shop': '聽遍商店裡的每一首曲子', 'Oopsie': '哎呀', 'End a Classic game with under 100 points': '經典模式一局得分不到 100 分',
+    'Mad scientist': '瘋狂科學家', 'Push every Sandbox slider all the way up': '把沙盒的每個滑塊都拉到最高', 'Snack time': '點心時間', 'Let a black hole eat 10 planets': '讓黑洞吃掉 10 個星球'
+  };
+  const zhPlanet = n => ZH_PLANETS[n] || ZH_PLANETS[n.replace(/s$/, '')] || n;
+  const zhWord = s => ZH[s] || s;
+  // Text with numbers or names in it: [pattern, replacement]
+  const ZH_RX = [
+    [/^([\d,]+) coins$/, '$1 金幣'], [/^\+([\d,]+) coins$/, '+$1 金幣'], [/^([\d,]+) coins for a replay$/, '$1 金幣（重玩）'],
+    [/^([\d,]+) coins earned this game$/, '本局獲得 $1 金幣'], [/^([\d,]+) of (\d+) earned\. Each one pays coins the first time\.$/, '已獲得 $1/$2 個。每個徽章第一次獲得時會獎勵金幣。'],
+    [/^([\d,]+) in the shop$/, '商店售價 $1'], [/^(\d+)s$/, '$1 秒'], [/^(\d+)s left$/, '剩 $1 秒'], [/^HP ([\d,]+)$/, '生命 $1'],
+    [/^Best ([\d,]+)$/, '最高 $1'], [/^Continue · ([\d,]+) points$/, '繼續 · $1 分'], [/^(\d+) · normal$/, '$1 · 正常'], [/^Need ([\d,]+)$/, '還差 $1'],
+    [/^Version ([\d.]+)$/, '版本 $1'], [/^Supernova! \+([\d,]+)$/, '超新星！+$1'],
+    [/^Level (\d+)$/, '第 $1 關'], [/^Level (\d+) · (.+)$/, (m, n, s) => '第 ' + n + ' 關 · ' + zhWord(s)],
+    [/^Level (\d+), (.+), cleared$/, (m, n, s) => '第 ' + n + ' 關，' + zhWord(s) + '，已通過'],
+    [/^Level (\d+), (.+), locked$/, (m, n, s) => '第 ' + n + ' 關，' + zhWord(s) + '，未解鎖'], [/^Level (\d+), (.+)$/, (m, n, s) => '第 ' + n + ' 關，' + zhWord(s)],
+    [/^Next up: level (\d+) · (.+)$/, (m, n, s) => '下一關：第 ' + n + ' 關 · ' + zhWord(s)],
+    [/^Goal: (\d+) (\w+)$/, (m, n, p) => '目標：' + n + ' 個' + zhPlanet(p)], [/^Goal: (\w+)$/, (m, p) => '目標：' + zhPlanet(p)],
+    [/^Make (\d+) × (\w+)$/, (m, n, p) => '合成 ' + n + ' 個' + zhPlanet(p)], [/^Make (\w+)$/, (m, p) => '合成' + zhPlanet(p)],
+    [/^Shoot (\w+)$/, (m, p) => '發射' + zhPlanet(p)],
+    [/^You have (\d+) shots$/, '你有 $1 次發射'], [/^You have (\d+) seconds$/, '你有 $1 秒'],
+    [/^Merge timer planets within (\d+) shots$/, '在 $1 次發射内合並帶計時器的星球'],
+    [/^(\d+) icy planets fall in every ([\d.]+) seconds$/, '每 $2 秒落下 $1 個冰凍星球'],
+    [/^(\d+) planets fall in every ([\d.]+) seconds$/, '每 $2 秒落下 $1 個星球'],
+    [/^(\d+) aliens come every (\d+) shots$/, '每發射 $2 次來 $1 個外星人'],
+    [/^A space rock lands every (\d+) shots and stays$/, '每發射 $1 次落下一塊不會消失的太空岩石'],
+    [/^A black hole drifts and eats a planet every (\d+) shots$/, '黑洞會飄來飄去，每發射 $1 次吃掉一個星球'],
+    [/^It sends (\d+) aliens every (\d+) shots$/, '它每發射 $2 次派出 $1 個外星人'],
+    [/^Every (\d+) seconds an earthquake tips the board and shuffles your planets$/, '每 $1 秒發生一次地震，棋盤傾斜，星球會被打亂'],
+    [/^Wait ([\d.]+) seconds and the planet shoots by itself$/, '等 $1 秒星球就會自動發射'],
+    [/^Smash (\d+) icy planets$/, '擊碎 $1 個冰凍星球'], [/^Collect (\d+) stars$/, '收集 $1 顆星星'], [/^Break (\d+) cracked rocks$/, '打碎 $1 塊裂開的岩石'],
+    [/^Score ([\d,]+) points$/, '得到 $1 分'], [/^Score ([\d,]+) in one Classic game$/, '在一局經典模式中得到 $1 分'], [/^Survive for (\d+) seconds$/, '堅持 $1 秒'],
+    [/^(\w+)s do not merge here, so they pile up$/, (m, p) => zhPlanet(p) + '在這裡不會合並，會越堆越多'],
+    [/^New high score on (.+)!$/, (m, s) => zhWord(s) + '的新紀錄！'],
+    [/^(.+) · drag to aim, let go to slide$/, (m, s) => zhWord(s) + ' · 拖動瞄準，鬆手發射'],
+    [/^(.+) \((\w+)\)$/, (m, s, k) => zhWord(s) + ' (' + k + ')']      // sandbox labels in the dev build
+  ];
+  function zh(text) {              // English text to Chinese, or the text unchanged when there is no translation
+    const k = text.replace(/\s+/g, ' ').trim();
+    if (!k) return text;
+    let out = ZH[k];
+    if (out === undefined) for (const [rx, to] of ZH_RX) if (rx.test(k)) { out = k.replace(rx, to); break; }
+    return out === undefined ? text : text.match(/^\s*/)[0] + out + text.match(/\s*$/)[0];
+  }
+
+  // ---------- Language ----------
+  // The page is written in English. In Chinese mode a watcher swaps every piece of text for its Chinese
+  // as soon as it appears, and remembers the English so switching back restores it.
+  let lang = 'en';
+  const orig = new WeakMap();            // text node or element -> { en, zh } (per attribute for elements)
+  const ATTRS = ['aria-label', 'alt', 'title'];
+  const skipText = n => { const p = n.parentElement; return !p || p.tagName === 'SCRIPT' || p.tagName === 'STYLE' || p.closest('[data-notr]'); };
+  function trText(n) {
+    if (skipText(n)) return;
+    const rec = orig.get(n);
+    if (rec && rec.zh === n.data) return;
+    const z = zh(n.data);
+    if (z !== n.data) { orig.set(n, { en: n.data, zh: z }); n.data = z; }
+  }
+  function trAttr(el, a) {
+    const v = el.getAttribute(a); if (!v) return;
+    let rec = orig.get(el); if (!rec) orig.set(el, rec = {});
+    if (rec[a] && rec[a].zh === v) return;
+    const z = zh(v);
+    if (z !== v) { rec[a] = { en: v, zh: z }; el.setAttribute(a, z); }
+  }
+  function trTree(root) {
+    if (root.nodeType === 3) return trText(root);
+    if (root.nodeType !== 1) return;
+    for (const a of ATTRS) if (root.hasAttribute(a)) trAttr(root, a);
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      if (n.nodeType === 3) trText(n);
+      else for (const a of ATTRS) if (n.hasAttribute(a)) trAttr(n, a);
+    }
+  }
+  function untrTree(root) {               // back to English
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      const rec = orig.get(n); if (!rec) continue;
+      if (n.nodeType === 3) { if (rec.zh === n.data) n.data = rec.en; }
+      else for (const a of ATTRS) if (rec[a] && n.getAttribute(a) === rec[a].zh) n.setAttribute(a, rec[a].en);
+    }
+  }
+  const langWatch = new MutationObserver(list => {
+    if (lang !== 'zh') return;
+    for (const m of list) {
+      if (m.type === 'characterData') trText(m.target);
+      else if (m.type === 'attributes') trAttr(m.target, m.attributeName);
+      else m.addedNodes.forEach(trTree);
+    }
+  });
+  langWatch.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ATTRS });
+  function setLang(to) {
+    lang = to === 'zh' ? 'zh' : 'en';
+    store.opts.lang = lang;
+    document.documentElement.lang = lang === 'zh' ? 'zh-Hant' : 'en';
+    document.documentElement.classList.toggle('zh', lang === 'zh');
+    if (lang === 'zh') trTree(document.body); else untrTree(document.body);
+    fitHud();
+  }
+  // Big numbers and long words shrink to fit their boxes instead of spilling over the edge.
+  function fitText(el, max, min) {
+    if (!el || !el.clientWidth) return;
+    let fs = max; el.style.fontSize = fs + 'px';
+    while (el.scrollWidth > el.clientWidth + 0.5 && fs > min) { fs -= 1; el.style.fontSize = fs + 'px'; }
+  }
+  let fitQueued = false;
+  function fitHud() {
+    if (fitQueued) return; fitQueued = true;
+    requestAnimationFrame(() => { fitQueued = false; fitText($('score'), 32, 12); fitText($('best'), 15, 9); fitText($('scoreLabel'), 11.5, 7); });
+  }
+  window.addEventListener('resize', fitHud);
+
   // ---------- Profile ----------
   let profTab = 'records';
   function openProfile() { showScreen('profile'); renderProfile(); }
@@ -3935,6 +4248,7 @@ canvas#c {
         '<div class="row2"><button class="btn ghost" id="optPhysics" type="button">Reset physics</button>' +
         '<button class="btn ghost" id="optClear" type="button">Clear board</button></div>';
     }
+    html += '<button class="btn ghost" id="optLang" type="button" data-notr></button>';
     html += '<div class="row2"><button class="btn ghost" id="optMusic" type="button"></button>' +
             '<button class="btn ghost" id="optSfx" type="button"></button></div>';
     if (holidaySeason()) html += '<button class="btn ghost" id="optHoliday" type="button"></button>' +
@@ -3952,6 +4266,7 @@ canvas#c {
     $('sheet').innerHTML = html;
 
     const labelToggles = () => {
+      $('optLang').textContent = lang === 'zh' ? '語言：中文 · Language' : 'Language: English · 中文';
       $('optMusic').textContent = 'Music: ' + (store.opts.music ? 'On' : 'Off');
       $('optSfx').textContent = 'Sounds: ' + (store.opts.sfx ? 'On' : 'Off');
       $('optMusic').setAttribute('aria-pressed', store.opts.music);
@@ -3959,6 +4274,7 @@ canvas#c {
       if ($('optHoliday')) { $('optHoliday').textContent = 'Holiday look: ' + (store.opts.holiday !== false ? 'On' : 'Off'); $('optHoliday').setAttribute('aria-pressed', store.opts.holiday !== false); }
     };
     labelToggles();
+    $('optLang').addEventListener('click', () => { setLang(lang === 'zh' ? 'en' : 'zh'); labelToggles(); save(); if (screen === 'home') refreshHome(); });
     $('optMusic').addEventListener('click', () => { setMusic(!store.opts.music); labelToggles(); save(); });
     $('optSfx').addEventListener('click', () => { setSfx(!store.opts.sfx); labelToggles(); save(); });
     if ($('optHoliday')) $('optHoliday').addEventListener('click', () => { store.opts.holiday = store.opts.holiday === false; labelToggles(); save(); refreshHome(); });
@@ -4049,6 +4365,7 @@ canvas#c {
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000 || 0);
     last = now;
+    if (bannerUntil && now > bannerUntil + 400) hideBanner();     // backup: the banner never outstays its time
     if (screen === 'home') drawHome(now, dt);
     else if (screen === 'game') {
       if (!over && !paused && !hold) {
@@ -4064,6 +4381,7 @@ canvas#c {
 
   function start(hotData) {
     loadStore(hotData);
+    setLang(store.opts.lang || (/^zh/i.test(navigator.language || '') ? 'zh' : 'en'));
     curMap = store.map;
     audio.track = store.equip.track;
     buildSprites();
@@ -4074,7 +4392,7 @@ canvas#c {
     window.addEventListener('resize', refit);
     requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
     if (typeof window.__PS_TEST === 'function') {
-      window.__PS_TEST({ setHoliday: v => { devHoliday = v; homeSprites = null; refreshHome(); }, holidayLook, art: (t, sk, f) => { const c = document.createElement('canvas'); c.width = c.height = 240; const g = c.getContext('2d'), q = 64 / TIERS[t].r; g.setTransform(q, 0, 0, q, 120, 130); drawPlanet(g, t, sk, f || 'classic'); return c.toDataURL(); }, armTimer: n => { const b = bodies.filter(p => !p.fly && !p.taken && p.t === 0).sort((p, q) => q.y - p.y)[0]; if (!b) return null; b.fused = true; b.fuse = n; return { x: b.x, y: b.y }; }, setCur: t => { cur = t; ready = true; }, peekGems: () => gems.filter(g => !g.got).map(g => ({ x: g.x, y: g.y })), peekRocks: () => rocks.filter(o => o.brk).map(o => ({ x: o.x, y: o.y, r: o.r })), LEVELS, quietAudio, wakeAudio, toastText: () => $('toast').textContent, toastOn: () => $('toast').classList.contains('go'), toast, peekBodies: () => bodies.map(b => ({ x: b.x, y: b.y, t: b.t, fly: b.fly, ice: !!b.ice, fuse: b.fused ? Math.max(0, b.fuse) + 1 : 0 })), peekCur: () => cur, badge, ACH, MAPS, TRACKS, songPlan, loopSeconds, audio, audioWake, setTrack, scheduleBar, enterGame, enterLevel, openAdventure, openMaps, openProfile, playMap, award, profTab(t) { profTab = t; renderProfile(); }, step, openSettings, openShop, shopTap, store, start() { hideCard(); hold = false; }, peek: () => ({ over, hold, made: made.slice(), shotsLeft, timeLeft, bossHp: boss && boss.hp, done: store.adv.slice(), title: ($('overCard').querySelector('h2') || {}).textContent }), tab(t) { shopTab = t; renderShop(); }, shoot(x) { aimX = x; launch(); }, aim(x) { aimX = x; }, get: () => ({ score, over, n: bodies.length, best: bestOf(curMap), map: curMap }) });
+      window.__PS_TEST({ layout: () => { const r = canvas.getBoundingClientRect(); return { W, H, VH, k: r.width / W, cw: r.width, ch: r.height, top: r.top, left: r.left, iw: innerWidth, ih: innerHeight, launchBottom: r.top + (launchY() + TIERS[cur].bottom) * r.width / W, worldBottom: r.top + H * r.width / W, hudBottom: document.querySelector(".hint").getBoundingClientRect().bottom }; }, buildSprites, setScore: v => { score = v; hud(); }, setLang, zh, fitHud, failLevel, winLevel, endGame, setHoliday: v => { devHoliday = v; homeSprites = null; refreshHome(); }, holidayLook, art: (t, sk, f) => { const c = document.createElement('canvas'); c.width = c.height = 240; const g = c.getContext('2d'), q = 64 / TIERS[t].r; g.setTransform(q, 0, 0, q, 120, 130); drawPlanet(g, t, sk, f || 'classic'); return c.toDataURL(); }, armTimer: n => { const b = bodies.filter(p => !p.fly && !p.taken && p.t === 0).sort((p, q) => q.y - p.y)[0]; if (!b) return null; b.fused = true; b.fuse = n; return { x: b.x, y: b.y }; }, setCur: t => { cur = t; ready = true; }, peekGems: () => gems.filter(g => !g.got).map(g => ({ x: g.x, y: g.y })), peekRocks: () => rocks.filter(o => o.brk).map(o => ({ x: o.x, y: o.y, r: o.r })), LEVELS, quietAudio, wakeAudio, toastText: () => $('toast').textContent, toastOn: () => $('toast').classList.contains('go'), toast, peekBodies: () => bodies.map(b => ({ x: b.x, y: b.y, t: b.t, fly: b.fly, ice: !!b.ice, fuse: b.fused ? Math.max(0, b.fuse) + 1 : 0 })), peekCur: () => cur, badge, ACH, MAPS, TRACKS, songPlan, loopSeconds, audio, audioWake, setTrack, scheduleBar, enterGame, enterLevel, openAdventure, openMaps, openProfile, playMap, award, profTab(t) { profTab = t; renderProfile(); }, step, openSettings, openShop, shopTap, store, start() { hideCard(); hold = false; }, peek: () => ({ over, hold, made: made.slice(), shotsLeft, timeLeft, bossHp: boss && boss.hp, done: store.adv.slice(), title: ($('overCard').querySelector('h2') || {}).textContent }), tab(t) { shopTab = t; renderShop(); }, shoot(x) { aimX = x; launch(); }, aim(x) { aimX = x; }, get: () => ({ score, over, n: bodies.length, best: bestOf(curMap), map: curMap }) });
     }
   }
 
