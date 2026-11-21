@@ -176,13 +176,14 @@ html.zh h1, html.zh h2, html.zh .btn, html.zh .score, html.zh .mini b, html.zh .
 #game .app { padding-bottom: 0; max-width: 760px; }      /* the board reaches the bottom of the screen; wider on tablets and computers */
 #rotate { display: none; position: fixed; inset: 0; z-index: 60; background: var(--space); place-items: center; text-align: center; padding: 24px; font-family: var(--display); font-size: 20px; color: var(--sun); }
 @media (orientation: landscape) and (max-height: 500px) { #rotate { display: grid; } }
-canvas#c {
+canvas#c {                         /* the sky fills the whole screen; the board sits in it, under the HUD */
   display: block;
-  border-radius: 20px 20px 0 0;
+  position: fixed; left: 0; top: 0; width: 100%; height: 100%; z-index: 0;
   touch-action: none;
   background: #1d1648;
-  box-shadow: 0 0 0 3px var(--ink), 0 6px 0 3px var(--ink);
 }
+#game .hud, #game #menu, #game .hint { position: relative; z-index: 1; }
+#game .hint { text-shadow: 0 1px 2px var(--ink); color: var(--star); opacity: 0.85; }
 .toast {
   position: absolute;
   left: 0; right: 0; top: 22%;
@@ -268,6 +269,40 @@ canvas#c {
 .lv:disabled { background: #3a2d86; color: #7d74b8; cursor: default; }
 .lv:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
 .lv:focus-visible { outline: 3px solid var(--star); outline-offset: 2px; }
+/* ---------- adventure map ---------- */
+.advmap { padding: 0 !important; gap: 0 !important; position: relative; overflow-y: auto; border-radius: 18px; }
+.region { position: relative; width: 100%; overflow: hidden; flex: none; }
+.region canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.region.locked canvas { filter: brightness(0.5) saturate(0.6); }
+.rhead { position: absolute; left: 10px; right: 10px; bottom: 8px; padding: 8px 12px; border-radius: 16px; background: rgba(18, 13, 46, 0.78); border: 2px solid rgba(253, 246, 255, 0.18); }
+.rhead b { display: block; font-family: var(--display); font-weight: 400; font-size: 17px; color: var(--sun); }
+.rhead i { font-style: normal; font-size: 12px; color: var(--blue); margin-left: 6px; font-family: var(--body); font-weight: 700; }
+.rhead p { margin: 3px 0 0; font-size: 11.5px; font-weight: 500; color: var(--star); line-height: 1.35; }
+.node { position: absolute; width: 62px; height: 62px; margin: -31px 0 0 -31px; border-radius: 50%; display: grid; place-items: center; padding: 0;
+  font-family: var(--display); font-size: 22px; color: #2a1650; background: var(--blue); border: 3px solid var(--ink); box-shadow: 0 5px 0 var(--ink); cursor: pointer; touch-action: manipulation; line-height: 1; }
+.node small { display: block; font-family: var(--body); font-size: 9px; font-weight: 700; margin-top: -10px; }
+.node.done { background: var(--sun); }
+.node.boss { width: 74px; height: 74px; margin: -37px 0 0 -37px; background: var(--pink); }
+.node.boss.done { background: var(--sun); }
+.node:disabled { background: #3a2d86; color: #7d74b8; cursor: default; }
+.node.cur { animation: nodepulse 1.4s ease-in-out infinite; }
+@keyframes nodepulse { 0%, 100% { box-shadow: 0 5px 0 var(--ink), 0 0 0 0 rgba(255, 212, 94, 0.7); } 50% { box-shadow: 0 5px 0 var(--ink), 0 0 0 10px rgba(255, 212, 94, 0); } }
+@media (prefers-reduced-motion: reduce) { .node.cur { animation: none; outline: 3px solid var(--sun); outline-offset: 3px; } }
+.node:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+.node:focus-visible, .egg:focus-visible { outline: 3px solid var(--star); outline-offset: 2px; }
+.egg { position: absolute; width: 48px; height: 48px; margin: -24px 0 0 -24px; padding: 0; border-radius: 50%; border: 2px dashed rgba(255, 212, 94, 0.8); background: rgba(18, 13, 46, 0.55); cursor: pointer; touch-action: manipulation; }
+.egg img { width: 100%; height: 100%; display: block; }
+.egg.found { border-style: solid; border-color: var(--sun); }
+.mlabel { position: absolute; transform: translate(-50%, -50%); font-size: 10.5px; font-weight: 700; color: var(--star); width: max-content; max-width: min(124px, 36%); text-align: center; line-height: 1.2; pointer-events: none;
+  text-shadow: 0 1px 0 var(--ink), 0 0 4px var(--ink), 0 0 8px var(--ink); }
+.mlabel.small { font-size: 9.5px; color: var(--muted); }
+.fact { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; background: rgba(10, 6, 30, 0.6); padding: 20px; }
+.fact[hidden] { display: none; }
+.fact-card { width: min(340px, 100%); padding: 16px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.fact-card img { width: 96px; height: 96px; }
+.fact-card h3 { margin: 0; font-family: var(--display); font-weight: 400; color: var(--sun); font-size: 20px; }
+.fact-card p { margin: 0; font-size: 14px; line-height: 1.45; font-weight: 500; }
+#eggCount { color: var(--sun); white-space: nowrap; }
 .scorerow { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .scorerow img { width: 36px; height: 36px; flex: none; }
 .scorerow img[hidden] { display: none; }
@@ -450,7 +485,7 @@ canvas#c {
       <button class="btn ghost" id="btnHomeSettings" type="button">Settings</button>
       <button class="btn holiday-pill" id="btnHoliday" type="button" hidden>Holiday shop · open until Dec 26</button>
     </div>
-    <div class="ver">Version 1.24</div>
+    <div class="ver">Version 1.26</div>
   </div>
 </section>
 
@@ -483,8 +518,16 @@ canvas#c {
       <h2>Adventure</h2>
       <div class="panel best-pill"><i class="coin"></i><b id="advCoins">0</b></div>
     </header>
-    <p class="shop-note">Clear a level to open the next one. The first time you clear a level, you win coins.</p>
-    <div class="shop-list"><div class="levels" id="levels"></div></div>
+    <p class="shop-note"><span>Fly outward from the asteroid belt to the edge of the universe. Tap the spacecraft and places on the way to learn about them.</span> <b id="eggCount"></b></p>
+    <div class="shop-list advmap" id="advMap"></div>
+    <div class="fact" id="fact" hidden>
+      <div class="panel fact-card" role="dialog" aria-modal="true" aria-labelledby="factName">
+        <img id="factImg" alt="">
+        <h3 id="factName"></h3>
+        <p id="factText"></p>
+        <button class="btn pink" id="factClose" type="button">Close</button>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -649,7 +692,7 @@ canvas#c {
   const store = {
     map: 'open', bests: {}, runs: {},       // classic: chosen map, high score per map, game in progress per map
     opts: { music: true, sfx: true, holiday: true, lang: null }, sand: { ...DEFAULTS },
-    coins: 0, owned: {}, adv: [], ach: {}, stats: freshStats(),
+    coins: 0, owned: {}, adv: [], eggs: {}, ach: {}, stats: freshStats(),
     equip: { skins: TIERS.map(() => 'classic'), faces: TIERS.map(() => 'classic'), bg: 'night', track: 'sunny' }
   };
   let screen = 'home';           // 'home', 'game', 'shop' or 'adv' (the level list)
@@ -669,6 +712,7 @@ canvas#c {
   // the launch area, so there is never an empty strip. VH is that full drawn height.
   const WORLD_H = 600;
   let H = WORLD_H, VH = WORLD_H;
+  let OX = 0, OY = 0, VW = W;      // extra sky drawn left of the board and above it (behind the HUD), in game units; VW is the drawn width
   let bodies = [];
   let particles = [];
   let score = 0;
@@ -743,6 +787,7 @@ canvas#c {
     }
     if (Number.isFinite(saved.coins)) store.coins = Math.max(0, saved.coins | 0);
     if (Array.isArray(saved.adv)) store.adv = saved.adv.map(Boolean);
+    if (saved.eggs && typeof saved.eggs === 'object') for (const k in saved.eggs) if (saved.eggs[k]) store.eggs[k] = 1;
     if (saved.owned && typeof saved.owned === 'object') for (const id in saved.owned) if (saved.owned[id]) store.owned[id] = true;
     if (saved.equip) {      // only keep choices that still exist and are owned
       const e = saved.equip;
@@ -1361,7 +1406,7 @@ canvas#c {
     { name: 'Hungry storm', goal: { make: 5, count: 2 }, time: 90, wind: { a: 380, period: 7 }, alien: { every: 14, target: 'big' }, tip: 'Wind, and an alien that takes your biggest planet.' },
     { name: 'Meteor shower', goal: { make: 5, count: 2 }, meteors: { every: 8, r: 18 }, tip: 'Every 8 shots a space rock lands somewhere in the upper part of the board and stays. Room runs out, so be quick.' },
     { name: 'Bomb squad', goal: { score: 450 }, shots: 130, line: 140, fuse: { tiers: [0, 1], shots: 12, every: 12 }, tip: 'Timers keep coming and there is less room to work in.' },
-    { name: 'Black hole', goal: { boss: true }, shots: 130, boss: { kind: 'hole', hp: 175, r: 46, y: 0.2, eat: 5, heal: 5, g: 520, target: 'big' }, tip: 'It pulls planets in and swallows your biggest one every few shots, which heals it.' },
+    { name: 'Great Dark Spot', goal: { boss: true }, shots: 130, boss: { kind: 'hole', look: 'storm', hp: 175, r: 46, y: 0.2, eat: 5, heal: 5, g: 520, target: 'big' }, tip: 'A giant storm on Neptune pulls planets in and swallows your biggest one every few shots, which heals it.' },
     // 21-30: new tricks, one at a time, then a moving boss
     { name: 'Star catcher', goal: { stars: true }, shots: 74, stars: [[60, 0.18], [180, 0.14], [300, 0.18], [110, 0.32], [250, 0.32]], tip: 'Build your planets up towards the stars, then merge two right on top of one.' },
     { name: 'Demolition', goal: { breakRocks: true }, shots: 78, rocks: [{ x: 90, y: 0.32, r: 22, brk: 1 }, { x: 270, y: 0.32, r: 22, brk: 1 }, { x: 180, y: 0.48, r: 22, brk: 1 }], tip: 'Cracked rocks break when two planets merge right next to them.' },
@@ -1472,24 +1517,312 @@ canvas#c {
       : lv.goal.stars ? 'Collect ' + lv.stars.length + ' stars'
       : lv.goal.breakRocks ? 'Break ' + breakTotal(lv) + ' cracked rocks'
       : lv.goal.make === SUN ? 'Make the Sun'
-      : lv.boss && lv.boss.hp ? 'Beat the ' + ({ hole: 'black hole', rock: 'grumpy asteroid', ship: 'mothership' })[lv.boss.kind]
+      : lv.boss && lv.boss.hp ? 'Beat the ' + (lv.boss.look === 'storm' ? 'Great Dark Spot' : { hole: 'black hole', rock: 'grumpy asteroid', ship: 'mothership' }[lv.boss.kind])
       : lv.goal.score ? 'Score ' + fmt(lv.goal.score) + ' points'
       : 'Make ' + (lv.goal.count > 1 ? lv.goal.count + ' × ' : '') + TIERS[lv.goal.make].n;
     return '<div class="goalbox"><span class="tag">GOAL</span>' +
       (lv.goal.make !== undefined ? '<img src="' + sprites[lv.goal.make].url + '" alt="">' : '') +
       '<span class="what">' + what + '</span>' + rulesOf(lv).map(t => '<span class="limit">' + t + '</span>').join('') + '</div>';
   }
+  // ---------- Adventure map ----------
+  // The 50 levels are a trip outward from the asteroid belt to the edge of the observable universe,
+  // five levels per region, in real order of distance. Facts, dates and distances were checked
+  // against NASA and other sources in November 2026. Bosses and aliens are game characters.
+  const REGIONS = [
+    { name: 'The Asteroid Belt', dist: '2.2–3.2 AU from the Sun',
+      fact: 'Our trip starts just past Mars. Millions of asteroids orbit here, but they are so spread out that spacecraft fly through safely. 1 AU is the distance from Earth to the Sun, about 150 million km.',
+      labels: [['Mars', 0.18, 0.77], ['Ceres', 0.85, 0.43]],
+      eggs: [{ id: 'dawn', name: 'Dawn', x: 0.8, y: 0.2, fact: 'NASA’s Dawn orbited the asteroid Vesta, then Ceres, the biggest object in the asteroid belt. It ran out of fuel in 2018 and is still circling Ceres, where it should stay for decades.' },
+             { id: 'psyche', name: 'Psyche', x: 0.12, y: 0.42, fact: 'NASA’s Psyche spacecraft is on its way to 16 Psyche, an asteroid rich in metal. It is due to arrive in 2029.' }] },
+    { name: 'Jupiter and the Trojans', dist: '5.2 AU',
+      fact: 'Jupiter is so big that all the other planets could fit inside it. Two swarms of Trojan asteroids share its orbit, one ahead of it and one behind.',
+      labels: [['Jupiter', 0.14, 0.69], ['Trojan asteroids', 0.8, 0.23]],
+      eggs: [{ id: 'lucy', name: 'Lucy', x: 0.88, y: 0.34, fact: 'In October 2026, NASA’s Lucy became the first spacecraft to reach the Trojan asteroids. Its first close flyby, of the asteroid Eurybates, is planned for August 2027.' }] },
+    { name: 'Saturn', dist: '9.5 AU',
+      fact: 'Saturn’s rings are mostly chunks of ice. The main rings stretch about 280,000 km across, but in most places they are only about 10 meters thick.',
+      labels: [['Saturn', 0.14, 0.53], ['Titan', 0.86, 0.32]],
+      eggs: [{ id: 'cassini', name: 'Cassini', x: 0.87, y: 0.62, fact: 'Cassini studied Saturn for 13 years. On September 15, 2017 it dove into Saturn on purpose, sending back data until the very end.' },
+             { id: 'huygens', name: 'Huygens', x: 0.86, y: 0.13, fact: 'In January 2005 the Huygens probe parachuted onto Titan, Saturn’s biggest moon. It is still the farthest landing ever made.' }] },
+    { name: 'Uranus and Neptune', dist: '19–30 AU',
+      fact: 'These ice giants are so far away that only one spacecraft has ever visited them. Uranus spins tipped over on its side.',
+      labels: [['Uranus', 0.86, 0.77], ['Neptune', 0.14, 0.43]],
+      eggs: [{ id: 'voyager2', name: 'Voyager 2', x: 0.88, y: 0.12, fact: 'Voyager 2 is the only spacecraft to visit Uranus (1986) and Neptune (1989). At Neptune it found a giant storm called the Great Dark Spot.' }] },
+    { name: 'The Kuiper Belt', dist: '30–50 AU',
+      fact: 'A huge ring of icy worlds past Neptune. Pluto is the largest one we know of.',
+      labels: [['Pluto', 0.84, 0.66], ['Arrokoth', 0.16, 0.3]],
+      eggs: [{ id: 'newhorizons', name: 'New Horizons', x: 0.86, y: 0.36, fact: 'New Horizons flew past Pluto on July 14, 2015, then past Arrokoth on January 1, 2019, the farthest object ever explored up close.' },
+             { id: 'paleblue', name: 'Pale Blue Dot', x: 0.13, y: 0.62, fact: 'In 1990, from about 6 billion km away, Voyager 1 looked back and photographed Earth as a tiny dot in a sunbeam.' }] },
+    { name: 'The Edge of the Sun’s Bubble', dist: 'about 90–170 AU',
+      fact: 'The Sun blows out a wind of particles that makes a giant bubble called the heliosphere. Its edge, the heliopause, is about 120 AU away. Past it is interstellar space.',
+      labels: [['Termination shock · about 94 AU', 0.76, 0.67], ['Heliopause · about 120 AU', 0.78, 0.48], ['Interstellar space', 0.26, 0.3]],
+      eggs: [{ id: 'voyager1', name: 'Voyager 1', x: 0.84, y: 0.14, fact: 'Voyager 1 left the Sun’s bubble in August 2012. On November 18, 2026 it became the first human-made object one light-day from Earth, about 173 AU. Its radio signals now take a whole day to reach us.' },
+             { id: 'record', name: 'Golden Record', x: 0.15, y: 0.14, fact: 'Both Voyagers carry a golden record with sounds, music and pictures of Earth, in case anyone ever finds them.' }] },
+    { name: 'The Oort Cloud', dist: 'about 2,000–100,000 AU',
+      fact: 'Scientists think a giant shell of icy bodies surrounds the solar system, far past the planets. Many comets come from here. Nobody has seen it directly yet.',
+      labels: [],
+      eggs: [{ id: 'oortvoyager', name: 'A very long trip', x: 0.85, y: 0.5, fact: 'Even at about 61,000 km per hour, Voyager 1 will need about 300 years to reach the Oort Cloud, and maybe 30,000 years to get through it.' }] },
+    { name: 'Our Star Neighbors', dist: '4.2–1,600 light-years',
+      fact: 'A light-year is how far light travels in a year, about 9.5 trillion km. The nearest star to the Sun, Proxima Centauri, is 4.2 light-years away.',
+      labels: [['Proxima Centauri · 4.2 light-years', 0.82, 0.5], ['Alpha Centauri · 4.4 light-years', 0.78, 0.68], ['Orion Nebula · 1,300 light-years', 0.22, 0.25]],
+      eggs: [{ id: 'gaiabh1', name: 'Gaia BH1', x: 0.84, y: 0.27, fact: 'The nearest black hole we know of is about 1,560 light-years away. It is quiet and doesn’t glow. Astronomers found it by watching a Sun-like star circle around it.' },
+             { id: 'gliese', name: 'Gliese 445', x: 0.12, y: 0.53, fact: 'Around the year 40,272, Voyager 1 will pass within 1.7 light-years of a small red star called Gliese 445.' }] },
+    { name: 'The Milky Way', dist: 'about 100,000 light-years across',
+      fact: 'Our galaxy is a spiral of hundreds of billions of stars. The Sun sits in a small arm called the Orion Arm, about 27,000 light-years from the center.',
+      labels: [['You are here', 0.69, 0.56]],
+      eggs: [{ id: 'sgra', name: 'Sagittarius A*', x: 0.5, y: 0.42, fact: 'A black hole about 4 million times heavier than the Sun sits at the center of our galaxy, about 27,000 light-years away. Its first picture was shown on May 12, 2022.' }] },
+    { name: 'Beyond Our Galaxy', dist: 'back to 13.8 billion years ago',
+      fact: 'The nearest big galaxy, Andromeda, is 2.5 million light-years away. Looking farther means looking back in time, all the way to the glow left over from the Big Bang.',
+      labels: [['Large Magellanic Cloud · 160,000 light-years', 0.24, 0.77], ['Andromeda · 2.5 million light-years', 0.75, 0.45], ['Afterglow of the Big Bang', 0.2, 0.05]],
+      eggs: [{ id: 'momz14', name: 'MoM-z14', x: 0.86, y: 0.15, fact: 'The farthest galaxy ever confirmed. The Webb telescope sees it as it was just 280 million years after the Big Bang. Its light traveled about 13.5 billion years to reach us.' }] }
+  ];
+  const ALL_EGGS = REGIONS.flatMap(r => r.eggs);
+  const PER_REGION = 5, NODE_GAP = 118, HEAD_H = 124, REGION_H = PER_REGION * NODE_GAP + HEAD_H;
+  const nodeX = i => 0.5 + 0.24 * Math.sin(i * 1.15 + 0.4);                 // the path winds left and right
+  const nodeLocalY = k => REGION_H - HEAD_H - (k + 0.5) * NODE_GAP;          // within a region, from its top
+  const regionOf = i => Math.floor(i / PER_REGION);
+  const regionOpen = r => r === 0 || !!store.adv[r * PER_REGION - 1];
+
+  // ----- art for each region (drawn in CSS pixels; w is the map width, h the region height) -----
+  function mapStars(g, w, h, seed, n, alpha) {
+    const rnd = seeded(seed);
+    for (let i = 0; i < n; i++) { g.globalAlpha = alpha * (0.3 + rnd() * 0.7); blob(g, rnd() * w, rnd() * h, 0.4 + rnd() * 1.3, '#ffffff'); }
+    g.globalAlpha = 1;
+  }
+  function rock(g, x, y, r, rnd, fill) {        // a lumpy asteroid
+    g.fillStyle = fill; g.beginPath();
+    for (let i = 0; i < 9; i++) { const a = i / 9 * TAU, d = r * (0.72 + rnd() * 0.35); g.lineTo(x + Math.cos(a) * d, y + Math.sin(a) * d); }
+    g.closePath(); g.fill();
+    blob(g, x - r * 0.25, y - r * 0.2, r * 0.18, 'rgba(0,0,0,0.18)');
+  }
+  function sprite(g, t, x, y, size) {            // one of the game's own planets, `size` = radius in px
+    g.save(); g.translate(x, y); const k = size / TIERS[t].r; g.scale(k, k); drawPlanet(g, t, 'classic', 'classic'); g.restore();
+  }
+  function glowDot(g, x, y, r, color) {
+    const gl = g.createRadialGradient(x, y, 0, x, y, r * 4);
+    gl.addColorStop(0, color); gl.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gl; g.beginPath(); g.arc(x, y, r * 4, 0, TAU); g.fill();
+    blob(g, x, y, r, '#ffffff');
+  }
+  function spiral(g, x, y, R, tilt, arms, color, seed) {    // a spiral galaxy made of dots
+    const rnd = seeded(seed);
+    g.save(); g.translate(x, y); g.scale(1, tilt);
+    const core = g.createRadialGradient(0, 0, 0, 0, 0, R * 0.35);
+    core.addColorStop(0, 'rgba(255,240,200,0.95)'); core.addColorStop(1, 'rgba(255,240,200,0)');
+    g.fillStyle = core; g.beginPath(); g.arc(0, 0, R * 0.35, 0, TAU); g.fill();
+    for (let i = 0; i < 900; i++) {
+      const arm = i % arms, t = rnd(), a = arm / arms * TAU + t * 4.2 + (rnd() - 0.5) * 0.5, d = R * (0.12 + t * 0.88);
+      g.globalAlpha = 0.25 + rnd() * 0.6; blob(g, Math.cos(a) * d, Math.sin(a) * d, 0.5 + rnd() * 1.4, rnd() < 0.15 ? '#ffb3d9' : color);
+    }
+    g.restore(); g.globalAlpha = 1;
+  }
+  const REGION_ART = [
+    (g, w, h) => {                               // asteroid belt
+      const rnd = seeded(11);
+      for (let i = 0; i < 70; i++) rock(g, rnd() * w, rnd() * h, 2 + rnd() * 7, rnd, ['#8d8aa3', '#a08770', '#6f6a86'][i % 3]);
+      sprite(g, 2, w * 0.18, h * 0.68, 40);
+      blob(g, w * 0.85, h * 0.36, 26, '#9b98a8'); blob(g, w * 0.85 - 6, h * 0.36 - 5, 22, '#aeabba');   // Ceres, with its bright spots
+      blob(g, w * 0.85 + 6, h * 0.36 + 2, 3, '#ffffff'); blob(g, w * 0.85 + 10, h * 0.36 + 5, 1.8, '#ffffff');
+    },
+    (g, w, h) => {                               // Jupiter and the Trojans
+      sprite(g, 8, w * 0.02, h * 0.48, 100);
+      for (const [x, y, c] of [[0.34, 0.36, '#f2d36b'], [0.38, 0.44, '#e8e4dc'], [0.4, 0.53, '#b9a58c'], [0.37, 0.62, '#8d8173']]) blob(g, w * x, h * y, 5, c);   // Io, Europa, Ganymede, Callisto
+      const rnd = seeded(12);
+      for (let i = 0; i < 40; i++) rock(g, w * (0.62 + rnd() * 0.34), h * (0.04 + rnd() * 0.16), 2 + rnd() * 5, rnd, '#8d8aa3');   // Trojans ahead of Jupiter
+      for (let i = 0; i < 34; i++) rock(g, w * (0.66 + rnd() * 0.3), h * (0.68 + rnd() * 0.14), 2 + rnd() * 5, rnd, '#a08770');   // and behind
+    },
+    (g, w, h) => {                               // Saturn
+      sprite(g, 7, w * 0.1, h * 0.42, 58);
+      blob(g, w * 0.86, h * 0.26, 10, '#e7a64a'); blob(g, w * 0.86 - 3, h * 0.26 - 3, 4, 'rgba(255,255,255,0.35)');   // Titan's orange haze
+    },
+    (g, w, h) => {                               // Uranus and Neptune
+      sprite(g, 6, w * 0.98, h * 0.66, 56);
+      sprite(g, 5, w * 0.06, h * 0.32, 56);
+    },
+    (g, w, h) => {                               // Kuiper belt
+      const rnd = seeded(14);
+      for (let i = 0; i < 80; i++) { g.globalAlpha = 0.6; blob(g, rnd() * w, rnd() * h, 1 + rnd() * 3.5, ['#cfe6ff', '#e8d7c4', '#b9c7e8'][i % 3]); }
+      g.globalAlpha = 1;
+      sprite(g, 0, w * 0.96, h * 0.58, 40); blob(g, w * 0.96 - 46, h * 0.58 - 26, 11, '#9a8f86');   // Pluto and Charon
+      blob(g, w * 0.16 - 7, h * 0.38, 9, '#b2674a'); blob(g, w * 0.16 + 6, h * 0.38 + 2, 6.5, '#a85c42');   // Arrokoth: two lobes
+    },
+    (g, w, h) => {                               // heliosphere's edge
+      const cx = w * 0.5;
+      for (let i = 0; i < 26; i++) { const x = (i / 26) * w; g.strokeStyle = 'rgba(255,212,94,0.12)'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, h); g.lineTo(x + (x - cx) * 0.2, h * 0.86); g.stroke(); }   // solar wind streaming out
+      g.setLineDash([6, 6]); g.strokeStyle = 'rgba(127,208,255,0.6)'; g.lineWidth = 3;
+      g.beginPath(); g.ellipse(cx, h * 1.2, w * 0.9, h * 0.5, 0, Math.PI, TAU); g.stroke(); g.setLineDash([]);
+      const hp = g.createLinearGradient(0, h * 0.4, 0, h * 0.56);
+      hp.addColorStop(0, 'rgba(255,126,182,0)'); hp.addColorStop(1, 'rgba(255,126,182,0.35)');
+      g.strokeStyle = 'rgba(255,126,182,0.85)'; g.lineWidth = 5;
+      g.beginPath(); g.ellipse(cx, h * 1.35, w * 1.05, h * 0.85, 0, Math.PI, TAU); g.stroke();
+      mapStars(g, w, h * 0.45, 16, 60, 0.9);
+    },
+    (g, w, h) => {                               // Oort cloud: a faint shell of icy bodies and a few comets
+      const rnd = seeded(17);
+      for (let i = 0; i < 260; i++) { const a = rnd() * Math.PI, d = (0.55 + rnd() * 0.5) * w; g.globalAlpha = 0.35 + rnd() * 0.4; blob(g, w * 0.5 + Math.cos(a + Math.PI) * d, h * 1.1 + Math.sin(a + Math.PI) * d * 1.1, 0.8 + rnd() * 1.6, '#cfe6ff'); }
+      g.globalAlpha = 1;
+      for (const [x, y, ang] of [[0.25, 0.3, 2.4], [0.7, 0.75, 0.8], [0.15, 0.82, 1.9]]) {
+        const tail = g.createLinearGradient(w * x, h * y, w * x + Math.cos(ang) * 70, h * y + Math.sin(ang) * 70);
+        tail.addColorStop(0, 'rgba(180,230,255,0.8)'); tail.addColorStop(1, 'rgba(180,230,255,0)');
+        g.strokeStyle = tail; g.lineWidth = 6; g.lineCap = 'round'; g.beginPath(); g.moveTo(w * x, h * y); g.lineTo(w * x + Math.cos(ang) * 70, h * y + Math.sin(ang) * 70); g.stroke();
+        blob(g, w * x, h * y, 4, '#ffffff');
+      }
+    },
+    (g, w, h) => {                               // our star neighbors
+      mapStars(g, w, h, 18, 120, 1);
+      glowDot(g, w * 0.82, h * 0.45, 3, 'rgba(255,90,70,0.6)');                                   // Proxima Centauri, a small red dwarf
+      glowDot(g, w * 0.75, h * 0.63, 5, 'rgba(255,230,150,0.7)'); glowDot(g, w * 0.81, h * 0.635, 4, 'rgba(255,200,120,0.6)');   // Alpha Centauri A and B
+      for (let i = 0; i < 6; i++) { const gl = g.createRadialGradient(w * 0.2 + i * 6, h * 0.17 + (i % 2) * 8, 0, w * 0.2 + i * 6, h * 0.17, 40 - i * 4); gl.addColorStop(0, 'rgba(255,120,180,0.25)'); gl.addColorStop(1, 'rgba(120,80,255,0)'); g.fillStyle = gl; g.beginPath(); g.arc(w * 0.2 + i * 6, h * 0.17, 40, 0, TAU); g.fill(); }   // Orion Nebula
+    },
+    (g, w, h) => {                               // the Milky Way, face on
+      mapStars(g, w, h, 19, 80, 0.7);
+      spiral(g, w * 0.5, h * 0.42, Math.min(w * 0.46, h * 0.42), 1, 4, '#cfd8ff', 7);
+      const sx = w * 0.5 + Math.min(w * 0.46, h * 0.42) * 0.54 * Math.cos(0.7), sy = h * 0.42 + Math.min(w * 0.46, h * 0.42) * 0.54 * Math.sin(0.7);
+      blob(g, sx, sy, 4, '#ffd45e'); g.strokeStyle = '#ffd45e'; g.lineWidth = 2; g.beginPath(); g.arc(sx, sy, 9, 0, TAU); g.stroke();
+    },
+    (g, w, h) => {                               // other galaxies, then the afterglow of the Big Bang
+      const rnd = seeded(20);
+      for (let i = 0; i < 60; i++) { g.save(); g.translate(rnd() * w, h * (0.12 + rnd() * 0.75)); g.rotate(rnd() * 3); g.globalAlpha = 0.4 + rnd() * 0.5; g.fillStyle = ['#ffd0a0', '#cfd8ff', '#ffb3d9'][i % 3]; g.beginPath(); g.ellipse(0, 0, 2 + rnd() * 4, 1 + rnd() * 2, 0, 0, TAU); g.fill(); g.restore(); }
+      g.globalAlpha = 1;
+      for (let i = 0; i < 160; i++) { g.globalAlpha = 0.5; blob(g, w * (0.1 + rnd() * 0.28), h * (0.66 + rnd() * 0.07), 0.6 + rnd(), '#dfe6ff'); }   // Large Magellanic Cloud
+      g.globalAlpha = 1;
+      spiral(g, w * 0.75, h * 0.37, w * 0.22, 0.35, 2, '#dfe6ff', 3);                                                 // Andromeda, tilted
+      for (let y = 0; y < h * 0.1; y += 6) for (let x = 0; x < w; x += 6) {                                            // the cosmic microwave background
+        const v = Math.sin(x * 0.07 + y * 0.11) + Math.sin(x * 0.031 - y * 0.05) + rnd() * 0.8;
+        g.globalAlpha = 0.55 * (1 - y / (h * 0.1)); g.fillStyle = v > 0.6 ? '#ff9a4a' : v > -0.2 ? '#ffd07a' : '#5a8cff'; g.fillRect(x, y, 6, 6);
+      }
+      g.globalAlpha = 1;
+    }
+  ];
+  const REGION_SKY = [['#120e30', '#1d1648'], ['#160f33', '#1f1550'], ['#140f30', '#1b1545'], ['#0f1236', '#16194a'], ['#0e0f2c', '#141640'],
+                      ['#100a26', '#1c1238'], ['#0a0820', '#120e2c'], ['#07061a', '#0e0b26'], ['#080618', '#100c28'], ['#050410', '#0a0820']];
+  function drawRegion(canvas, r) {
+    const w = canvas.clientWidth, h = canvas.clientHeight; if (!w) return;
+    const k = Math.min(window.devicePixelRatio || 1, 1.5);
+    canvas.width = Math.round(w * k); canvas.height = Math.round(h * k);
+    const g = canvas.getContext('2d'); g.setTransform(k, 0, 0, k, 0, 0);
+    const sky = g.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, REGION_SKY[r][1]); sky.addColorStop(1, REGION_SKY[r][0]);
+    g.fillStyle = sky; g.fillRect(0, 0, w, h);
+    mapStars(g, w, h, 100 + r, 50, 0.8);
+    REGION_ART[r](g, w, h);
+    g.setLineDash([2, 9]); g.lineCap = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(253,246,255,0.55)';   // the path, continuing into the next regions
+    g.beginPath();
+    for (let i = r * PER_REGION - 1; i <= Math.min(r * PER_REGION + PER_REGION, LEVELS.length - 1); i++) {
+      const rr = regionOf(i), y = (r - rr) * REGION_H + nodeLocalY(((i % PER_REGION) + PER_REGION) % PER_REGION);
+      if (i === r * PER_REGION - 1) g.moveTo(nodeX(i) * w, y); else g.lineTo(nodeX(i) * w, y);
+    }
+    g.stroke(); g.setLineDash([]);
+    canvas.dataset.drawn = w;
+  }
+  const iconCache = {};
+  function eggIcon(id) {                         // little drawings of the spacecraft and sights
+    if (iconCache[id]) return iconCache[id];
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const g = c.getContext('2d'); g.translate(64, 64); g.lineCap = 'round'; g.lineJoin = 'round';
+    const gold = '#e9b949', panel = '#3f6fd8', white = '#e8ecf4', line = (x1, y1, x2, y2, c2, lw) => { g.strokeStyle = c2; g.lineWidth = lw; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); };
+    const dish = (x, y, r) => { blob(g, x, y, r, white); g.strokeStyle = '#9aa3b8'; g.lineWidth = 3; g.beginPath(); g.arc(x, y, r * 0.6, 0, TAU); g.stroke(); blob(g, x, y, r * 0.15, '#9aa3b8'); };
+    const voyager = () => { line(0, 6, -44, 34, '#c9ced9', 4); line(0, 6, 40, 30, '#c9ced9', 4); line(0, 6, 34, -30, '#c9ced9', 3); g.fillStyle = gold; g.fillRect(-10, 2, 20, 12); dish(0, -12, 26); };
+    if (id === 'dawn' || id === 'psyche') {
+      g.fillStyle = panel; g.fillRect(-58, -9, 42, 18); g.fillRect(16, -9, 42, 18);
+      if (id === 'psyche') { g.fillRect(-50, -20, 26, 40); g.fillRect(24, -20, 26, 40); }
+      g.strokeStyle = '#9fc1ff'; g.lineWidth = 2; for (let x = -54; x < 58; x += 10) if (Math.abs(x) > 14) line(x, -9, x, 9, '#9fc1ff', 2);
+      g.fillStyle = gold; g.fillRect(-16, -16, 32, 32); dish(0, -22, 10);
+    } else if (id === 'lucy') {
+      for (const s of [-1, 1]) { blob(g, s * 36, 0, 26, panel); g.strokeStyle = '#9fc1ff'; g.lineWidth = 2; g.beginPath(); g.arc(s * 36, 0, 17, 0, TAU); g.stroke(); line(s * 36, -26, s * 36, 26, '#9fc1ff', 2); }
+      g.fillStyle = gold; g.fillRect(-12, -14, 24, 28); dish(0, -20, 12);
+    } else if (id === 'cassini') {
+      g.fillStyle = '#d2a44a'; g.fillRect(-12, -12, 24, 44); line(0, 10, -46, 26, '#c9ced9', 3); dish(0, -22, 26);
+    } else if (id === 'huygens') {
+      g.fillStyle = '#ff9a4a'; g.beginPath(); g.arc(0, -16, 40, Math.PI, TAU); g.fill();
+      for (const x of [-38, -14, 14, 38]) line(x, -16, 0, 24, '#c9ced9', 2);
+      g.fillStyle = gold; g.beginPath(); g.ellipse(0, 28, 22, 9, 0, 0, TAU); g.fill();
+    } else if (id === 'voyager1' || id === 'voyager2') voyager();
+    else if (id === 'newhorizons') {
+      g.fillStyle = gold; g.beginPath(); g.moveTo(-30, 26); g.lineTo(30, 26); g.lineTo(0, -12); g.closePath(); g.fill();
+      line(14, 8, 50, 32, '#5a5f6e', 7); dish(0, -18, 22);
+    } else if (id === 'paleblue') {
+      g.fillStyle = '#0b0a16'; g.fillRect(-56, -56, 112, 112);
+      for (const [a, c] of [[-40, 'rgba(255,170,120,0.35)'], [-10, 'rgba(255,220,180,0.45)'], [20, 'rgba(255,170,220,0.3)']]) { g.fillStyle = c; g.save(); g.rotate(0.35); g.fillRect(a - 7, -90, 14, 180); g.restore(); }
+      blob(g, 4, 10, 3.5, '#7fd0ff');
+    } else if (id === 'record') {
+      blob(g, 0, 0, 50, '#d9a93c'); g.strokeStyle = 'rgba(120,80,10,0.5)'; g.lineWidth = 2;
+      for (let r2 = 14; r2 < 50; r2 += 6) { g.beginPath(); g.arc(0, 0, r2, 0, TAU); g.stroke(); }
+      blob(g, 0, 0, 10, '#f6dd8c'); blob(g, 0, 0, 3, '#8a6512');
+    } else if (id === 'oortvoyager') {
+      g.fillStyle = '#ffd45e'; g.beginPath(); g.moveTo(-26, -44); g.lineTo(26, -44); g.lineTo(0, 0); g.lineTo(26, 44); g.lineTo(-26, 44); g.lineTo(0, 0); g.closePath(); g.fill();
+      g.fillStyle = '#c99a3a'; g.beginPath(); g.moveTo(-14, 44); g.lineTo(14, 44); g.lineTo(0, 22); g.closePath(); g.fill();
+      line(-30, -46, 30, -46, '#fdf6ff', 5); line(-30, 46, 30, 46, '#fdf6ff', 5);
+    } else if (id === 'gaiabh1') {
+      g.strokeStyle = '#ff9a4a'; g.lineWidth = 8; g.beginPath(); g.ellipse(-8, 4, 38, 12, -0.2, 0, TAU); g.stroke();
+      blob(g, -8, 4, 22, '#05030c'); glowDot(g, 36, -30, 7, 'rgba(255,230,140,0.7)');
+    } else if (id === 'gliese') {
+      glowDot(g, -16, -10, 12, 'rgba(255,90,70,0.6)');
+      g.setLineDash([3, 6]); line(46, 46, 6, 6, '#c9ced9', 3); g.setLineDash([]); blob(g, 46, 46, 5, '#e8ecf4');
+    } else if (id === 'sgra') {
+      const ring = g.createRadialGradient(0, 0, 14, 0, 0, 48);
+      ring.addColorStop(0, 'rgba(0,0,0,1)'); ring.addColorStop(0.45, 'rgba(255,140,40,1)'); ring.addColorStop(0.7, 'rgba(255,200,90,0.8)'); ring.addColorStop(1, 'rgba(255,120,30,0)');
+      g.fillStyle = ring; g.beginPath(); g.arc(0, 0, 48, 0, TAU); g.fill();
+    } else if (id === 'momz14') {
+      g.fillStyle = '#e9b949';
+      for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; g.beginPath(); for (let j = 0; j < 6; j++) { const b = j / 6 * TAU + Math.PI / 6; g.lineTo(Math.cos(a) * 20 - 24 + Math.cos(b) * 10, Math.sin(a) * 20 - 20 + Math.sin(b) * 10); } g.fill(); }
+      glowDot(g, 30, 30, 5, 'rgba(255,90,60,0.8)');
+    }
+    return iconCache[id] = c.toDataURL();
+  }
+  let mapBuilt = false, mapTick = 0;
+  function drawNearby() {                        // draw the pictures of regions on or near the screen (each is drawn once per width)
+    const m = $('advMap'), top = m.scrollTop - 700, bot = m.scrollTop + m.clientHeight + 700;
+    m.querySelectorAll('.region').forEach(el => {
+      if (el.offsetTop + el.offsetHeight < top || el.offsetTop > bot) return;
+      const cv = el.firstElementChild;
+      if (+cv.dataset.drawn !== cv.clientWidth) drawRegion(cv, +el.id.slice(4));
+    });
+  }
+  $('advMap').addEventListener('scroll', () => { if (!mapTick) mapTick = requestAnimationFrame(() => { mapTick = 0; drawNearby(); }); }, { passive: true });
+  function buildMap() {
+    const m = $('advMap');
+    let html = '';
+    for (let r = REGIONS.length - 1; r >= 0; r--) {             // farthest at the top: the journey goes up
+      const R = REGIONS[r], open = regionOpen(r);
+      html += '<section class="region' + (open ? '' : ' locked') + '" id="reg_' + r + '" style="height:' + REGION_H + 'px" aria-label="' + R.name + '">' +
+        '<canvas aria-hidden="true"></canvas>';
+      for (const [text, x, y] of R.labels) html += '<span class="mlabel" style="left:' + (x * 100) + '%;top:' + (y * REGION_H) + 'px">' + text + '</span>';
+      if (open) for (const e of R.eggs) html += '<button type="button" class="egg' + (store.eggs[e.id] ? ' found' : '') + '" data-egg="' + e.id + '" style="left:' + (e.x * 100) + '%;top:' + (e.y * REGION_H) + 'px" aria-label="' + e.name + '"><img alt="" src="' + eggIcon(e.id) + '"></button>';
+      for (let k = PER_REGION - 1; k >= 0; k--) {
+        const i = r * PER_REGION + k, lv = LEVELS[i]; if (!lv) continue;
+        const lvOpen = i === 0 || store.adv[i - 1], done = !!store.adv[i];
+        html += '<button type="button" class="node' + (isBoss(lv) ? ' boss' : '') + (done ? ' done' : '') + (lvOpen && !done ? ' cur' : '') + '" data-level="' + i + '"' + (lvOpen ? '' : ' disabled') +
+          ' style="left:' + (nodeX(i) * 100) + '%;top:' + nodeLocalY(k) + 'px" aria-label="Level ' + (i + 1) + ', ' + lv.name + (done ? ', cleared' : lvOpen ? '' : ', locked') + '">' +
+          (i + 1) + (isBoss(lv) ? '<small>BOSS</small>' : done ? '<small>★</small>' : '') + '</button>';
+      }
+      html += '<div class="rhead"><b>' + R.name + '<i>' + R.dist + '</i></b><p>' + R.fact + '</p></div></section>';
+    }
+    m.innerHTML = html;
+    drawNearby();
+    $('eggCount').textContent = 'Space facts found: ' + ALL_EGGS.filter(e => store.eggs[e.id]).length + '/' + ALL_EGGS.length;
+    mapBuilt = true;
+  }
   function openAdventure() {
     showScreen('adv'); paused = false; over = true;
     $('advCoins').textContent = fmt(store.coins);
-    $('levels').innerHTML = LEVELS.map((lv, i) => {
-      const open = i === 0 || store.adv[i - 1], done = !!store.adv[i];
-      return '<button type="button" class="lv' + (isBoss(lv) ? ' boss' : '') + (done ? ' done' : '') + '" id="lv_' + i + '" data-level="' + i + '"' + (open ? '' : ' disabled') +
-        ' aria-label="Level ' + (i + 1) + ', ' + lv.name + (done ? ', cleared' : open ? '' : ', locked') + '">' + (i + 1) +
-        '<small>' + (done ? '★ done' : isBoss(lv) ? 'BOSS' : open ? 'play' : 'locked') + '</small></button>';
-    }).join('');
+    buildMap();
+    const m = $('advMap'), cur = m.querySelector('.node.cur') || m.querySelector('.node[data-level="' + (LEVELS.length - 1) + '"]');
+    requestAnimationFrame(() => {                              // start with the next level to play in the middle of the screen
+      if (cur) m.scrollTop = cur.offsetTop + cur.parentElement.offsetTop - m.clientHeight / 2;
+      drawNearby();
+    });
   }
-  $('levels').addEventListener('click', ev => {
+  new ResizeObserver(() => { if (screen === 'adv') drawNearby(); }).observe($('advMap'));
+  function showFact(id) {
+    const e = ALL_EGGS.find(x => x.id === id); if (!e) return;
+    $('factImg').src = eggIcon(id); $('factName').textContent = e.name; $('factText').textContent = e.fact;
+    $('fact').hidden = false; $('factClose').focus();
+    if (!store.eggs[id]) { store.eggs[id] = 1; save(); $('eggCount').textContent = 'Space facts found: ' + ALL_EGGS.filter(x => store.eggs[x.id]).length + '/' + ALL_EGGS.length; const b = $('advMap').querySelector('[data-egg="' + id + '"]'); if (b) b.classList.add('found'); }
+  }
+  $('factClose').addEventListener('click', () => { $('fact').hidden = true; });
+  $('fact').addEventListener('click', ev => { if (ev.target === $('fact')) $('fact').hidden = true; });
+  $('advMap').addEventListener('click', ev => {
+    const egg = ev.target.closest('[data-egg]');
+    if (egg) { showFact(egg.dataset.egg); return; }
     const btn = ev.target.closest('[data-level]');
     if (btn && !btn.disabled) enterLevel(+btn.dataset.level);
   });
@@ -3114,6 +3447,24 @@ canvas#c {
     face(g, r, {}, 'sparkle', '#fdf6ff');
     g.restore();
   }
+  function drawStorm(g, x, y, r, now, flash) {      // Neptune's Great Dark Spot, seen by Voyager 2 in 1989
+    g.save(); g.translate(x, y);
+    const glow = g.createRadialGradient(0, 0, r * 0.7, 0, 0, r * 1.8);
+    glow.addColorStop(0, 'rgba(90,140,255,0.55)'); glow.addColorStop(1, 'rgba(90,140,255,0)');
+    g.fillStyle = glow; g.beginPath(); g.arc(0, 0, r * 1.8, 0, TAU); g.fill();
+    g.save(); g.rotate(reduceMotion ? 0 : -now / 900);
+    for (let i = 0; i < 3; i++) {                     // swirling cloud bands
+      g.strokeStyle = i % 2 ? 'rgba(160,200,255,0.75)' : 'rgba(90,140,255,0.85)'; g.lineWidth = r * 0.13; g.lineCap = 'round';
+      g.beginPath(); g.ellipse(0, 0, r * (1.05 + i * 0.13), r * (0.72 + i * 0.1), 0, i * 2.1, i * 2.1 + 2.3); g.stroke();
+    }
+    g.restore();
+    g.save(); g.scale(1.15, 0.85); blob(g, 0, 0, r, flash ? '#3a4f9a' : '#16205a'); g.restore();
+    g.strokeStyle = '#f4f8ff'; g.lineWidth = r * 0.09; g.lineCap = 'round';   // the bright white "companion" clouds beside it
+    g.beginPath(); g.arc(r * 0.2, -r * 0.3, r * 1.05, -1.25, -0.55); g.stroke();
+    g.beginPath(); g.arc(-r * 0.3, r * 0.2, r * 1.0, 1.9, 2.5); g.stroke();
+    face(g, r, {}, 'sparkle', '#fdf6ff');
+    g.restore();
+  }
   function drawBumper(g, x, y, r, now) {
     const pulse = reduceMotion ? 0 : Math.sin(now / 200) * 1.5;
     blob(g, x, y, r + 3 + pulse, '#120d2e'); blob(g, x, y, r + pulse, '#ff7eb6'); blob(g, x, y, r * 0.68, '#ffd45e'); blob(g, x, y, r * 0.38, '#fdf6ff');
@@ -3139,18 +3490,29 @@ canvas#c {
     g.restore();
   }
   function draw(now, dt) {
-    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.setTransform(scale, 0, 0, scale, OX * scale, OY * scale);
     if (shake > 0 && !reduceMotion) {               // earthquake shake
       shake = Math.max(0, shake - dt);
       ctx.translate((Math.random() - 0.5) * 10 * shake, (Math.random() - 0.5) * 10 * shake);
     }
-    sky(ctx, W, VH, now);
     const bg = BGS[store.equip.bg] || BGS.night;
     const festive = mode !== 'sandbox' && holidayLook();
+    ctx.save(); ctx.translate(-OX, -OY);            // the sky and snow fill the whole screen
+    sky(ctx, VW, VH + OY, now);
+    ctx.restore();
+    ctx.fillStyle = 'rgba(10,6,30,0.3)';             // shade the sky outside the board (behind the HUD, and at the sides on wide screens)
+    ctx.fillRect(-OX, -OY, VW, OY);
+    if (OX > 1) { ctx.fillRect(-OX, 0, OX, VH); ctx.fillRect(W, 0, OX, VH); }
+    ctx.strokeStyle = bg.soft; ctx.lineWidth = 2; ctx.beginPath();
+    ctx.moveTo(OX > 1 ? -1 : -OX, -1); ctx.lineTo(OX > 1 ? W + 1 : W + OX, -1);       // the board's top edge
+    if (OX > 1) { ctx.moveTo(-1, -1); ctx.lineTo(-1, VH); ctx.moveTo(W + 1, -1); ctx.lineTo(W + 1, VH); }
+    ctx.stroke();
     if (festive || (TW && TW.snow)) {
-      snowfall(ctx, W, VH, now, dt, gameSnow, 0.6);
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';               // a soft snowdrift along the near edge
-      for (let x = -10; x < W + 30; x += 34) { ctx.beginPath(); ctx.arc(x, VH + 6, 16 + (x % 3) * 3, 0, TAU); ctx.fill(); }
+      ctx.save(); ctx.translate(-OX, -OY);
+      snowfall(ctx, VW, VH + OY, now, dt, gameSnow, 0.6);
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';               // a soft snowdrift along the bottom edge
+      for (let x = -10; x < VW + 30; x += 34) { ctx.beginPath(); ctx.arc(x, VH + OY + 6, 16 + (Math.round(x) % 3) * 3, 0, TAU); ctx.fill(); }
+      ctx.restore();
     }
     if (mode !== 'sandbox') {
       const lineY = H - lineH();
@@ -3201,7 +3563,7 @@ canvas#c {
         ctx.fillStyle = '#8d8aa3'; ctx.fillRect(pad - 4, 0, 4, H); ctx.fillRect(W - pad, 0, 4, H);
       }
       if (boss) {
-        if (boss.kind === 'hole') drawHole(ctx, boss.x, boss.y, boss.r, now, boss.flash > 0);
+        if (boss.kind === 'hole') (boss.look === 'storm' ? drawStorm : drawHole)(ctx, boss.x, boss.y, boss.r, now, boss.flash > 0);
         else if (boss.kind === 'ship') { ctx.save(); ctx.translate(boss.x, boss.y); ctx.scale(boss.r / 34, boss.r / 34); if (boss.flash > 0) ctx.globalAlpha = 0.6; drawUfo(ctx, { x: 0, y: 0, beam: false }); ctx.restore(); }
         else { drawRock(ctx, boss.x, boss.y, boss.r, 'grumpy', boss.flash > 0); if (festive) snowCap(ctx, boss.x, boss.y, boss.r); }
         if (boss.hpMax) {
@@ -3326,18 +3688,19 @@ canvas#c {
 
   // ---------- Sizing ----------
   function fit() {
-    const w = stage.clientWidth, h = stage.clientHeight;
-    if (!w || h <= 0) return;
+    // The canvas covers the whole screen. The board (always W x WORLD_H game units, so every screen plays the same game)
+    // starts under the HUD, is as big as fits, and is centered. Sky is drawn around it: at the sides on wide screens,
+    // behind the HUD, and under it all the way to the bottom edge as extra launch area.
+    const cw = canvas.clientWidth, ch = canvas.clientHeight, top = stage.getBoundingClientRect().top;
+    const h = ch - top;
+    if (!cw || h <= 0) return;
     const safe = $('safeProbe').offsetHeight || 0;          // the iPhone home bar: keep the launcher above it
-    const k = Math.min(w / W, (h - safe - 6) / WORLD_H);    // screen pixels per game unit
-    const cssW = W * k, cssH = h;                           // full height: the board runs to the bottom edge
-    H = WORLD_H; VH = cssH / k;
-    canvas.style.width = cssW + 'px';
-    canvas.style.height = cssH + 'px';
+    const k = Math.min(cw / W, (h - safe - 6) / WORLD_H);   // screen pixels per game unit
+    H = WORLD_H; VW = cw / k; OX = (VW - W) / 2; OY = top / k; VH = h / k;
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
-    canvas.width = Math.round(cssW * dpr);
-    canvas.height = Math.round(cssH * dpr);
-    scale = canvas.width / W;
+    canvas.width = Math.round(cw * dpr);
+    canvas.height = Math.round(ch * dpr);
+    scale = canvas.width / VW;
     for (const b of bodies) {
       const lim = H - TIERS[b.t].bottom;
       if (b.y > lim) { b.y = lim; b.py = lim; }
@@ -3911,6 +4274,7 @@ canvas#c {
   // by the patterns below the word list. Anything missing here simply stays in English.
   const ZH_PLANETS = { Pluto: '冥王星', Moon: '月球', Mars: '火星', Venus: '金星', Earth: '地球', Neptune: '海王星', Uranus: '天王星', Saturn: '土星', Jupiter: '木星', Sun: '太陽' };
   const ZH = {
+    "Fly outward from the asteroid belt to the edge of the universe. Tap the spacecraft and places on the way to learn about them.": "從小行星帶一路往外飛到宇宙的盡頭。點一下沿路的太空船和地點，就能認識它們。", "The Asteroid Belt": "小行星帶", "2.2–3.2 AU from the Sun": "距離太陽 2.2–3.2 天文單位", "Our trip starts just past Mars. Millions of asteroids orbit here, but they are so spread out that spacecraft fly through safely. 1 AU is the distance from Earth to the Sun, about 150 million km.": "旅程從火星外側開始。這裡有數百萬顆小行星，但彼此相隔非常遠，太空船可以安全飛過。1 天文單位是地球到太陽的距離，大約 1.5 億公里。", "Mars": "火星", "Ceres": "穀神星", "Dawn": "曙光號", "Psyche": "靈神星號", "NASA’s Dawn orbited the asteroid Vesta, then Ceres, the biggest object in the asteroid belt. It ran out of fuel in 2018 and is still circling Ceres, where it should stay for decades.": "NASA 的曙光號先環繞小行星灶神星，再環繞小行星帶裡最大的天體穀神星。它在 2018 年燃料用完，至今仍繞著穀神星轉，預計還會再轉好幾十年。", "NASA’s Psyche spacecraft is on its way to 16 Psyche, an asteroid rich in metal. It is due to arrive in 2029.": "NASA 的靈神星號正飛往富含金屬的小行星「16 靈神星」，預計 2029 年抵達。", "Jupiter and the Trojans": "木星與特洛伊小行星", "5.2 AU": "5.2 天文單位", "Jupiter is so big that all the other planets could fit inside it. Two swarms of Trojan asteroids share its orbit, one ahead of it and one behind.": "木星大到可以把其他所有行星都裝進去。兩群特洛伊小行星和木星共用同一條軌道，一群在它前面，一群在它後面。", "Jupiter": "木星", "Trojan asteroids": "特洛伊小行星", "Lucy": "露西號", "In October 2026, NASA’s Lucy became the first spacecraft to reach the Trojan asteroids. Its first close flyby, of the asteroid Eurybates, is planned for August 2027.": "2026 年 10 月，NASA 的露西號成為第一艘抵達特洛伊小行星的太空船。它預計在 2027 年 8 月第一次近距離飛掠小行星歐律巴特斯。", "Saturn": "土星", "9.5 AU": "9.5 天文單位", "Saturn’s rings are mostly chunks of ice. The main rings stretch about 280,000 km across, but in most places they are only about 10 meters thick.": "土星環大多是冰塊。主環寬約 28 萬公里，但大部分地方只有大約 10 公尺厚。", "Titan": "泰坦", "Cassini": "卡西尼號", "Huygens": "惠更斯號", "Cassini studied Saturn for 13 years. On September 15, 2017 it dove into Saturn on purpose, sending back data until the very end.": "卡西尼號研究土星 13 年。2017 年 9 月 15 日它刻意衝進土星，一直傳回資料到最後一刻。", "In January 2005 the Huygens probe parachuted onto Titan, Saturn’s biggest moon. It is still the farthest landing ever made.": "2005 年 1 月，惠更斯號探測器乘著降落傘降落在土星最大的衛星泰坦上。這至今仍是人類最遠的一次登陸。", "Uranus and Neptune": "天王星與海王星", "19–30 AU": "19–30 天文單位", "These ice giants are so far away that only one spacecraft has ever visited them. Uranus spins tipped over on its side.": "這兩顆冰巨星非常遙遠，只有一艘太空船造訪過它們。天王星是躺著自轉的。", "Uranus": "天王星", "Neptune": "海王星", "Voyager 2": "航海家 2 號", "Voyager 2 is the only spacecraft to visit Uranus (1986) and Neptune (1989). At Neptune it found a giant storm called the Great Dark Spot.": "航海家 2 號是唯一造訪過天王星（1986 年）和海王星（1989 年）的太空船。它在海王星發現了一個叫「大暗斑」的巨大風暴。", "The Kuiper Belt": "古柏帶", "30–50 AU": "30–50 天文單位", "A huge ring of icy worlds past Neptune. Pluto is the largest one we know of.": "海王星外一大圈冰冷的小世界。冥王星是我們已知最大的一個。", "Pluto": "冥王星", "Arrokoth": "天涯海角", "New Horizons": "新視野號", "Pale Blue Dot": "暗淡藍點", "New Horizons flew past Pluto on July 14, 2015, then past Arrokoth on January 1, 2019, the farthest object ever explored up close.": "新視野號在 2015 年 7 月 14 日飛掠冥王星，又在 2019 年 1 月 1 日飛掠天涯海角，那是人類近距離探索過最遠的天體。", "In 1990, from about 6 billion km away, Voyager 1 looked back and photographed Earth as a tiny dot in a sunbeam.": "1990 年，航海家 1 號在大約 60 億公里外回頭拍下地球，地球只是陽光中的一個小點。", "The Edge of the Sun’s Bubble": "太陽泡泡的邊緣", "about 90–170 AU": "大約 90–170 天文單位", "The Sun blows out a wind of particles that makes a giant bubble called the heliosphere. Its edge, the heliopause, is about 120 AU away. Past it is interstellar space.": "太陽吹出的粒子風形成一個巨大的泡泡，叫做太陽圈。它的邊緣「太陽圈頂」大約在 120 天文單位外，再過去就是星際空間。", "Termination shock · about 94 AU": "終端震波 · 大約 94 天文單位", "Heliopause · about 120 AU": "太陽圈頂 · 大約 120 天文單位", "Interstellar space": "星際空間", "Voyager 1": "航海家 1 號", "Golden Record": "金唱片", "Voyager 1 left the Sun’s bubble in August 2012. On November 18, 2026 it became the first human-made object one light-day from Earth, about 173 AU. Its radio signals now take a whole day to reach us.": "航海家 1 號在 2012 年 8 月離開太陽的泡泡。2026 年 11 月 18 日，它成為第一個距離地球一光日（大約 173 天文單位）的人造物體。它的無線電訊號現在要花整整一天才能傳到我們這裡。", "Both Voyagers carry a golden record with sounds, music and pictures of Earth, in case anyone ever finds them.": "兩艘航海家號都帶著一張金唱片，裡面有地球的聲音、音樂和圖片，以防哪天有誰發現它們。", "The Oort Cloud": "歐特雲", "about 2,000–100,000 AU": "大約 2,000–100,000 天文單位", "Scientists think a giant shell of icy bodies surrounds the solar system, far past the planets. Many comets come from here. Nobody has seen it directly yet.": "科學家認為在行星很遠很遠之外，有一層巨大的冰質天體外殼包圍著太陽系。很多彗星來自這裡。目前還沒有人直接看見過它。", "A very long trip": "好長的旅程", "Even at about 61,000 km per hour, Voyager 1 will need about 300 years to reach the Oort Cloud, and maybe 30,000 years to get through it.": "就算時速大約 61,000 公里，航海家 1 號也要大約 300 年才能抵達歐特雲，再花大概 3 萬年才能穿過它。", "Our Star Neighbors": "我們的恆星鄰居", "4.2–1,600 light-years": "4.2–1,600 光年", "A light-year is how far light travels in a year, about 9.5 trillion km. The nearest star to the Sun, Proxima Centauri, is 4.2 light-years away.": "一光年是光一年走的距離，大約 9.5 兆公里。離太陽最近的恆星比鄰星在 4.2 光年外。", "Proxima Centauri · 4.2 light-years": "比鄰星 · 4.2 光年", "Alpha Centauri · 4.4 light-years": "南門二 · 4.4 光年", "Orion Nebula · 1,300 light-years": "獵戶座大星雲 · 1,300 光年", "Gaia BH1": "蓋亞 BH1", "Gliese 445": "格利澤 445", "The nearest black hole we know of is about 1,560 light-years away. It is quiet and doesn’t glow. Astronomers found it by watching a Sun-like star circle around it.": "我們已知最近的黑洞大約在 1,560 光年外。它很安靜，不會發光。天文學家是觀察到一顆像太陽的恆星繞著它轉，才發現它的。", "Around the year 40,272, Voyager 1 will pass within 1.7 light-years of a small red star called Gliese 445.": "大約在西元 40272 年，航海家 1 號會從一顆叫格利澤 445 的小紅星旁 1.7 光年內經過。", "The Milky Way": "銀河系", "about 100,000 light-years across": "直徑大約 10 萬光年", "Our galaxy is a spiral of hundreds of billions of stars. The Sun sits in a small arm called the Orion Arm, about 27,000 light-years from the center.": "我們的星系是一個由數千億顆恆星組成的螺旋。太陽位在一條叫獵戶臂的小旋臂上，離中心大約 27,000 光年。", "You are here": "你在這裡", "Sagittarius A*": "人馬座 A*", "A black hole about 4 million times heavier than the Sun sits at the center of our galaxy, about 27,000 light-years away. Its first picture was shown on May 12, 2022.": "我們星系的中心有一個大約比太陽重 400 萬倍的黑洞，離我們大約 27,000 光年。它的第一張照片在 2022 年 5 月 12 日公開。", "Beyond Our Galaxy": "銀河系之外", "back to 13.8 billion years ago": "回到 138 億年前", "The nearest big galaxy, Andromeda, is 2.5 million light-years away. Looking farther means looking back in time, all the way to the glow left over from the Big Bang.": "最近的大星系仙女座星系在 250 萬光年外。看得越遠，就是看到越久以前，一直到大霹靂留下的餘暉。", "Large Magellanic Cloud · 160,000 light-years": "大麥哲倫雲 · 16 萬光年", "Andromeda · 2.5 million light-years": "仙女座星系 · 250 萬光年", "Afterglow of the Big Bang": "大霹靂的餘暉", "MoM-z14": "MoM-z14", "The farthest galaxy ever confirmed. The Webb telescope sees it as it was just 280 million years after the Big Bang. Its light traveled about 13.5 billion years to reach us.": "目前確認最遠的星系。韋伯望遠鏡看到的是它在大霹靂後僅 2.8 億年時的樣子。它的光走了大約 135 億年才到達我們這裡。", "Great Dark Spot": "大暗斑", "Beat the Great Dark Spot": "打敗大暗斑", "A giant storm on Neptune pulls planets in and swallows your biggest one every few shots, which heals it.": "海王星上的巨大風暴會把星球吸過去，每隔幾發就吞掉你最大的星球，並幫自己回血。",
     ...ZH_PLANETS,
     // home, menus and buttons
     'Classic': '經典', 'Adventure': '冒險', 'Sandbox': '沙盒', 'Shop': '商店', 'Settings': '設定', 'Profile': '個人資料', 'Home': '主頁',
@@ -4083,6 +4447,7 @@ canvas#c {
   const zhWord = s => ZH[s] || s;
   // Text with numbers or names in it: [pattern, replacement]
   const ZH_RX = [
+    [/^Space facts found: (\d+)\/(\d+)$/, '找到的太空知識：$1/$2'],
     [/^([\d,]+) coins$/, '$1 金幣'], [/^\+([\d,]+) coins$/, '+$1 金幣'], [/^([\d,]+) coins for a replay$/, '$1 金幣（重玩）'],
     [/^([\d,]+) coins earned this game$/, '本局獲得 $1 金幣'], [/^([\d,]+) of (\d+) earned\. Each one pays coins the first time\.$/, '已獲得 $1/$2 個。每個徽章第一次獲得時會獎勵金幣。'],
     [/^([\d,]+) in the shop$/, '商店售價 $1'], [/^(\d+)s$/, '$1 秒'], [/^(\d+)s left$/, '剩 $1 秒'], [/^HP ([\d,]+)$/, '生命 $1'],
@@ -4286,7 +4651,7 @@ canvas#c {
     if ($('optReset')) twoTap($('optReset'), () => { store.bests = {}; store.runs = {}; save(); refreshHome(); $('optReset').textContent = 'High scores reset'; });
     if ($('optWipe')) twoTap($('optWipe'), () => {
       Object.assign(store, {
-        map: 'open', bests: {}, runs: {}, sand: { ...DEFAULTS }, coins: 0, owned: {}, adv: [], ach: {}, stats: freshStats(),
+        map: 'open', bests: {}, runs: {}, sand: { ...DEFAULTS }, coins: 0, owned: {}, adv: [], eggs: {}, ach: {}, stats: freshStats(),
         equip: { skins: TIERS.map(() => 'classic'), faces: TIERS.map(() => 'classic'), bg: 'night', track: 'sunny' }
       });
       pick = 0; faceTarget = 'all'; curMap = 'open';
@@ -4316,7 +4681,7 @@ canvas#c {
   // ---------- Input ----------
   function aimFrom(ev) {
     const rect = canvas.getBoundingClientRect();
-    aimX = (ev.clientX - rect.left) / rect.width * W;
+    aimX = (ev.clientX - rect.left) / rect.width * VW - OX;
   }
   let aiming = false;
   canvas.addEventListener('pointerdown', ev => {
@@ -4392,7 +4757,7 @@ canvas#c {
     window.addEventListener('resize', refit);
     requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
     if (typeof window.__PS_TEST === 'function') {
-      window.__PS_TEST({ layout: () => { const r = canvas.getBoundingClientRect(); return { W, H, VH, k: r.width / W, cw: r.width, ch: r.height, top: r.top, left: r.left, iw: innerWidth, ih: innerHeight, launchBottom: r.top + (launchY() + TIERS[cur].bottom) * r.width / W, worldBottom: r.top + H * r.width / W, hudBottom: document.querySelector(".hint").getBoundingClientRect().bottom }; }, buildSprites, setScore: v => { score = v; hud(); }, setLang, zh, fitHud, failLevel, winLevel, endGame, setHoliday: v => { devHoliday = v; homeSprites = null; refreshHome(); }, holidayLook, art: (t, sk, f) => { const c = document.createElement('canvas'); c.width = c.height = 240; const g = c.getContext('2d'), q = 64 / TIERS[t].r; g.setTransform(q, 0, 0, q, 120, 130); drawPlanet(g, t, sk, f || 'classic'); return c.toDataURL(); }, armTimer: n => { const b = bodies.filter(p => !p.fly && !p.taken && p.t === 0).sort((p, q) => q.y - p.y)[0]; if (!b) return null; b.fused = true; b.fuse = n; return { x: b.x, y: b.y }; }, setCur: t => { cur = t; ready = true; }, peekGems: () => gems.filter(g => !g.got).map(g => ({ x: g.x, y: g.y })), peekRocks: () => rocks.filter(o => o.brk).map(o => ({ x: o.x, y: o.y, r: o.r })), LEVELS, quietAudio, wakeAudio, toastText: () => $('toast').textContent, toastOn: () => $('toast').classList.contains('go'), toast, peekBodies: () => bodies.map(b => ({ x: b.x, y: b.y, t: b.t, fly: b.fly, ice: !!b.ice, fuse: b.fused ? Math.max(0, b.fuse) + 1 : 0 })), peekCur: () => cur, badge, ACH, MAPS, TRACKS, songPlan, loopSeconds, audio, audioWake, setTrack, scheduleBar, enterGame, enterLevel, openAdventure, openMaps, openProfile, playMap, award, profTab(t) { profTab = t; renderProfile(); }, step, openSettings, openShop, shopTap, store, start() { hideCard(); hold = false; }, peek: () => ({ over, hold, made: made.slice(), shotsLeft, timeLeft, bossHp: boss && boss.hp, done: store.adv.slice(), title: ($('overCard').querySelector('h2') || {}).textContent }), tab(t) { shopTab = t; renderShop(); }, shoot(x) { aimX = x; launch(); }, aim(x) { aimX = x; }, get: () => ({ score, over, n: bodies.length, best: bestOf(curMap), map: curMap }) });
+      window.__PS_TEST({ layout: () => { const r = canvas.getBoundingClientRect(), k = r.width / VW, t0 = r.top + OY * k; return { W, H, VH, OX, OY, k, cw: r.width, ch: r.height, top: t0, left: r.left + OX * k, iw: innerWidth, ih: innerHeight, launchBottom: t0 + (launchY() + TIERS[cur].bottom) * k, worldBottom: t0 + H * k, hudBottom: document.querySelector(".hint").getBoundingClientRect().bottom }; }, buildSprites, setScore: v => { score = v; hud(); }, setLang, zh, fitHud, failLevel, winLevel, endGame, setHoliday: v => { devHoliday = v; homeSprites = null; refreshHome(); }, holidayLook, art: (t, sk, f) => { const c = document.createElement('canvas'); c.width = c.height = 240; const g = c.getContext('2d'), q = 64 / TIERS[t].r; g.setTransform(q, 0, 0, q, 120, 130); drawPlanet(g, t, sk, f || 'classic'); return c.toDataURL(); }, armTimer: n => { const b = bodies.filter(p => !p.fly && !p.taken && p.t === 0).sort((p, q) => q.y - p.y)[0]; if (!b) return null; b.fused = true; b.fuse = n; return { x: b.x, y: b.y }; }, setCur: t => { cur = t; ready = true; }, peekGems: () => gems.filter(g => !g.got).map(g => ({ x: g.x, y: g.y })), peekRocks: () => rocks.filter(o => o.brk).map(o => ({ x: o.x, y: o.y, r: o.r })), LEVELS, quietAudio, wakeAudio, toastText: () => $('toast').textContent, toastOn: () => $('toast').classList.contains('go'), toast, peekBodies: () => bodies.map(b => ({ x: b.x, y: b.y, t: b.t, fly: b.fly, ice: !!b.ice, fuse: b.fused ? Math.max(0, b.fuse) + 1 : 0 })), peekCur: () => cur, badge, ACH, MAPS, TRACKS, songPlan, loopSeconds, audio, audioWake, setTrack, scheduleBar, enterGame, enterLevel, openAdventure, openMaps, openProfile, playMap, award, profTab(t) { profTab = t; renderProfile(); }, step, openSettings, openShop, shopTap, store, start() { hideCard(); hold = false; }, peek: () => ({ over, hold, made: made.slice(), shotsLeft, timeLeft, bossHp: boss && boss.hp, done: store.adv.slice(), title: ($('overCard').querySelector('h2') || {}).textContent }), tab(t) { shopTab = t; renderShop(); }, shoot(x) { aimX = x; launch(); }, aim(x) { aimX = x; }, get: () => ({ score, over, n: bodies.length, best: bestOf(curMap), map: curMap }) });
     }
   }
 

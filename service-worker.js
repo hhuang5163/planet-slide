@@ -10,7 +10,7 @@
 // How updates work: when the game opens with a connection it shows the newest index.html
 // from the server; with no connection (or after 3 slow seconds) it shows the saved copy.
 // Saved scores live in the browser's storage and are never touched here.
-const SHELL_VERSION = 'planet-slide-v15';
+const SHELL_VERSION = 'planet-slide-v17';
 const PREFIX = 'planet-slide-';
 const SHELL = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
