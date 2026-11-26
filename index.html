@@ -454,6 +454,42 @@ canvas#c {                         /* the sky fills the whole screen; the board 
 .card.ach:active { transform: none; box-shadow: 0 4px 0 var(--ink); }
 .grid2 .card.ach img { max-width: 92px; }
 .tabs.two { grid-template-columns: 1fr 1fr; }
+.tabs .btn.wide { grid-column: span 6; }
+.pubar { position: fixed; z-index: 2; left: max(10px, env(safe-area-inset-left)); bottom: calc(env(safe-area-inset-bottom) + 10px); display: flex; gap: 7px; }
+.pubar[hidden], .pupick[hidden] { display: none; }
+.pu-chip { position: relative; width: 44px; height: 44px; padding: 5px; border-radius: 50%; border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink); display: grid; place-items: center; cursor: pointer; }
+.pu-chip svg { width: 100%; height: 100%; display: block; }
+.pu-chip:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.pu-chip.sel { box-shadow: 0 0 0 4px var(--c); }
+@media (prefers-reduced-motion: no-preference) { .pu-chip.sel { animation: chipbob 0.9s ease-in-out infinite; } }
+@keyframes chipbob { 50% { transform: translateY(-3px); } }
+.pu-chip.used { opacity: 0.28; filter: grayscale(1); cursor: default; }
+.pu-chip .tm { position: absolute; top: -7px; right: -9px; min-width: 18px; font: 700 10px/16px var(--body); color: #fff; background: var(--ink); border-radius: 8px; padding: 0 4px; }
+.pu-chip .tm.on { background: #e8394a; }
+.pupick { position: fixed; z-index: 3; left: max(10px, env(safe-area-inset-left)); bottom: calc(env(safe-area-inset-bottom) + 66px); display: flex; gap: 6px; padding: 6px; border-radius: 16px; }
+.pupick button { width: 46px; height: 46px; padding: 3px; border-radius: 50%; background: rgba(255,255,255,0.08); }
+.pupick img { width: 100%; height: 100%; }
+.pu-ico { display: inline-grid; place-items: center; width: 40px; height: 40px; padding: 4px; border-radius: 50%; border: 2.5px solid var(--ink); flex: none; }
+.pu-ico svg { width: 100%; height: 100%; }
+.pu-ico.big { width: 62px; height: 62px; padding: 6px; }
+.pk-note { font-size: 13px; }
+.pk-slots { display: flex; justify-content: center; gap: 10px; margin: 6px 0 10px; }
+.pk-slot { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; padding: 0; background: none; border: 0; box-shadow: none; outline: none; }
+.pk-slot:not(.empty) .pu-ico { box-shadow: 0 0 0 3px var(--c); }
+.pk-slot.empty { border: 2.5px dashed rgba(253,246,255,0.4); }
+.pk-slot .pu-ico { width: 52px; height: 52px; padding: 6px; }
+.pk-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; max-height: 42vh; overflow-y: auto; padding: 2px; margin-bottom: 8px; }
+.pk-item { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 4px; border-radius: 14px; background: rgba(255,255,255,0.08); color: var(--star); font: 700 11.5px var(--body); line-height: 1.15; }
+.pk-item[disabled] { opacity: 0.35; }
+.pk-item .ct { color: var(--sun); }
+.pu-rows { display: flex; flex-direction: column; gap: 8px; }
+.pu-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; text-align: left; }
+.pu-row .nm { font-weight: 700; } .pu-row .ds { font-size: 11.5px; opacity: 0.8; }
+.pu-row .ct { margin-left: auto; color: var(--sun); font-size: 17px; }
+.pu-row.none { opacity: 0.5; }
+.pu-card .ds { font-size: 11px; opacity: 0.8; line-height: 1.25; }
+.pu-card .own { font-size: 11.5px; font-weight: 700; color: var(--sun); }
+.pu-row .ct.overflow, .pk-item .ct.overflow, .pu-card .own.overflow { color: #ff7eb6; text-shadow: 0 0 8px rgba(255,126,182,0.6); }   /* more than 99, thanks to a gift */
 .tabs.two .btn { grid-column: auto; }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .stat { padding: 8px 6px; text-align: center; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -513,7 +549,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         <svg class="hp-gift" viewBox="0 0 30 30" width="24" height="24" aria-hidden="true"><rect x="3" y="11" width="24" height="16" rx="2" fill="#ffd45e" stroke="#120d2e" stroke-width="2"/><rect x="1.5" y="7" width="27" height="6" rx="2" fill="#ffe58a" stroke="#120d2e" stroke-width="2"/><rect x="13" y="7" width="4" height="20" fill="#e8394a"/><path d="M15 7 C10 0 5 4 9 7 M15 7 C20 0 25 4 21 7" fill="none" stroke="#e8394a" stroke-width="2.5"/></svg>
       </button>
     </div>
-    <div class="ver">Version 1.28</div>
+    <div class="ver">Version 1.30</div>
   </div>
 </section>
 
@@ -535,6 +571,8 @@ canvas#c {                         /* the sky fills the whole screen; the board 
       <canvas id="c" aria-label="Night sky. Drag left or right to aim, release to slide the planet."></canvas>
       <div class="toast" id="toast" aria-live="polite"></div>
       <div class="over" id="over"><div id="overCard"></div></div>
+      <div class="pubar" id="puBar" hidden></div>
+      <div class="panel pupick" id="puPick" hidden></div>
     </div>
   </div>
 </section>
@@ -579,10 +617,11 @@ canvas#c {                         /* the sky fills the whole screen; the board 
       <h2>Profile</h2>
       <div class="panel best-pill"><i class="coin"></i><b id="profCoins">0</b></div>
     </header>
-    <div class="tabs three" role="tablist" id="profTabs">
+    <div class="tabs two" role="tablist" id="profTabs">
       <button class="btn ghost" type="button" role="tab" id="ptab_records" data-ptab="records">Records</button>
       <button class="btn ghost" type="button" role="tab" id="ptab_ach" data-ptab="ach">Achievements</button>
       <button class="btn ghost" type="button" role="tab" id="ptab_album" data-ptab="album">Space album</button>
+      <button class="btn ghost" type="button" role="tab" id="ptab_pu" data-ptab="pu">Power-ups</button>
     </div>
     <div class="shop-list" id="profList"></div>
   </div>
@@ -602,6 +641,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
       <button class="btn ghost" type="button" role="tab" id="tab_maps" data-tab="maps">Maps</button>
       <button class="btn ghost" type="button" role="tab" id="tab_music" data-tab="music">Music</button>
       <button class="btn ghost" type="button" role="tab" id="tab_walls" data-tab="walls">Wallpapers</button>
+      <button class="btn ghost wide" type="button" role="tab" id="tab_power" data-tab="power">Power-ups</button>
     </div>
     <div class="shop-list" id="shopList"></div>
   </div>
@@ -722,7 +762,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   const store = {
     map: 'open', bests: {}, runs: {},       // classic: chosen map, high score per map, game in progress per map
     opts: { music: true, sfx: true, holiday: true, lang: null }, sand: { ...DEFAULTS },
-    coins: 0, owned: {}, adv: [], eggs: {}, album: {}, ach: {}, stats: freshStats(),
+    coins: 0, owned: {}, adv: [], eggs: {}, album: {}, pu: {}, bestsP: {}, gifts: {}, ach: {}, stats: freshStats(),
     equip: { skins: TIERS.map(() => 'classic'), faces: TIERS.map(() => 'classic'), bg: 'night', track: 'sunny' }
   };
   let screen = 'home';           // 'home', 'game', 'shop' or 'adv' (the level list)
@@ -775,10 +815,338 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     return { x, y, px: x, py: y, ax: x, ay: y, t, s: 1, age: 0, overT: 0, stillT: 0, dead: false, fly: false, taken: null };
   }
 
+  // ---------- Power-ups (Classic only) ----------
+  // Kept in an inventory of up to 99 of each. They come from the shop for now; anything that should hand one out
+  // later (achievements, sightings, rewards) just calls grantPower(id, n).
+  // Before a Classic game you bring up to 3 (the same one twice is fine), but only one Rare or Legendary.
+  // Each one brought is used once. Unused ones go back to your inventory when the game ends.
+  // kind: now = works when tapped · tap = then tap a glowing planet · hug = tap two matching planets
+  //       pick = choose your planet · shot = changes your next shot · auto = works by itself when needed
+  const PU_RARITY = ['Common', 'Uncommon', 'Rare', 'Legendary'];
+  const PU_COLOR = ['#7fd0ff', '#6fdc8c', '#c3a6ff', '#ffd45e'];
+  const PU_MAX = 99, PU_SLOTS = 3;
+  const PU_HARD = 999;           // buying stops at 99, but a gift can push you past it (shown in a different colour)
+  const SHOOT_MAX = SPAWN_WEIGHTS.length - 1;     // the biggest planet the launcher hands out (Venus)
+  const WILD_MAX = 5;                              // Wild planet merges with planets up to Neptune
+  const HUG_MAX = 7;                               // Cosmic hug works up to Saturn, so it never makes a Sun
+  const POWERUPS = [
+    { id: 'nudge', name: 'Nudge', rare: 0, price: 70, kind: 'now', desc: 'Gently shakes the planets so they settle into gaps.' },
+    { id: 'swap', name: 'Swap', rare: 0, price: 60, kind: 'now', desc: 'Switch the planet you’re about to shoot with the next one.' },
+    { id: 'shrink', name: 'Shrink ray', rare: 0, price: 90, kind: 'tap', desc: 'Tap a planet to make it one size smaller.' },
+    { id: 'double', name: 'Double points', rare: 0, price: 100, kind: 'now', desc: 'Every merge is worth double points for 30 seconds.' },
+    { id: 'pick', name: 'Pick', rare: 1, price: 180, kind: 'pick', desc: 'Choose which planet you shoot next, from Pluto to Venus.' },
+    { id: 'grow', name: 'Grow', rare: 1, price: 200, kind: 'tap', desc: 'Tap a small planet (up to Venus) to make it one size bigger.' },
+    { id: 'magnet', name: 'Magnet', rare: 1, price: 160, kind: 'now', desc: 'For 6 seconds, matching planets that are close together pull into each other.' },
+    { id: 'hug', name: 'Cosmic hug', rare: 1, price: 240, kind: 'hug', desc: 'Tap two matching planets anywhere on the board to merge them. Works up to Saturn.' },
+    { id: 'hole', name: 'Black hole', rare: 2, price: 350, kind: 'tap', desc: 'Tap any planet to make it disappear.' },
+    { id: 'bomb', name: 'Supernova bomb', rare: 2, price: 320, kind: 'shot', desc: 'Your next planet explodes when it lands and clears the small planets around it.' },
+    { id: 'ghost', name: 'Ghost shot', rare: 2, price: 300, kind: 'shot', desc: 'Your next planet flies through other planets and lands in the first gap behind them.' },
+    { id: 'wild', name: 'Wild planet', rare: 2, price: 400, kind: 'shot', desc: 'Your next planet is a rainbow that merges with whatever it hits first (up to Neptune).' },
+    { id: 'undo', name: 'Undo', rare: 3, price: 650, kind: 'now', desc: 'Take back your last shot.' },
+    { id: 'second', name: 'Second chance', rare: 3, price: 800, kind: 'auto', desc: 'If the sky fills up, the planets closest to the line are cleared so you can keep playing. Turns on by itself.' }
+  ];
+  const PU_BY = {}; POWERUPS.forEach(p => { PU_BY[p.id] = p; });
+  const INKC = '#2a1650';
+  const PU_SVG = {
+    nudge: '<circle cx="20" cy="22" r="9" fill="#f6d77e" stroke="' + INKC + '" stroke-width="2.5"/><path d="M6 14q-3 8 0 16M34 14q3 8 0 16M11 17q-2 5 0 10M29 17q2 5 0 10" fill="none" stroke="' + INKC + '" stroke-width="2.5" stroke-linecap="round"/><path d="M20 9V4M17 7l3-3 3 3" fill="none" stroke="' + INKC + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+    swap: '<path d="M9 14h20l-5-5M31 26H11l5 5" fill="none" stroke="' + INKC + '" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    shrink: '<circle cx="20" cy="20" r="14" fill="none" stroke="' + INKC + '" stroke-width="2.5" stroke-dasharray="4 4"/><circle cx="20" cy="20" r="6.5" fill="#ee7b56" stroke="' + INKC + '" stroke-width="2.5"/>',
+    double: '<text x="20" y="27" text-anchor="middle" font-family="Trebuchet MS,sans-serif" font-weight="900" font-size="19" fill="' + INKC + '">×2</text>',
+    pick: '<circle cx="13" cy="14" r="6" fill="#ecd6b8" stroke="' + INKC + '" stroke-width="2"/><circle cx="27" cy="14" r="6" fill="#dfe2ec" stroke="' + INKC + '" stroke-width="2"/><circle cx="13" cy="27" r="6" fill="#ee7b56" stroke="' + INKC + '" stroke-width="2"/><circle cx="27" cy="27" r="6.5" fill="#f6d77e" stroke="' + INKC + '" stroke-width="3.5"/>',
+    grow: '<circle cx="20" cy="21" r="12" fill="#5aa9ee" stroke="' + INKC + '" stroke-width="2.5"/><path d="M20 15v12M14 21h12" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>',
+    magnet: '<path d="M10 7v14a10 10 0 0 0 20 0V7h-7v14a3 3 0 0 1-6 0V7z" fill="#e8394a" stroke="' + INKC + '" stroke-width="2.5" stroke-linejoin="round"/><path d="M10 7h7v5h-7zM23 7h7v5h-7z" fill="#e8ecf4" stroke="' + INKC + '" stroke-width="2.5"/>',
+    hug: '<circle cx="12" cy="24" r="8" fill="#ee7b56" stroke="' + INKC + '" stroke-width="2.5"/><circle cx="28" cy="24" r="8" fill="#ee7b56" stroke="' + INKC + '" stroke-width="2.5"/><path d="M20 12c-1.6-3.6-7-2.4-5.2 1.8L20 19l5.2-5.2C27 9.6 21.6 8.4 20 12z" fill="#ff4f8a" stroke="' + INKC + '" stroke-width="1.8"/>',
+    hole: '<ellipse cx="20" cy="20" rx="16" ry="7" fill="none" stroke="#ff9a4a" stroke-width="4"/><circle cx="20" cy="20" r="9" fill="#120d2e" stroke="' + INKC + '" stroke-width="2"/>',
+    bomb: '<circle cx="18" cy="24" r="11" fill="#3a2d4f" stroke="' + INKC + '" stroke-width="2"/><path d="M25 15l4-4" stroke="' + INKC + '" stroke-width="3" stroke-linecap="round"/><path d="M31 3.5l1.6 3.2 3.5.5-2.5 2.4.6 3.5-3.2-1.7-3.2 1.7.6-3.5-2.5-2.4 3.5-.5z" fill="#ffd45e" stroke="' + INKC + '" stroke-width="1"/><circle cx="14" cy="20" r="3" fill="#fff" opacity=".45"/>',
+    ghost: '<path d="M10 34V18a10 10 0 0 1 20 0v16l-3.3-3-3.3 3-3.4-3-3.3 3-3.4-3z" fill="#fdf6ff" stroke="' + INKC + '" stroke-width="2.5" stroke-linejoin="round"/><circle cx="16" cy="19" r="2.2" fill="' + INKC + '"/><circle cx="24" cy="19" r="2.2" fill="' + INKC + '"/>',
+    wild: '<circle cx="20" cy="20" r="15" fill="#ff7eb6" stroke="' + INKC + '" stroke-width="2.5"/><circle cx="20" cy="20" r="11" fill="#ffd45e"/><circle cx="20" cy="20" r="7.5" fill="#6fdc8c"/><circle cx="20" cy="20" r="4" fill="#7fd0ff"/>',
+    undo: '<path d="M13 13h11a8 8 0 0 1 0 16H14" fill="none" stroke="' + INKC + '" stroke-width="3.5" stroke-linecap="round"/><path d="M18 7l-6.5 6 6.5 6" fill="none" stroke="' + INKC + '" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    second: '<path d="M20 34S6.5 26 6.5 15.5a6.7 6.7 0 0 1 13.5-2.2 6.7 6.7 0 0 1 13.5 2.2C33.5 26 20 34 20 34z" fill="#ff4f6a" stroke="' + INKC + '" stroke-width="2.5" stroke-linejoin="round"/><text x="20" y="24" text-anchor="middle" font-family="Trebuchet MS,sans-serif" font-weight="900" font-size="11" fill="#fff">+1</text>'
+  };
+  const puIcon = (id, cls) => '<span class="pu-ico' + (cls ? ' ' + cls : '') + '" style="background:' + PU_COLOR[PU_BY[id].rare] + '"><svg viewBox="0 0 40 40" aria-hidden="true">' + PU_SVG[id] + '</svg></span>';
+  const puHave = id => store.pu[id] || 0;
+  function grantPower(id, n = 1, overflow = false) {   // overflow: a gift, allowed past 99
+    if (!PU_BY[id]) return;
+    const have = puHave(id);
+    store.pu[id] = clamp(have + n, 0, overflow ? PU_HARD : Math.max(PU_MAX, have)); dirty = true; save();
+  }
+  const puCount = n => '<span class="ct' + (n > PU_MAX ? ' overflow' : '') + '">×' + n + '</span>';
+
+  // ----- the power-ups brought into the current game -----
+  let puSlots = [], runPowered = false, paidTo = 0;
+  let puMode = null;          // waiting for a planet tap: { i, first }
+  let shotMod = null;         // which slot is changing the next shot
+  let doubleT = 0, magnetT = 0, nudgeT = 0, undoSnap = null, pickDraft = [], puShown = '';
+  const puActive = () => mode === 'classic';
+  function resetPowerRun() { puSlots = []; runPowered = false; paidTo = 0; puMode = null; shotMod = null; doubleT = magnetT = nudgeT = 0; undoSnap = null; $('puPick').hidden = true; }
+  function returnUnused() {
+    for (const s of puSlots) if (!s.used) store.pu[s.id] = clamp(puHave(s.id) + 1, 0, PU_HARD);   // unused ones always come back
+    puSlots = [];
+  }
+  function restorePowers(g) {
+    puSlots = Array.isArray(g.pu) ? g.pu.filter(s => s && PU_BY[s.id]).slice(0, PU_SLOTS).map(s => ({ id: s.id, used: !!s.used })) : [];
+    runPowered = !!g.powered;
+    paidTo = Number.isFinite(g.paid) ? Math.max(g.paid, score) : score;
+  }
+  function usedPower(i) {
+    puSlots[i].used = true; runPowered = true; puMode = null;
+    if (shotMod === i) shotMod = null;
+    dirty = true; sfx.buy(); renderPuBar(); hud();
+  }
+
+  // ----- choosing what to bring, before a Classic game -----
+  function openPicker() {
+    hold = true;
+    const left = id => puHave(id) - pickDraft.filter(x => x === id).length;
+    const bigOne = pickDraft.some(x => PU_BY[x].rare >= 2);
+    const html = '<p class="pk-note">Bring up to 3 power-ups. Only one can be Rare or Legendary.</p><div class="pk-slots">' +
+      [0, 1, 2].map(i => pickDraft[i] ? '<button type="button" class="pk-slot" style="--c:' + PU_COLOR[PU_BY[pickDraft[i]].rare] + '" data-pkrm="' + i + '" aria-label="Remove ' + PU_BY[pickDraft[i]].name + '">' + puIcon(pickDraft[i]) + '</button>' : '<span class="pk-slot empty"></span>').join('') +
+      '</div><div class="pk-list">' + POWERUPS.filter(p => puHave(p.id) > 0).map(p => {
+        const n = left(p.id), off = n <= 0 || pickDraft.length >= PU_SLOTS || (p.rare >= 2 && bigOne);
+        return '<button type="button" class="pk-item"' + (off ? ' disabled' : '') + ' data-pkadd="' + p.id + '">' + puIcon(p.id) + '<span class="nm">' + p.name + '</span>' + puCount(n) + '</button>';
+      }).join('') + '</div>';
+    showCard('Power-ups', html, [{ label: 'Start', cls: 'big pink', fn: startWithPowers }]);
+  }
+  function startWithPowers() {
+    puSlots = pickDraft.map(id => ({ id, used: false }));
+    for (const id of pickDraft) store.pu[id] = Math.max(0, puHave(id) - 1);
+    pickDraft = []; hold = false; hideCard(); renderPuBar(); dirty = true; save();
+  }
+  $('overCard').addEventListener('click', ev => {
+    const add = ev.target.closest('[data-pkadd]'), rm = ev.target.closest('[data-pkrm]');
+    if (add && !add.disabled) { pickDraft.push(add.dataset.pkadd); openPicker(); }
+    else if (rm) { pickDraft.splice(+rm.dataset.pkrm, 1); openPicker(); }
+  });
+
+  // ----- the buttons during the game -----
+  function renderPuBar() {
+    const bar = $('puBar');
+    if (!puActive() || !puSlots.length) { bar.innerHTML = ''; puShown = ''; return; }
+    bar.innerHTML = puSlots.map((s, i) => {
+      const p = PU_BY[s.id], sel = (puMode && puMode.i === i) || shotMod === i;
+      const t = s.id === 'double' && doubleT > 0 ? Math.ceil(doubleT) : s.id === 'magnet' && magnetT > 0 ? Math.ceil(magnetT) : 0;
+      const gone = s.used && !t;
+      return '<button type="button" class="pu-chip' + (gone ? ' used' : '') + (sel ? ' sel' : '') + '" data-pu="' + i + '" style="background:' + PU_COLOR[p.rare] + ';--c:' + PU_COLOR[p.rare] + '" aria-label="' + p.name + '"' + (gone ? ' disabled' : '') + '>' +
+        '<svg viewBox="0 0 40 40" aria-hidden="true">' + PU_SVG[s.id] + '</svg>' + (t ? '<span class="tm">' + t + '</span>' : '') + (s.id === 'second' && !s.used ? '<span class="tm on">ON</span>' : '') + '</button>';
+    }).join('');
+    puShown = puKey();
+  }
+  const puKey = () => puSlots.map(s => +s.used).join('') + '|' + Math.ceil(doubleT) + '|' + Math.ceil(magnetT) + '|' + (puMode ? puMode.i : '') + '|' + shotMod;
+  function puCanUse(id, b, first) {
+    if (b.fly || b.taken || b.dead || b.ghost) return false;
+    if (id === 'shrink') return b.t >= 1;
+    if (id === 'grow') return b.t <= SHOOT_MAX;       // up to Venus, which grows into an Earth
+    if (id === 'hole') return true;
+    if (id === 'wild') return b.t <= WILD_MAX;
+    if (id === 'hug') {
+      if (b.t > HUG_MAX) return false;
+      if (first) return b !== first && b.t === first.t;
+      return bodies.some(o => o !== b && o.t === b.t && !o.fly && !o.taken && !o.dead && !o.ghost);
+    }
+    return false;
+  }
+  function usePower(i) {
+    const s = puSlots[i];
+    if (!s || s.used || over || paused || hold || !puActive()) return;
+    const p = PU_BY[s.id], id = s.id;
+    $('puPick').hidden = true;
+    if (puMode && puMode.i === i) { puMode = null; renderPuBar(); return; }   // tap again to cancel
+    if (shotMod === i) { shotMod = null; renderPuBar(); return; }
+    puMode = null;
+    if (p.kind === 'shot') shotMod = null;      // a loaded shot power stays loaded while you use instant ones
+    if (p.kind === 'tap' || p.kind === 'hug') {
+      if (!bodies.some(b => puCanUse(id, b, null))) { toast('No planet to use it on'); sfx.nope(); renderPuBar(); return; }
+      puMode = { i, first: null };
+      toast(p.kind === 'hug' ? 'Tap two matching planets' : 'Tap a glowing planet');
+    } else if (p.kind === 'shot') {
+      shotMod = i; toast(id === 'ghost' ? 'Next shot: Ghost shot' : id === 'bomb' ? 'Next shot: Supernova bomb' : 'Next shot: Wild planet');
+    } else if (p.kind === 'pick') {
+      if (!ready) { toast('Wait for your next planet'); return; }
+      $('puPick').innerHTML = TIERS.slice(0, SHOOT_MAX + 1).map((T, t) => '<button type="button" data-pickt="' + t + '" aria-label="' + T.n + '"><img src="' + sprites[t].url + '" alt=""></button>').join('');
+      $('puPick').dataset.slot = i; $('puPick').hidden = false;
+    } else if (p.kind === 'auto') {
+      toast('Second chance is on. It works by itself.');
+    } else if (id === 'swap') {
+      if (!ready) { toast('Wait for your next planet'); return; }
+      [cur, next] = [next, cur]; usedPower(i);
+    } else if (id === 'double') { doubleT = 30; toast('Double points for 30 seconds!'); usedPower(i); }
+    else if (id === 'magnet') { magnetT = 6; usedPower(i); }
+    else if (id === 'nudge') {
+      // Every planet is pushed only towards the back (away from the line), with a little sideways wiggle,
+      // and the line doesn't count while it settles, so a nudge can never lose the game.
+      nudgeT = 1.2; shake = 0.35;
+      const hq = DT / SUBSTEPS;
+      for (const b of bodies) if (!b.fly && !b.taken) { b.px -= (Math.random() * 2 - 1) * 60 * hq; b.py += (140 + Math.random() * 160) * hq; b.stillT = 0; }
+      usedPower(i);
+    } else if (id === 'undo') {
+      if (!undoSnap) { toast('Nothing to undo yet'); return; }
+      bodies = undoSnap.bodies.map(o => { const nb = makeBody(o.x, o.y, o.t); nb.age = 5; return nb; });
+      score = undoSnap.score; cur = undoSnap.cur; next = undoSnap.next; madeSun = undoSnap.madeSun;
+      ready = true; particles = []; undoSnap = null;
+      usedPower(i);
+    }
+    renderPuBar();
+  }
+  $('puBar').addEventListener('click', ev => { const b = ev.target.closest('[data-pu]'); if (b) usePower(+b.dataset.pu); });
+  $('puPick').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-pickt]'); if (!b) return;
+    const i = +$('puPick').dataset.slot;
+    $('puPick').hidden = true;
+    if (!puSlots[i] || puSlots[i].used || !ready) return;
+    cur = +b.dataset.pickt; usedPower(i);
+  });
+  function puTapWorld(wx, wy) {     // a tap on the board while a power-up waits for a planet
+    const i = puMode.i, id = puSlots[i].id;
+    let hit = null, hd = 1e9;
+    for (const b of bodies) {
+      if (!puCanUse(id, b, puMode.first)) continue;
+      const d = Math.hypot(b.x - wx, b.y - wy) - TIERS[b.t].r * b.s;
+      if (d < 12 && d < hd) { hit = b; hd = d; }
+    }
+    if (!hit) { sfx.nope(); toast(puMode.first ? 'Tap a matching planet' : 'Tap a glowing planet'); return; }
+    if (id === 'shrink') { hit.t--; sparkle(hit.x, hit.y, 14, 140); }
+    else if (id === 'grow') { hit.t++; hit.s = reduceMotion ? 1 : 0.72; sparkle(hit.x, hit.y, 14, 140); }
+    else if (id === 'hole') { hit.taken = { kind: 'pu' }; sparkle(hit.x, hit.y, 16, 160); }
+    else if (id === 'hug') {
+      if (!puMode.first) { puMode.first = hit; sfx.tap(); return; }
+      const a = puMode.first, b = hit, born = [];
+      a.x = b.x; a.y = b.y; a.px = b.px; a.py = b.py;        // merge where the second planet is
+      merge(a, b, born);
+      bodies = bodies.filter(o => !o.dead).concat(born);
+    }
+    usedPower(i);
+  }
+  function explode(c) {             // Supernova bomb: pops the small planets around where the shot lands
+    c.bomb = false;
+    const R = 95; let pts = 0;
+    for (const o of bodies) {
+      if (o.dead || o.taken) continue;
+      if (o !== c && (o.t > SHOOT_MAX || Math.hypot(o.x - c.x, o.y - c.y) > R + TIERS[o.t].r)) continue;
+      o.dead = true; pts += 2 ** (o.t + 1);
+      sparkle(o.x, o.y, 10, 200);
+    }
+    if (!reduceMotion) particles.push({ kind: 'ring', x: c.x, y: c.y, r: R, life: 0, max: 0.45 });
+    shake = 0.35; sfx.hit();
+    setScore(score + Math.ceil(pts / 2)); dirty = true;
+  }
+  function ghostCheck(h) {          // Ghost shot: solid again as soon as it is clear of the planets it passed
+    for (const b of bodies) {
+      if (!b.ghost) continue;
+      const inside = bodies.some(o => o !== b && !o.dead && !o.taken && Math.hypot(o.x - b.x, o.y - b.y) < (TIERS[o.t].r * o.s + TIERS[b.t].r * b.s) * 0.98);
+      if (inside) b.passed = true;
+      if (!b.fly) b.stuckT = (b.stuckT || 0) + h;
+      if (!inside && (b.passed || !b.fly)) { b.ghost = false; if (b.fly) { b.fly = false; b.px = b.x; b.py = b.y; } }
+      else if (b.stuckT > 1) b.ghost = false;      // squeezed in at the very back: let it push its way in
+    }
+  }
+  function magnetPull(h) {          // Magnet: matching planets close to each other drift together, gently
+    const f = 280 * h * h;
+    for (let i = 0; i < bodies.length; i++) {
+      const a = bodies[i]; if (a.fly || a.taken || a.ghost) continue;
+      for (let j = i + 1; j < bodies.length; j++) {
+        const b = bodies[j]; if (b.t !== a.t || b.fly || b.taken || b.ghost) continue;
+        const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, gap = d - TIERS[a.t].r - TIERS[b.t].r;
+        if (gap <= 0 || gap > 90) continue;
+        a.x += dx / d * f; a.y += dy / d * f; b.x -= dx / d * f; b.y -= dy / d * f;
+      }
+    }
+  }
+  function secondChance() {         // clears everything at or past a line one Moon wide in front of the danger line
+    const i = puSlots.findIndex(s => s.id === 'second' && !s.used);
+    if (mode !== 'classic' || i < 0) return false;
+    const y2 = H - lineH() - TIERS[1].r * 2;
+    for (const b of bodies) {
+      if (b.taken || b.dead) continue;
+      if (!b.fly && b.y + TIERS[b.t].bottom * b.s > y2) { b.taken = { kind: 'pu' }; sparkle(b.x, b.y, 10, 160); }
+      b.stillT = 0; b.overT = 0; b.ax = b.x; b.ay = b.y;
+    }
+    toast('Second chance!'); shake = 0.3;
+    if (!reduceMotion) particles.push({ kind: 'ring', x: W / 2, y: y2, r: 40, life: 0, max: 0.4 });
+    usedPower(i);
+    return true;
+  }
+  function powerTick() {            // timers, once per game step
+    if (doubleT > 0) doubleT = Math.max(0, doubleT - DT);
+    if (magnetT > 0) magnetT = Math.max(0, magnetT - DT);
+    if (nudgeT > 0) nudgeT = Math.max(0, nudgeT - DT);
+  }
+  function drawPowers(g, now, lx, ly, showLauncher) {
+    const bar = $('puBar'), show = puActive() && puSlots.length > 0 && !over && !hold && screen === 'game';
+    if (bar.hidden === show) bar.hidden = !show;
+    if (!show) { if (!$('puPick').hidden) $('puPick').hidden = true; return; }
+    if (puKey() !== puShown) renderPuBar();
+    const pulse = reduceMotion ? 0.6 : 0.5 + 0.5 * Math.sin(now / 200);
+    const glowId = puMode ? puSlots[puMode.i].id : (shotMod !== null && puSlots[shotMod].id === 'wild') || bodies.some(b => b.wild) ? 'wild' : null;
+    if (glowId) {
+      g.setLineDash([5, 5]); g.lineWidth = 3;
+      for (const b of bodies) {
+        if (!puCanUse(glowId, b, puMode && puMode.first)) continue;
+        g.strokeStyle = 'rgba(255,240,160,' + (0.45 + 0.5 * pulse) + ')';
+        g.beginPath(); g.arc(b.x, b.y, TIERS[b.t].r * b.s + 4 + pulse * 2, 0, TAU); g.stroke();
+      }
+      g.setLineDash([]);
+    }
+    if (puMode && puMode.first && !puMode.first.dead) {
+      const b = puMode.first; g.strokeStyle = '#ff7eb6'; g.lineWidth = 4;
+      g.beginPath(); g.arc(b.x, b.y, TIERS[b.t].r * b.s + 5, 0, TAU); g.stroke();
+    }
+    const rainbow = (x, y, r) => {
+      ['#ff7eb6', '#ffd45e', '#6fdc8c', '#7fd0ff', '#c3a6ff'].forEach((c, k) => {
+        g.strokeStyle = c; g.lineWidth = 3; const a0 = now / 300 + k * TAU / 5;
+        g.beginPath(); g.arc(x, y, r, a0, a0 + TAU / 5); g.stroke();
+      });
+    };
+    const mark = (id, x, y, r) => {
+      if (id === 'wild') rainbow(x, y, r + 4);
+      else if (id === 'bomb') { g.strokeStyle = 'rgba(255,90,60,' + (0.5 + 0.5 * pulse) + ')'; g.lineWidth = 3; g.beginPath(); g.arc(x, y, r + 4 + pulse * 3, 0, TAU); g.stroke(); }
+      else if (id === 'ghost') { g.strokeStyle = 'rgba(253,246,255,0.8)'; g.setLineDash([3, 5]); g.lineWidth = 2.5; g.beginPath(); g.arc(x, y, r + 4, 0, TAU); g.stroke(); g.setLineDash([]); }
+    };
+    for (const b of bodies) mark(b.wild ? 'wild' : b.bomb ? 'bomb' : b.ghost ? 'ghost' : '', b.x, b.y, TIERS[b.t].r * b.s);
+    if (shotMod !== null && showLauncher) mark(puSlots[shotMod].id, lx, ly, TIERS[cur].r);
+    const sc = puSlots.find(s => s.id === 'second' && !s.used);
+    if (sc) {                       // where Second chance would clear from
+      const y2 = H - lineH() - TIERS[1].r * 2;
+      g.strokeStyle = 'rgba(255,79,106,0.28)'; g.lineWidth = 2; g.setLineDash([2, 7]);
+      g.beginPath(); g.moveTo(0, y2); g.lineTo(W, y2); g.stroke(); g.setLineDash([]);
+    }
+  }
+  function puInventoryHtml() {
+    let html = '<p class="shop-note">Bring up to 3 into a Classic game. Unused ones come back to you when the game ends.</p>';
+    PU_RARITY.forEach((rn, r) => {
+      html += '<div class="pname">' + rn + '</div><div class="pu-rows">' + POWERUPS.filter(p => p.rare === r).map(p =>
+        '<div class="panel pu-row' + (puHave(p.id) ? '' : ' none') + '">' + puIcon(p.id) + '<div><div class="nm">' + p.name + '</div><div class="ds">' + p.desc + '</div></div><b class="ct' + (puHave(p.id) > PU_MAX ? ' overflow' : '') + '">×' + puHave(p.id) + '</b></div>').join('') + '</div>';
+    });
+    return html + '<button class="btn pink" type="button" id="pu_goshop" data-goshop="pu">Get more in the shop</button>';
+  }
+  function puShopHtml() {
+    let html = '<p class="shop-note">Power-ups are used up once you use them in a Classic game. You can hold up to 99 of each.</p>';
+    PU_RARITY.forEach((rn, r) => {
+      html += '<div class="pname">' + rn + '</div><div class="grid2">' + POWERUPS.filter(p => p.rare === r).map(p => {
+        const key = 'pu:' + p.id, n = puHave(p.id);
+        const st = n >= PU_MAX ? 'Max 99' : short.id === key && Date.now() - short.at < 1800 ? '<span class="warn">Need ' + fmt(p.price - store.coins) + '</span>'
+          : armed.id === key && Date.now() - armed.at < 3000 ? 'Buy?' : '<i class="coin"></i>' + fmt(p.price);
+        return '<button type="button" class="card pu-card" id="it_pu_' + p.id + '" data-buypu="' + p.id + '">' + puIcon(p.id, 'big') + '<span class="nm">' + p.name + '</span><span class="ds">' + p.desc + '</span>' +
+          '<span class="own' + (n > PU_MAX ? ' overflow' : '') + '">' + (n ? 'You own ' + n : 'None yet') + '</span><span class="st">' + st + '</span></button>';
+      }).join('') + '</div>';
+    });
+    return html;
+  }
+  function buyPower(id) {
+    const p = PU_BY[id], key = 'pu:' + id;
+    if (!p || puHave(id) >= PU_MAX) return;
+    if (store.coins < p.price) { short.id = key; short.at = Date.now(); sfx.nope(); setTimeout(() => { if (screen === 'shop') renderShop(); }, 1900); }
+    else if (armed.id === key && Date.now() - armed.at < 3000) {
+      store.coins -= p.price; grantPower(id); sfx.buy(); award('buy');
+      armed.at = Date.now();                       // tap again straight away to buy another
+      setTimeout(() => { if (screen === 'shop') renderShop(); }, 3100);
+    } else { armed.id = key; armed.at = Date.now(); setTimeout(() => { if (screen === 'shop') renderShop(); }, 3100); }
+    save(); renderShop();
+  }
+
   // ---------- Saving ----------
   function serialize() {
     return {
-      score, cur, next, madeSun,
+      score, cur, next, madeSun, pu: puSlots.map(s => ({ id: s.id, used: s.used })), powered: runPowered, paid: paidTo,
       bodies: bodies.map(b => ({ x: Math.round(b.x * 10) / 10, y: Math.round(b.y * 10) / 10, t: b.t }))
     };
   }
@@ -801,6 +1169,9 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     if (saved.bests && typeof saved.bests === 'object') {
       for (const k in saved.bests) if (MAPS[k] && Number.isFinite(saved.bests[k])) store.bests[k] = clamp(saved.bests[k] | 0, 0, SCORE_CAP);
     } else if (Number.isFinite(saved.best)) store.bests.open = clamp(saved.best | 0, 0, SCORE_CAP);   // older saves had one best
+    if (saved.gifts && typeof saved.gifts === 'object') for (const k in saved.gifts) if (saved.gifts[k]) store.gifts[k] = 1;
+    if (saved.bestsP && typeof saved.bestsP === 'object') for (const k in saved.bestsP) if (MAPS[k] && Number.isFinite(saved.bestsP[k])) store.bestsP[k] = clamp(saved.bestsP[k] | 0, 0, SCORE_CAP);
+    if (saved.pu && typeof saved.pu === 'object') for (const k in saved.pu) if (PU_BY[k] && Number.isFinite(+saved.pu[k])) store.pu[k] = clamp(Math.floor(+saved.pu[k]), 0, PU_HARD);
     if (saved.runs && typeof saved.runs === 'object') {
       for (const k in saved.runs) if (MAPS[k] && saved.runs[k] && Array.isArray(saved.runs[k].bodies)) store.runs[k] = saved.runs[k];
     } else if (saved.run && Array.isArray(saved.run.bodies)) store.runs.open = saved.run;
@@ -923,7 +1294,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         { bass: 48, pad: [55, 60, 64], tune: [72, 0, 76, 0, 72, 0, 0, 0] }]
     },
     cloud: {
-      name: 'Cloud nap', desc: 'Very slow and sleepy', price: 350, bpm: 56, echo: 0.4, twinkle: 0.1,
+      name: 'Cloud nap', desc: 'Very slow and sleepy', price: 450, bpm: 56, echo: 0.4, twinkle: 0.1,
       pad: { mode: 'hold', vol: 0.05 }, bass: { beats: [0], len: 3.6, vol: 0.06 },
       arp: { type: 'sine', mode: 'walk', on: 0.38, off: 0.14, decay: 2.0, vol: 0.07 },
             sections: { B: [
@@ -939,7 +1310,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         { bass: 48, pad: [55, 59, 62], pool: [67, 71, 74, 79, 83] }]
     },
     chill: {
-      name: 'Chill drift', desc: 'Floaty and a little mysterious', price: 400, bpm: 74, echo: 0.3, twinkle: 0.14,
+      name: 'Chill drift', desc: 'Floaty and a little mysterious', price: 520, bpm: 74, echo: 0.3, twinkle: 0.14,
       pad: { mode: 'hold', vol: 0.05 }, bass: { beats: [0], len: 3.6, vol: 0.07 },
       arp: { type: 'triangle', mode: 'walk', on: 0.72, off: 0.4, decay: 1.1, vol: 0.075 },
             sections: { B: [
@@ -955,7 +1326,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         { bass: 55, pad: [55, 59, 62, 64], pool: [59, 62, 67, 71, 74, 79] }]
     },
     picnic: {
-      name: 'Picnic', desc: 'A cheerful skipping tune', price: 550, bpm: 112, echo: 0.12, twinkle: 0,
+      name: 'Picnic', desc: 'A cheerful skipping tune', price: 700, bpm: 112, echo: 0.12, twinkle: 0,
       pad: { mode: 'stab', vol: 0.04, decay: 0.2 }, bass: { beats: [0, 1, 2, 3], len: 0.5, vol: 0.09, alt: 7 },
       arp: { type: 'triangle', mode: 'tune', decay: 0.32, vol: 0.08 },
             sections: {
@@ -977,7 +1348,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         { bass: 43, pad: [59, 62, 67], tune: [71, 74, 79, 74, 83, 0, 79, 74] }]
     },
     lullaby: {
-      name: 'Music box', desc: 'A tinkly bedtime tune', price: 600, bpm: 66, echo: 0.22, twinkle: 0,
+      name: 'Music box', desc: 'A tinkly bedtime tune', price: 780, bpm: 66, echo: 0.22, twinkle: 0,
       pad: { mode: 'hold', vol: 0.028 }, bass: { beats: [0, 2], len: 1.6, vol: 0.05 },
       arp: { type: 'sine', mode: 'updown', on: 1, off: 1, decay: 0.9, vol: 0.085 },
             sections: { B: [
@@ -993,7 +1364,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         { bass: 46, pad: [58, 62, 65], pool: [77, 82, 86, 89, 94] }]
     },
     bubble: {
-      name: 'Bubble bounce', desc: 'Upbeat and bouncy', price: 700, bpm: 108, echo: 0.14, twinkle: 0.05,
+      name: 'Bubble bounce', desc: 'Upbeat and bouncy', price: 900, bpm: 108, echo: 0.14, twinkle: 0.05,
       pad: { mode: 'stab', vol: 0.045, decay: 0.2 }, bass: { beats: [0, 1, 2, 3], len: 0.5, vol: 0.1, alt: 7 },
       arp: { type: 'square', mode: 'walk', on: 0.85, off: 0.6, decay: 0.24, vol: 0.028 },
             sections: { B: [
@@ -1009,7 +1380,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         { bass: 53, pad: [60, 65, 69], pool: [72, 77, 81, 84, 89] }]
     },
     stardust: {
-      name: 'Stardust', desc: 'Dreamy, sparkly and a little wistful', price: 900, bpm: 84, echo: 0.46, twinkle: 0.38,
+      name: 'Stardust', desc: 'Dreamy, sparkly and a little wistful', price: 1150, bpm: 84, echo: 0.46, twinkle: 0.38,
       pad: { mode: 'hold', vol: 0.045 }, bass: { beats: [0], len: 3.6, vol: 0.06 },
       arp: { type: 'sine', mode: 'walk', on: 0.55, off: 0.5, decay: 1.7, vol: 0.065 },
             sections: { B: [
@@ -1025,7 +1396,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         { bass: 52, pad: [52, 55, 59, 62], pool: [67, 71, 74, 76, 79, 83] }]
     },
     arcade: {
-      name: 'Tiny arcade', desc: 'Fast, bleepy video-game fun', price: 1000, bpm: 132, echo: 0.1, twinkle: 0,
+      name: 'Tiny arcade', desc: 'Fast, bleepy video-game fun', price: 1300, bpm: 132, echo: 0.1, twinkle: 0,
       pad: { mode: 'none' }, bass: { beats: [0, 1, 2, 3], len: 0.45, vol: 0.09, alt: 12 },
       arp: { type: 'square', mode: 'tune', decay: 0.16, vol: 0.03 },
             sections: {
@@ -1048,7 +1419,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     }
   };
   TRACKS.sleigh = {      // holiday only: an original jolly tune in F with sleigh bells
-    name: 'Snowy sleigh', desc: 'Jolly and jingly, for the holidays', price: 300, limited: true, bpm: 108, echo: 0.18, twinkle: 0.12, jingle: 0.05,
+    name: 'Snowy sleigh', desc: 'Jolly and jingly, for the holidays', price: 400, limited: true, bpm: 108, echo: 0.18, twinkle: 0.12, jingle: 0.05,
     pad: { mode: 'stab', vol: 0.035, decay: 0.22 }, bass: { beats: [0, 1, 2, 3], len: 0.5, vol: 0.085, alt: 7 },
     arp: { type: 'triangle', mode: 'tune', decay: 0.4, vol: 0.085 },
     sections: { B: [
@@ -1244,17 +1615,22 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   // ---------- Game flow ----------
   function setScore(v) {
     v = Math.min(SCORE_CAP, v);
-    if (mode === 'classic') store.coins += Math.floor(v / COIN_EVERY) - Math.floor(score / COIN_EVERY);
+    if (mode === 'classic' && doubleT > 0 && v > score) v = Math.min(SCORE_CAP, score + (v - score) * 2);   // Double points
+    // coins are paid only for points above the best this game has reached, so an Undo can't pay twice
+    if (mode === 'classic' && v > paidTo) { store.coins += Math.floor(v / COIN_EVERY) - Math.floor(paidTo / COIN_EVERY); paidTo = v; }
     score = v;
     if (mode === 'classic') scoreAch(v);
   }
+  // Each map keeps two high scores: games without power-ups (bests) and games where one was used (bestsP).
   const bestOf = id => store.bests[id] || 0;
-  const topScore = () => Math.max(0, ...Object.values(store.bests));
-  function bumpBest() { if (mode === 'classic' && score > bestOf(curMap)) store.bests[curMap] = score; }
+  const bestPow = id => store.bestsP[id] || 0;
+  const bestNow = () => runPowered ? bestPow(curMap) : bestOf(curMap);
+  const topScore = () => Math.max(0, ...Object.values(store.bests), ...Object.values(store.bestsP));
+  function bumpBest() { if (mode === 'classic' && score > bestNow()) (runPowered ? store.bestsP : store.bests)[curMap] = score; }
   function hud() {
     const s = $('score');
     let text = fmt(score), label = mode === 'sandbox' ? 'Sandbox score' : 'Score';
-    let sideLabel = 'Best', side = fmt(bestOf(curMap));
+    let sideLabel = runPowered && mode === 'classic' ? 'Power best' : 'Best', side = fmt(bestNow());
     let pic = '';
     if (mode === 'adventure' && L) {
       if (L.goal.survive) { label = 'Goal: survive'; text = Math.max(0, Math.ceil(timeLeft)) + 's left'; }
@@ -1343,12 +1719,14 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   }
   function newGame() {
     clearToast();
+    if (mode === 'classic') { returnUnused(); resetPowerRun(); }
     bodies = []; particles = [];
     score = 0; over = false; madeSun = false; ufos = []; shotCount = 0; fuseNext = 3;
     cur = mode === 'sandbox' ? pick : randomTier(); next = randomTier();
     ready = true; aimX = W / 2;
     hideCard();
-    hud(); save();
+    hud(); save(); renderPuBar();
+    if (mode === 'classic' && POWERUPS.some(p => puHave(p.id) > 0)) { pickDraft = []; openPicker(); }
   }
   function showGame() {
     clearToast();
@@ -1358,7 +1736,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   }
   function enterGame(which) {
     mode = which; L = null;
-    showGame(); clearBoardExtras();
+    showGame(); clearBoardExtras(); resetPowerRun();
     const sandbox = mode === 'sandbox', map = MAPS[curMap] || MAPS.open;
     P = sandbox ? store.sand : { ...DEFAULTS, ...(map.cfg.phys || {}) };
     spawn = SPAWN_WEIGHTS;
@@ -1367,8 +1745,9 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     $('hint').textContent = sandbox ? 'Tap a planet above to choose what you shoot' : map.name + ' · drag to aim, let go to slide';
     fit();
     if (!sandbox) setupTwists(map.cfg);
-    const run = !sandbox && store.runs[curMap];
-    if (run) { restoreRun(run); ready = true; aimX = W / 2; hud(); }
+    let run = !sandbox && store.runs[curMap];
+    if (run && !(run.score > 0 || run.bodies.length || (run.pu && run.pu.length))) run = null;   // left at the power-up picker: start fresh
+    if (run) { restoreRun(run); restorePowers(run); ready = true; aimX = W / 2; hud(); renderPuBar(); }
     else newGame();
     buildMenu();
     if (!sandbox) nightOwl();
@@ -1379,6 +1758,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     enterGame('classic');
   }
   function goHome() {
+    setTimeout(checkGifts, 0);
     if (screen === 'game') { bumpBest(); save(); }
     endPreview();
     clearToast();
@@ -1386,6 +1766,28 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     paused = false;
     showScreen('home');
     refreshHome(); fitHome();
+  }
+
+  // ----- One-time gifts: shown once when the app is opened on that exact day (local time), never again. -----
+  // To add one later, add a line here. Missing the day means missing the gift.
+  const GIFTS = [
+    { id: 'thanks2026', y: 2026, m: 11, d: 26, title: 'Happy Thanksgiving!', text: 'Thanks for playing Planet Slide! Here is a free Second chance power-up. It is waiting in your Power-ups.', pu: 'second', n: 1 }
+  ];
+  let giftBusy = false;
+  function showGift(gf) {
+    const box = document.createElement('div');       // inline SVG: the browser adds the namespace itself when it serializes
+    box.innerHTML = '<svg viewBox="0 0 40 40" width="120" height="120"><circle cx="20" cy="20" r="19" fill="' + PU_COLOR[PU_BY[gf.pu].rare] + '" stroke="#2a1650" stroke-width="2"/><g transform="translate(5 5) scale(0.75)">' + PU_SVG[gf.pu] + '</g></svg>';
+    const svg = new XMLSerializer().serializeToString(box.firstChild);
+    openFact('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg), gf.title, gf.text);
+  }
+  function checkGifts() {
+    if (giftBusy || !store.gifts || screen === 'game') return;
+    const now = new Date();
+    const gf = GIFTS.find(g => !store.gifts[g.id] && now.getFullYear() === g.y && now.getMonth() + 1 === g.m && now.getDate() === g.d);
+    if (!gf) return;
+    giftBusy = true;
+    store.gifts[gf.id] = 1; grantPower(gf.pu, gf.n, true); save();
+    setTimeout(() => { showGift(gf); giftBusy = false; }, 600);
   }
   function refreshHome() {
     $('homeBest').textContent = fmt(topScore());
@@ -1484,19 +1886,19 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   // cfg uses the same twists as adventure levels (a black hole here has no HP and never goes away).
   const MAPS = {
     open:  { name: 'Open space', price: 0, desc: 'The classic board. Nothing in the way.', cfg: {} },
-    rock:  { name: 'Rocky middle', price: 250, desc: 'A sleepy space rock sits in the middle.', cfg: { rocks: [{ x: 180, y: 0.42, r: 30 }] } },
-    ice:   { name: 'Slippery ice', price: 350, desc: 'Almost no friction. Everything keeps sliding.', cfg: { phys: { friction: 15, drag: 0.1, bounce: 0.5 } } },
-    twin:  { name: 'Twin rocks', price: 400, desc: 'Two rocks split the board.', cfg: { rocks: [{ x: 95, y: 0.36, r: 28 }, { x: 265, y: 0.5, r: 28 }] } },
-    wall:  { name: 'The wall', price: 500, desc: 'A wall with one gap. Pick your lane.', cfg: { bars: [{ x: 0, y: 0.44, w: 205, h: 16 }] } },
-    swing: { name: 'Swinging rock', price: 600, desc: 'A rock sweeps back and forth across the middle.', cfg: { rocks: [{ x: 180, y: 0.45, r: 30, sway: 110, speed: 0.9 }] } },
-    wind:  { name: 'Solar wind', price: 700, desc: 'The wind swaps sides every few seconds.', cfg: { wind: { a: 430, period: 7 } } },
-    alien: { name: 'Alien visitors', price: 800, desc: 'Every 20 shots an alien takes one planet.', cfg: { alien: 20 } },
-    hole:  { name: 'Black hole', price: 1000, desc: 'It pulls planets in and swallows one every 14 shots.', cfg: { boss: { kind: 'hole', r: 46, y: 0.2, eat: 14, g: 520 } } },
-    xmas:  { name: 'Christmas tree', price: 600, limited: true, desc: 'A snowy tree in the middle and snow falling all game. Holiday only.',
+    rock:  { name: 'Rocky middle', price: 350, desc: 'A sleepy space rock sits in the middle.', cfg: { rocks: [{ x: 180, y: 0.42, r: 30 }] } },
+    ice:   { name: 'Slippery ice', price: 450, desc: 'Almost no friction. Everything keeps sliding.', cfg: { phys: { friction: 15, drag: 0.1, bounce: 0.5 } } },
+    twin:  { name: 'Twin rocks', price: 550, desc: 'Two rocks split the board.', cfg: { rocks: [{ x: 95, y: 0.36, r: 28 }, { x: 265, y: 0.5, r: 28 }] } },
+    wall:  { name: 'The wall', price: 700, desc: 'A wall with one gap. Pick your lane.', cfg: { bars: [{ x: 0, y: 0.44, w: 205, h: 16 }] } },
+    swing: { name: 'Swinging rock', price: 800, desc: 'A rock sweeps back and forth across the middle.', cfg: { rocks: [{ x: 180, y: 0.45, r: 30, sway: 110, speed: 0.9 }] } },
+    wind:  { name: 'Solar wind', price: 950, desc: 'The wind swaps sides every few seconds.', cfg: { wind: { a: 430, period: 7 } } },
+    alien: { name: 'Alien visitors', price: 1100, desc: 'Every 20 shots an alien takes one planet.', cfg: { alien: 20 } },
+    hole:  { name: 'Black hole', price: 1300, desc: 'It pulls planets in and swallows one every 14 shots.', cfg: { boss: { kind: 'hole', r: 46, y: 0.2, eat: 14, g: 520 } } },
+    xmas:  { name: 'Christmas tree', price: 800, limited: true, desc: 'A snowy tree in the middle and snow falling all game. Holiday only.',
              cfg: { tree: true, snow: true,      // tiers of branches, top to bottom; dy is an exact offset so they always stack
                     bars: [{ x: 148, y: 0.3, dy: 0, w: 64, h: 28 }, { x: 122, y: 0.3, dy: 28, w: 116, h: 28 }, { x: 96, y: 0.3, dy: 56, w: 168, h: 28 }, { x: 166, y: 0.3, dy: 84, w: 28, h: 20, trunk: 1 }],
                     rocks: [{ x: 180, y: 0.3, dy: -17, r: 16, star: 1 }] } },
-    storm: { name: 'Asteroid storm', price: 1500, desc: 'Two swinging rocks and an alien. Good luck!',
+    storm: { name: 'Asteroid storm', price: 2000, desc: 'Two swinging rocks and an alien. Good luck!',
              cfg: { rocks: [{ x: 110, y: 0.34, r: 24, sway: 70, speed: 1.1 }, { x: 250, y: 0.52, r: 24, sway: 70, speed: 0.8 }], alien: 8 } }
   };
   function openMaps() {
@@ -2000,7 +2402,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         { label: 'Levels', cls: 'ghost', fn: openAdventure }
       ]);
   }
-  function fail(why) { if (mode === 'adventure') failLevel(why); else endGame(); }
+  function fail(why) { if (mode === 'adventure') failLevel(why); else if (why === 'full' && secondChance()) return; else endGame(); }
   function steal(kind, how) {       // an alien or the black hole takes a planet: a random one, or the biggest
     const pool = bodies.filter(b => !b.fly && !b.taken && !b.dead && !b.marked && b.age > 0.5);
     if (!pool.length) return null;
@@ -2203,20 +2605,17 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     const card = x => {
         const n = store.album[x.id] || 0;
         return '<button type="button" class="card ach' + (n ? ' on' : '') + '" data-sight="' + x.id + '"><img src="' + eggIcon(x.id) + '" alt=""' + (n ? '' : ' class="unseen"') + '>' +
-          '<span class="nm">' + (n ? x.name : '???') + '</span><span class="ds">' + RARITY[x.rare] + '</span>' +
+          '<span class="nm">' + (n ? x.name : '???') + '</span>' + (x.season ? '<span class="ds">Holiday only</span>' : '') +
           '<span class="st">' + (n ? (n === 1 ? 'Seen once' : 'Seen ' + n + ' times') : 'Not seen yet') + '</span></button>';
     };
     let html = '<p class="shop-note">Rare things fly across the sky while you play. Tap one to catch it. Found ' + have + ' of ' + YEAR_ROUND.length + '.</p>';
-    for (const [t, title] of [[1, 'Easy'], [2, 'Medium'], [3, 'Rare'], [0, 'Holiday only']]) {
-      const list = SIGHTS.filter(x => x.rare === t && (!x.season || holidaySeason() || store.album[x.id]));
-      if (list.length) html += '<div class="pname">' + title + '</div><div class="grid2 album">' + list.map(card).join('') + '</div>';
-    }
-    return html;
+    // the tiers (how often each shows up) stay behind the scenes: the album is one simple grid
+    return html + '<div class="grid2 album">' + SIGHTS.filter(x => !x.season || holidaySeason() || store.album[x.id]).map(card).join('') + '</div>';
   }
   function showSight(id) {
     const x = SIGHT_BY[id], n = store.album[id] || 0;
     openFact(eggIcon(id), n ? x.name : '???', n ? x.fact : (x.season ? 'Keep watching the sky between Nov 15 and Dec 26.' : 'Not seen yet. Keep an eye on the sky while you play.'),
-      RARITY[x.rare], x.season ? 'season' : 'r' + x.rare, !n);
+      x.season ? 'Holiday only' : '', 'season', !n);
   }
   function toast(text) {
     const el = $('toast');
@@ -2243,8 +2642,11 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     if (!ready || over || paused || hold || screen !== 'game') return;
     if (mode === 'adventure' && L.shots && shotsLeft <= 0) return;
     const T = TIERS[cur];
+    if (mode === 'classic' && puSlots.some(s => s.id === 'undo' && !s.used))       // remember the board, for Undo
+      undoSnap = { bodies: bodies.filter(o => !o.taken && !o.dead).map(o => ({ x: o.x, y: o.y, t: o.t })), score, cur, next, madeSun };
     const b = makeBody(clamp(aimX, pad + T.left, W - pad - T.right), launchY(), cur);
     b.fly = true; b.fresh = clock + 3;
+    if (mode === 'classic' && shotMod !== null && puSlots[shotMod]) { b[puSlots[shotMod].id] = true; usedPower(shotMod); }   // b.ghost / b.bomb / b.wild
     bodies.push(b);
     ready = false; readyAt = clock + RELOAD; idleT = 0;
     dirty = true;
@@ -2316,7 +2718,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   }
 
   function collide(a, b, born) {
-    if (a.taken || b.taken) return;
+    if (a.taken || b.taken || a.ghost || b.ghost) return;
     const A = TIERS[a.t], B = TIERS[b.t];
     const dx0 = b.x - a.x, dy0 = b.y - a.y, far = A.bound * a.s + B.bound * b.s;
     if (dx0 * dx0 + dy0 * dy0 >= far * far) return;
@@ -2331,6 +2733,12 @@ canvas#c {                         /* the sky fills the whole screen; the board 
       }
     }
     if (ov <= 0) return;
+    if (a.bomb || b.bomb) { explode(a.bomb ? a : b); return; }
+    if (a.wild !== b.wild) {                 // Wild planet: becomes a copy of the first planet it touches and merges with it
+      const w = a.wild ? a : b, o = w === a ? b : a;
+      w.wild = false;
+      if (o.t <= WILD_MAX) { w.t = o.t; w.x = o.x; w.y = o.y; w.px = o.px; w.py = o.py; merge(w, o, born); return; }
+    }
     land(a); land(b);
     const capped = mode === 'adventure' && L && L.cap !== undefined && a.t >= L.cap;   // at the cap, matching planets just bump
     // icy planets only merge with a matching planet you have just shot (not with ones already on the board)
@@ -2417,6 +2825,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         }
         if (b.s < 1) b.s = Math.min(1, b.s + 2.6 * h);
       }
+      if (magnetT > 0) magnetPull(h);
       const born = [];
       for (let i = 0; i < bodies.length; i++) {
         if (bodies[i].dead) continue;
@@ -2427,6 +2836,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         }
       }
       if (born.length || bodies.some(b => b.dead)) { bodies = bodies.filter(b => !b.dead).concat(born); hud(); }
+      if (mode === 'classic') ghostCheck(h);
       for (const b of bodies) {
         const T = TIERS[b.t];
         if (b.taken) continue;
@@ -2434,11 +2844,12 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         const cx = clamp(b.x, pad + T.left * b.s, W - pad - T.right * b.s);
         const cy = clamp(b.y, T.top * b.s, H - T.bottom * b.s);
         if (cx !== b.x) { b.x = cx; b.px = cx; }      // walls absorb the hit
-        if (cy !== b.y) { b.y = cy; b.py = cy; b.fly = false; }
+        if (cy !== b.y) { b.y = cy; b.py = cy; b.fly = false; if (b.bomb) explode(b); }
       }
     }
 
     clock += DT;
+    if (mode === 'classic' && !over) powerTick();
     if (mode !== 'sandbox') {
       // Losing: only time spent NOT MOVING past the line counts. Each planet drops an anchor where it
       // is; while it stays within STILL_RADIUS of the anchor its still-timer runs, and the moment it
@@ -2447,9 +2858,9 @@ canvas#c {                         /* the sky fills the whole screen; the board 
       const lineY = H - lineH();
       for (const b of bodies) {
         b.age += DT;
-        if (quakeLeft > 0 || Math.hypot(b.x - b.ax, b.y - b.ay) > STILL_RADIUS) { b.ax = b.x; b.ay = b.y; b.stillT = 0; }   // shaking counts as moving
+        if (quakeLeft > 0 || nudgeT > 0 || Math.hypot(b.x - b.ax, b.y - b.ay) > STILL_RADIUS) { b.ax = b.x; b.ay = b.y; b.stillT = 0; }   // shaking counts as moving
         else b.stillT += DT;
-        const past = !b.fly && !b.taken && b.age > 0.8 && quakeLeft <= 0 && b.y + TIERS[b.t].bottom * b.s > lineY;
+        const past = !b.fly && !b.taken && !b.dead && b.age > 0.8 && quakeLeft <= 0 && nudgeT <= 0 && b.y + TIERS[b.t].bottom * b.s > lineY;
         b.overT = past ? b.stillT : 0;
         if (past && b.stillT > OVER_STILL && !over) fail('full');
         if (past && b.stillT > 0.5) b.close = true;                       // nearly lost...
@@ -2512,16 +2923,17 @@ canvas#c {                         /* the sky fills the whole screen; the board 
 
   function endGame() {
     over = true;
-    const isBest = score > 0 && score >= bestOf(curMap);
+    const isBest = score > 0 && score >= bestNow();
     bumpBest();
+    returnUnused(); puMode = null; shotMod = null; $('puPick').hidden = true;
     store.stats.games++;
     if (store.stats.games >= 25) award('games');
     if (score < 100) award('tiny');
     sfx.over();
     hud(); save();
     showCard('The sky is full!',
-      '<p>You scored <b class="big">' + fmt(score) + '</b></p><div class="newbest">' + (isBest ? 'New high score on ' + MAPS[curMap].name + '!' : '') + '</div>' +
-      '<p><i class="coin"></i>' + fmt(Math.floor(score / COIN_EVERY)) + ' coins earned this game</p>', [
+      '<p>You scored <b class="big">' + fmt(score) + '</b></p><div class="newbest">' + (isBest ? (runPowered ? 'New power-up high score on ' : 'New high score on ') + MAPS[curMap].name + '!' : '') + '</div>' +
+      '<p><i class="coin"></i>' + fmt(Math.floor(paidTo / COIN_EVERY)) + ' coins earned this game</p>', [
         { label: 'Play again', cls: 'big pink', fn: newGame },
         { label: 'Maps', cls: 'ghost', fn: openMaps },
         { label: 'Home', cls: 'ghost', fn: goHome }
@@ -2582,9 +2994,10 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     giftwrap: { name: 'Gift wrap', extra: 15, limited: true, tall: true, ring: '#ffd23f', shine: '#fff3b0', ink: INK, bow: true,
       bases: ['#ff6f8a', '#5fc27a', '#6fb7ff', '#b07cff', '#ff8f5a', '#3fb3a8', '#ff5f6d', '#4fa36a', '#5a8cff', '#e8394a'] }
   };
-  const SETS = { candy: 900, frost: 990, galaxy: 1100, santahat: 700, gingerbread: 950, giftwrap: 950 };   // a whole skin for all ten planets, cheaper than one by one
+  const SETS = { candy: 1400, frost: 1500, galaxy: 1650, santahat: 1100, gingerbread: 1450, giftwrap: 1450 };   // a whole skin for all ten planets, cheaper than one by one
   // The holiday shop is open from Nov 15 to the end of Dec 26, every year. Items bought stay yours after that.
   let devHoliday = null;         // dev panel override: null = follow the calendar, true or false = force it
+  if (DEV) try { const v = localStorage.getItem('planet-slide-dev-xmas'); if (v === '1' || v === '0') devHoliday = v === '1'; } catch (e) {}
   function holidaySeason() {
     if (devHoliday !== null) return devHoliday;
     const d = new Date(), m = d.getMonth(), day = d.getDate();
@@ -2594,16 +3007,16 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   const skinName = (t, id) => SKINS[id].names ? SKINS[id].names[t] : SKINS[id].name;
   const FACES = {      // cheapest to rarest
     classic: { name: 'Classic', price: 0 },
-    snooze:  { name: 'Snooze', price: 120 },
-    wink:    { name: 'Wink', price: 160 },
-    wow:     { name: 'Wow', price: 180 },
-    sparkle: { name: 'Sparkle eyes', price: 200 },
-    grumpy:  { name: 'Grumpy', price: 220 },
-    squee:   { name: 'Squee', price: 240 },
-    kitty:   { name: 'Kitty', price: 260 },
-    cool:    { name: 'Cool shades', price: 320 },
-    love:    { name: 'Heart eyes', price: 380 },
-    star:    { name: 'Star eyes', price: 450 }
+    snooze:  { name: 'Snooze', price: 170 },
+    wink:    { name: 'Wink', price: 220 },
+    wow:     { name: 'Wow', price: 250 },
+    sparkle: { name: 'Sparkle eyes', price: 280 },
+    grumpy:  { name: 'Grumpy', price: 310 },
+    squee:   { name: 'Squee', price: 340 },
+    kitty:   { name: 'Kitty', price: 360 },
+    cool:    { name: 'Cool shades', price: 450 },
+    love:    { name: 'Heart eyes', price: 530 },
+    star:    { name: 'Star eyes', price: 630 }
   };
   function starPath(g, x, y, R) {
     g.beginPath();
@@ -3309,7 +3722,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         g.fillStyle = grad(g, h, [[0, '#1b1446'], [1, '#2f2270']]); g.fillRect(0, 0, w, h);
         starField(g, w, h, now, 1, 1);
       } },
-    polka: { name: 'Bubblegum dots', price: 150, line: '#ffffff', soft: 'rgba(255,255,255,0.8)', guide: 'rgba(60,30,110,0.35)',
+    polka: { name: 'Bubblegum dots', price: 210, line: '#ffffff', soft: 'rgba(255,255,255,0.8)', guide: 'rgba(60,30,110,0.35)',
       draw(g, w, h) {
         g.fillStyle = grad(g, h, [[0, '#b9a4ff'], [1, '#e2b8ff']]); g.fillRect(0, 0, w, h);
         const u = w / 360; g.fillStyle = 'rgba(255,255,255,0.28)';
@@ -3317,7 +3730,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
           for (let x = (row % 2 ? 44 : 20) * u; x < w + 12 * u; x += 48 * u) { g.beginPath(); g.arc(x, y, 9 * u, 0, TAU); g.fill(); }
         }
       } },
-    sunset: { name: 'Sunset clouds', price: 250, line: '#ffffff', soft: 'rgba(255,255,255,0.75)', guide: 'rgba(255,255,255,0.4)',
+    sunset: { name: 'Sunset clouds', price: 350, line: '#ffffff', soft: 'rgba(255,255,255,0.75)', guide: 'rgba(255,255,255,0.4)',
       draw(g, w, h, now) {
         g.fillStyle = grad(g, h, [[0, '#4b2a8a'], [0.45, '#c85a9a'], [0.8, '#ff9a76'], [1, '#ffd08a']]); g.fillRect(0, 0, w, h);
         starField(g, w, h, now, 0.8, 0.3);
@@ -3328,7 +3741,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
           cloud(g, ((i * 97 * u + t * (5 + i * 2) * u) % span) - 90 * u, h * (0.16 + i * 0.17), (0.8 + (i % 3) * 0.3) * u);
         }
       } },
-    ocean: { name: 'Deep sea', price: 300, line: '#9ff0ff', soft: 'rgba(159,240,255,0.6)', guide: 'rgba(220,250,255,0.3)',
+    ocean: { name: 'Deep sea', price: 420, line: '#9ff0ff', soft: 'rgba(159,240,255,0.6)', guide: 'rgba(220,250,255,0.3)',
       draw(g, w, h, now) {
         g.fillStyle = grad(g, h, [[0, '#11789a'], [0.5, '#0b3f73'], [1, '#081f47']]); g.fillRect(0, 0, w, h);
         g.fillStyle = 'rgba(255,255,255,0.05)';
@@ -3344,14 +3757,14 @@ canvas#c {                         /* the sky fills the whole screen; the board 
           g.beginPath(); g.arc(st.x * w + Math.sin(t * 1.2 + i) * 4 * u, y, (2 + st.r * 3) * u, 0, TAU); g.stroke();
         });
       } },
-    cotton: { name: 'Cotton candy', price: 350, line: '#ff3f93', soft: 'rgba(255,63,147,0.7)', guide: 'rgba(90,50,140,0.35)',
+    cotton: { name: 'Cotton candy', price: 490, line: '#ff3f93', soft: 'rgba(255,63,147,0.7)', guide: 'rgba(90,50,140,0.35)',
       draw(g, w, h, now) {
         g.fillStyle = grad(g, h, [[0, '#ffc4e6'], [0.5, '#d9c8ff'], [1, '#bfe6ff']]); g.fillRect(0, 0, w, h);
         const u = w / 360, t = reduceMotion ? 0 : now / 1000;
         stars.slice(0, 16).forEach((st, i) => heart(g, st.x * w, st.y * h + Math.sin(t * 0.8 + i) * 5 * u, (6 + st.r * 5) * u, 'rgba(255,255,255,0.6)'));
         starField(g, w, h, now, 1, 1);
       } },
-    sakura: { name: 'Cherry blossom', price: 380, line: '#e0407f', soft: 'rgba(224,64,127,0.7)', guide: 'rgba(120,50,90,0.35)',
+    sakura: { name: 'Cherry blossom', price: 530, line: '#e0407f', soft: 'rgba(224,64,127,0.7)', guide: 'rgba(120,50,90,0.35)',
       draw(g, w, h, now) {
         g.fillStyle = grad(g, h, [[0, '#ffd3e2'], [0.6, '#ffeaf1'], [1, '#e6f3ff']]); g.fillRect(0, 0, w, h);
         const u = w / 360, t = reduceMotion ? 0 : now / 1000;
@@ -3363,7 +3776,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
           g.beginPath(); g.ellipse(0, 0, (4 + st.r * 2) * u, (2.2 + st.r) * u, 0, 0, TAU); g.fill(); g.restore();
         });
       } },
-    meadow: { name: 'Rainbow day', price: 400, line: '#ff3f93', soft: 'rgba(255,63,147,0.7)', guide: 'rgba(40,60,120,0.35)',
+    meadow: { name: 'Rainbow day', price: 560, line: '#ff3f93', soft: 'rgba(255,63,147,0.7)', guide: 'rgba(40,60,120,0.35)',
       draw(g, w, h, now) {
         g.fillStyle = grad(g, h, [[0, '#7fcbff'], [1, '#dff5ff']]); g.fillRect(0, 0, w, h);
         const u = w / 360, t = reduceMotion ? 0 : now / 1000;
@@ -3377,7 +3790,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
           cloud(g, ((i * 131 * u + t * (4 + i * 2) * u) % span) - 90 * u, h * (0.12 + i * 0.22), (0.8 + (i % 2) * 0.35) * u);
         }
       } },
-    aurora: { name: 'Aurora', price: 450, line: '#ff7eb6', soft: 'rgba(255,126,182,0.55)', guide: 'rgba(253,246,255,0.3)',
+    aurora: { name: 'Aurora', price: 630, line: '#ff7eb6', soft: 'rgba(255,126,182,0.55)', guide: 'rgba(253,246,255,0.3)',
       draw(g, w, h, now) {
         g.fillStyle = grad(g, h, [[0, '#07142e'], [0.6, '#0d2a4a'], [1, '#123a4f']]); g.fillRect(0, 0, w, h);
         starField(g, w, h, now, 1, 1);
@@ -3393,7 +3806,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         });
       } }
   };
-  BGS.retro = { name: 'Neon grid', price: 500, line: '#7ef9ff', soft: 'rgba(126,249,255,0.65)', guide: 'rgba(126,249,255,0.35)',
+  BGS.retro = { name: 'Neon grid', price: 700, line: '#7ef9ff', soft: 'rgba(126,249,255,0.65)', guide: 'rgba(126,249,255,0.35)',
     draw(g, w, h, now) {
       g.fillStyle = grad(g, h, [[0, '#150a33'], [0.6, '#3a0f5e'], [1, '#7a1f7a']]); g.fillRect(0, 0, w, h);
       starField(g, w, h, now, 1, 0.55);
@@ -3405,7 +3818,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke();
       }
     } };
-  BGS.milky = { name: 'Milky way', price: 600, line: '#ff7eb6', soft: 'rgba(255,126,182,0.55)', guide: 'rgba(253,246,255,0.3)',
+  BGS.milky = { name: 'Milky way', price: 840, line: '#ff7eb6', soft: 'rgba(255,126,182,0.55)', guide: 'rgba(253,246,255,0.3)',
     draw(g, w, h, now) {
       g.fillStyle = grad(g, h, [[0, '#060a22'], [1, '#111b44']]); g.fillRect(0, 0, w, h);
       g.save(); g.translate(w / 2, h / 2); g.rotate(-0.9);
@@ -3428,7 +3841,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
       }
     } };
 
-  BGS.snowy = { name: 'Snowy night', price: 300, limited: true, line: '#ff6f8a', soft: 'rgba(255,255,255,0.75)', guide: 'rgba(255,255,255,0.35)',
+  BGS.snowy = { name: 'Snowy night', price: 420, limited: true, line: '#ff6f8a', soft: 'rgba(255,255,255,0.75)', guide: 'rgba(255,255,255,0.35)',
     draw(g, w, h, now) {                          // holiday only: a snowy hillside with pine trees and slow snow
       g.fillStyle = grad(g, h, [[0, '#14244f'], [0.7, '#2c4a86'], [1, '#4a6fae']]); g.fillRect(0, 0, w, h);
       starField(g, w, h, now, 0.8, 0.6);
@@ -3456,13 +3869,13 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     drawPlanet(g, t, skin, faceId); g.restore();
   }
   const WALLS = {
-    parade: { name: 'Planet parade', price: 1500,
+    parade: { name: 'Planet parade', price: 1700,
       draw(g, w, h) {
         BGS.night.draw(g, w, h, 0);
         // planet, x, y and size as fractions of the picture; checked so that no two touch, rings included
         for (const [t, x, y, size] of [[0, 0.330, 0.3100, 0.050], [1, 0.700, 0.3350, 0.058], [2, 0.260, 0.3797, 0.066], [3, 0.740, 0.4120, 0.074], [4, 0.310, 0.4641, 0.082], [5, 0.690, 0.5039, 0.090], [6, 0.270, 0.5721, 0.078], [7, 0.710, 0.6228, 0.082], [8, 0.300, 0.6952, 0.115], [9, 0.620, 0.9050, 0.240]]) put(g, t, 'classic', 'classic', w * x, h * y, w * size);
       } },
-    sleepy: { name: 'Sleepy Saturn', price: 1800,
+    sleepy: { name: 'Sleepy Saturn', price: 2100,
       draw(g, w, h) {
         BGS.sunset.draw(g, w, h, 0);
         put(g, 7, 'classic', 'snooze', w * 0.5, h * 0.66, w * 0.24);
@@ -3470,7 +3883,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         put(g, 0, 'classic', 'snooze', w * 0.2, h * 0.5, w * 0.05);
         put(g, 3, 'classic', 'snooze', w * 0.24, h * 0.86, w * 0.09);
       } },
-    candy: { name: 'Candy cosmos', price: 2000,      // a garden of planet lollipops
+    candy: { name: 'Candy cosmos', price: 2300,      // a garden of planet lollipops
       draw(g, w, h) {
         BGS.cotton.draw(g, w, h, 0);
         const rnd = seeded(77), colors = ['#ff6fa5', '#6fc3ff', '#ffb52e', '#4fcf9c', '#b07cff', '#ffffff'];
@@ -3492,7 +3905,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
           for (let i = 0; i < 7; i++) { g.beginPath(); g.arc(w * (i / 6 + (y < 1 ? 0.04 : -0.05)), h * y, w * q, 0, TAU); g.fill(); }
         }
       } },
-    orbit: { name: 'Galaxy friends', price: 2500,
+    orbit: { name: 'Galaxy friends', price: 2900,
       draw(g, w, h) {
         BGS.milky.draw(g, w, h, 0);
         const cx = w * 0.5, cy = h * 0.64, rings = [0.2, 0.31, 0.42];
@@ -3505,14 +3918,14 @@ canvas#c {                         /* the sky fills the whole screen; the board 
           put(g, t, 'galaxy', 'star', cx + Math.cos(a) * w * q, cy + Math.sin(a) * w * q * 1.25, w * (0.04 + t * 0.006));
         });
       } },
-    picnic: { name: 'Snack time', price: 3000,
+    picnic: { name: 'Snack time', price: 3400,
       draw(g, w, h) {
         BGS.meadow.draw(g, w, h, 0);
         const spots = [[0.2, 0.42, 0.06], [0.8, 0.4, 0.07], [0.5, 0.47, 0.08], [0.22, 0.6, 0.1], [0.76, 0.59, 0.11], [0.47, 0.69, 0.115], [0.18, 0.8, 0.1], [0.8, 0.79, 0.095], [0.47, 0.9, 0.145], [0.5, 0.33, 0.05]];
         [1, 3, 2, 4, 5, 8, 6, 7, 9, 0].forEach((t, i) => put(g, t, 'unique', i % 2 ? 'wink' : 'squee', w * spots[i][0], h * spots[i][1], w * spots[i][2]));
       } }
   };
-  WALLS.stack = { name: 'Sweet stack', price: 2200,        // a wobbly tower of dessert planets
+  WALLS.stack = { name: 'Sweet stack', price: 2500,        // a wobbly tower of dessert planets
     draw(g, w, h) {
       BGS.polka.draw(g, w, h, 0);
       const tower = [[8, 'unique3', 0.2, 0.03, 'snooze'], [7, 'unique2', 0.115, -0.02, 'sparkle'], [1, 'unique2', 0.105, 0.04, 'wink'],
@@ -3524,7 +3937,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         y -= w * size * 0.86;
       }
     } };
-  WALLS.sea = { name: 'Bubble dive', price: 2400,
+  WALLS.sea = { name: 'Bubble dive', price: 2800,
     draw(g, w, h) {
       BGS.ocean.draw(g, w, h, 0);
       const rnd = seeded(31);
@@ -3537,12 +3950,12 @@ canvas#c {                         /* the sky fills the whole screen; the board 
       put(g, 6, 'frost', 'snooze', w * 0.8, h * 0.42, w * 0.075);
       put(g, 4, 'unique2', 'love', w * 0.6, h * 0.9, w * 0.08);
     } };
-  WALLS.crew = { name: 'Cool crew', price: 2800,           // everyone in shades, flying in a V
+  WALLS.crew = { name: 'Cool crew', price: 3200,           // everyone in shades, flying in a V
     draw(g, w, h) {
       BGS.retro.draw(g, w, h, 0);
       for (const [t, x, y, size] of [[9, 0.5, 0.86, 0.17], [8, 0.2, 0.74, 0.1], [7, 0.78, 0.735, 0.075], [5, 0.3, 0.62, 0.08], [6, 0.71, 0.615, 0.062], [4, 0.39, 0.525, 0.062], [3, 0.62, 0.525, 0.058], [2, 0.5, 0.44, 0.045]]) put(g, t, 'classic', 'cool', w * x, h * y, w * size);
     } };
-  WALLS.holiday = { name: 'Holiday tree', price: 1600, limited: true,     // holiday only: a tree decorated with planets
+  WALLS.holiday = { name: 'Holiday tree', price: 1800, limited: true,     // holiday only: a tree decorated with planets
     draw(g, w, h) {
       BGS.snowy.draw(g, w, h, 0);
       const cx = w * 0.5;
@@ -3804,7 +4217,9 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     }
     ctx.setLineDash([]);
     for (const b of bodies) {
+      if (b.ghost) ctx.globalAlpha = 0.45;
       planet(ctx, b.x, b.y, b.t, b.s);
+      ctx.globalAlpha = 1;
       if (b.ice) {                     // frozen in a shell of ice
         const r = TIERS[b.t].r * b.s;
         ctx.fillStyle = 'rgba(190,235,255,0.45)'; ctx.beginPath(); ctx.arc(b.x, b.y, r + 2, 0, TAU); ctx.fill();
@@ -3833,6 +4248,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
       ctx.beginPath(); ctx.arc(lx, ly, rr, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - k)); ctx.stroke();
     }
 
+    drawPowers(ctx, now, lx, ly, showLauncher);
     for (const u of ufos) if (u.t >= 0) drawUfo(ctx, u);
     if (!over) drawSight(ctx, now);
     for (const p of particles) {
@@ -3936,8 +4352,11 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   const TEN = TIERS.map((T, t) => t);
   function price(id) {
     const [kind, a, b] = id.split(':');
-    if (kind === 'skin') return b === 'classic' ? 0 : b === 'unique' ? 120 + 20 * (+a) : b === 'unique2' ? 150 + 22 * (+a) : b === 'unique3' ? 180 + 25 * (+a)
-      : b === 'xmas' ? 140 + 20 * (+a) : b === 'xmas2' ? 160 + 22 * (+a) : 40 + 15 * (+a) + SKINS[b].extra;
+    if (kind === 'skin') {          // small planets stay cheap; prices climb faster for the big ones (top skin: about 4 games of coins)
+      const t = +a, curve = (base, step, sq) => Math.round((base + step * t + sq * t * t) / 5) * 5;
+      return b === 'classic' ? 0 : b === 'unique' ? curve(140, 28, 3.5) : b === 'unique2' ? curve(160, 30, 3.8) : b === 'unique3' ? curve(180, 32, 4)
+        : b === 'xmas' ? curve(150, 28, 3.5) : b === 'xmas2' ? curve(170, 30, 3.8) : curve(50, 18, 3) + SKINS[b].extra;
+    }
     if (kind === 'set') return SETS[a];
     if (kind === 'face') return FACES[a].price;
     if (kind === 'bg') return BGS[a].price;
@@ -3997,7 +4416,8 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   function renderShop() {
     const list = $('shopList'), top = list.scrollTop;
     $('shopCoins').textContent = fmt(store.coins);
-    for (const tab of ['planets', 'faces', 'skies', 'maps', 'music', 'walls']) $('tab_' + tab).setAttribute('aria-selected', tab === shopTab);
+    for (const tab of ['planets', 'faces', 'skies', 'maps', 'music', 'walls', 'power']) $('tab_' + tab).setAttribute('aria-selected', tab === shopTab);
+    if (shopTab === 'power') { list.innerHTML = puShopHtml(); list.scrollTop = top; return; }
     const eq = store.equip;
     let html = '';
     if (shopTab === 'planets') {
@@ -4104,6 +4524,8 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     renderShop();
   }
   $('shopList').addEventListener('click', ev => {
+    const bp = ev.target.closest('[data-buypu]');
+    if (bp) { buyPower(bp.dataset.buypu); return; }
     const hear = ev.target.closest('[data-listen]');
     if (hear) {
       if (audio.preview === hear.dataset.listen) endPreview(); else previewTrack(hear.dataset.listen);
@@ -4503,6 +4925,8 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   // by the patterns below the word list. Anything missing here simply stays in English.
   const ZH_PLANETS = { Pluto: '冥王星', Moon: '月球', Mars: '火星', Venus: '金星', Earth: '地球', Neptune: '海王星', Uranus: '天王星', Saturn: '土星', Jupiter: '木星', Sun: '太陽' };
   const ZH = {
+    "Happy Thanksgiving!": "感恩節快樂！", "Thanks for playing Planet Slide! Here is a free Second chance power-up. It is waiting in your Power-ups.": "謝謝你玩 Planet Slide！送你一個免費的「第二次機會」道具，已經放進你的道具裡了。", "One-time gift": "限定禮物", "Test the Thanksgiving gift pop-up": "測試感恩節禮物彈窗",
+    "Power-ups": "道具", "Common": "普通", "Uncommon": "不常見", "Rare": "稀有", "Legendary": "傳說", "Nudge": "輕推", "Swap": "交換", "Shrink ray": "縮小光線", "Double points": "雙倍分數", "Pick": "自選", "Grow": "變大", "Magnet": "磁鐵", "Cosmic hug": "宇宙擁抱", "Supernova bomb": "超新星炸彈", "Ghost shot": "幽靈射擊", "Wild planet": "百搭星球", "Undo": "復原", "Second chance": "第二次機會", "Gently shakes the planets so they settle into gaps.": "輕輕搖一搖星球，讓它們落進空隙。", "Switch the planet you’re about to shoot with the next one.": "把你要發射的星球和下一顆交換。", "Tap a planet to make it one size smaller.": "點一顆星球，讓它變小一級。", "Every merge is worth double points for 30 seconds.": "30 秒內每次合併都是雙倍分數。", "Choose which planet you shoot next, from Pluto to Venus.": "自己選下一發要射的星球，從冥王星到金星。", "Tap a small planet (up to Venus) to make it one size bigger.": "點一顆小星球（最大到金星），讓它變大一級。", "For 6 seconds, matching planets that are close together pull into each other.": "6 秒內，靠在附近的相同星球會互相吸過去。", "Tap two matching planets anywhere on the board to merge them. Works up to Saturn.": "點棋盤上任意兩顆相同的星球，讓它們合併。最大到土星。", "Tap any planet to make it disappear.": "點任何一顆星球，讓它消失。", "Your next planet explodes when it lands and clears the small planets around it.": "下一顆星球落地時會爆炸，清掉附近的小星球。", "Your next planet flies through other planets and lands in the first gap behind them.": "下一顆星球會穿過其他星球，落在它們後面的第一個空隙。", "Your next planet is a rainbow that merges with whatever it hits first (up to Neptune).": "下一顆星球變成彩虹，和第一個碰到的星球合併（最大到海王星）。", "Take back your last shot.": "收回你的上一發。", "If the sky fills up, the planets closest to the line are cleared so you can keep playing. Turns on by itself.": "如果天空滿了，最靠近線的星球會被清掉，讓你繼續玩。會自動啟動。", "Bring up to 3 power-ups. Only one can be Rare or Legendary.": "最多帶 3 個道具。稀有或傳說只能帶一個。", "Start": "開始", "Play without": "不帶道具開始", "No planet to use it on": "沒有可以用的星球", "Tap two matching planets": "點兩顆相同的星球", "Tap a glowing planet": "點一顆發光的星球", "Tap a matching planet": "點一顆相同的星球", "Next shot: Ghost shot": "下一發：幽靈射擊", "Next shot: Supernova bomb": "下一發：超新星炸彈", "Next shot: Wild planet": "下一發：百搭星球", "Wait for your next planet": "等下一顆星球裝好", "Second chance is on. It works by itself.": "第二次機會已啟動，會自動生效。", "Double points for 30 seconds!": "30 秒雙倍分數！", "Nothing to undo yet": "還沒有可以復原的", "Second chance!": "第二次機會！", "Power best": "道具最高", "With power-ups": "使用道具", "Bring up to 3 into a Classic game. Unused ones come back to you when the game ends.": "經典模式每局最多帶 3 個。沒用到的會在遊戲結束時還給你。", "Get more in the shop": "去商店買更多", "Power-ups are used up once you use them in a Classic game. You can hold up to 99 of each.": "道具在經典模式用過就沒了。每種最多可以擁有 99 個。", "Max 99": "已達 99", "None yet": "還沒有", "+5 of every power-up": "每種道具 +5", "Empty power-ups": "清空道具",
     "Fly from the asteroid belt to the edge of the universe. Tap the spacecraft along the way for space facts.": "從小行星帶一路飛到宇宙的盡頭。點一下沿路的太空船，就能看到太空小知識。", "Open until Dec 26": "開到 12 月 26 日", "Curious cadet": "好奇的學員", "Tap a spacecraft on the Adventure map to read a space fact": "在冒險地圖上點一艘太空船，讀一則太空小知識", "Space nerd": "太空迷", "Read 5 space facts on the Adventure map": "在冒險地圖上讀 5 則太空小知識", "Walking encyclopedia": "行走的百科全書", "Read every space fact on the Adventure map": "讀完冒險地圖上所有的太空小知識", "Stargazer": "觀星者", "Tap something rare flying across the sky while you play": "玩的時候點一下飛過天空的稀有東西", "Sky watcher": "天空觀察家", "Spot 6 different things for your Space album": "為太空相簿收集 6 種不同的東西", "Full album": "相簿全滿", "Spot all 11 year-round sightings in your Space album": "收集太空相簿裡全部 11 種常駐目擊", "Ho ho ho!": "吼吼吼！", "Spot Santa’s sleigh (only Nov 15 – Dec 26)": "發現聖誕老人的雪橇（只在 11/15 – 12/26 出現）", "Space album": "太空相簿", "Shooting star": "流星", "A shooting star is a speck of space dust, often smaller than a grain of sand, burning up high in Earth’s air.": "流星是一小粒太空塵埃，常常比一粒沙還小，在地球高空的空氣中燒起來。", "Comet": "彗星", "A comet is a ball of ice and dust. When it comes close to the Sun, the ice turns to gas and makes a long, glowing tail.": "彗星是一團冰和塵埃。靠近太陽時，冰會變成氣體，拖出一條長長的發光尾巴。", "Satellite": "人造衛星", "Thousands of working satellites circle Earth. They help with phone calls, maps and weather forecasts.": "有好幾千顆運作中的人造衛星繞著地球轉，幫忙打電話、看地圖和預報天氣。", "Space station": "太空站", "The International Space Station circles Earth about every 90 minutes, so its crew sees about 16 sunrises every day.": "國際太空站大約每 90 分鐘繞地球一圈，所以太空人每天大約會看到 16 次日出。", "Hubble telescope": "哈伯望遠鏡", "The Hubble Space Telescope has been taking pictures of deep space since 1990.": "哈伯太空望遠鏡從 1990 年起就一直在拍攝深太空的照片。", "Rocket": "火箭", "To stay in orbit around Earth, a spacecraft has to fly about 28,000 km per hour.": "太空船要以大約每小時 28,000 公里的速度飛行，才能留在繞地球的軌道上。", "Floating astronaut": "漂浮的太空人", "In 1984, astronaut Bruce McCandless flew in space with a jetpack, with no line tying him to his spaceship.": "1984 年，太空人布魯斯·麥坎德利斯背著噴射背包在太空中飛行，身上沒有任何繩子連著太空船。", "Lost glove": "遺失的手套", "On the first American spacewalk in 1965, a spare glove floated out of the spaceship and drifted away into orbit.": "1965 年美國第一次太空漫步時，一隻備用手套飄出太空船，飄進了軌道。", "Car in space": "太空中的汽車", "In 2018 a red sports car was launched on a test rocket. It is still out there, circling the Sun.": "2018 年，一輛紅色跑車被放在測試火箭上發射出去。它現在還在太空中繞著太陽轉。", "Friendly UFO": "友善的幽浮", "Just for fun! Nobody has ever found proof of alien visitors, but scientists keep listening for signals from other worlds.": "只是好玩而已！從來沒有人找到外星訪客的證據，不過科學家一直在聆聽來自其他世界的訊號。", "Halley’s Comet": "哈雷彗星", "Halley’s Comet comes back about every 76 years. It was last seen from Earth in 1986 and returns in 2061.": "哈雷彗星大約每 76 年回來一次。上次從地球看到它是 1986 年，下次回來是 2061 年。", "Santa’s sleigh": "聖誕老人的雪橇", "Only seen from Nov 15 to Dec 26! Every Christmas Eve since 1955, NORAD has “tracked” Santa’s sleigh for children around the world.": "只在 11 月 15 日到 12 月 26 日出現！從 1955 年起，每年平安夜北美防空司令部都會為全世界的小朋友「追蹤」聖誕老人的雪橇。", "Holiday only": "節日限定", "Easy": "簡單", "Medium": "中等", "Rare": "稀有", "Not seen yet": "還沒看過", "Seen once": "看過 1 次", "Keep watching the sky between Nov 15 and Dec 26.": "在 11 月 15 日到 12 月 26 日之間繼續注意天空。", "Not seen yet. Keep an eye on the sky while you play.": "還沒看過。玩的時候多注意天空。",
     "Fly outward from the asteroid belt to the edge of the universe. Tap the spacecraft and places on the way to learn about them.": "從小行星帶一路往外飛到宇宙的盡頭。點一下沿路的太空船和地點，就能認識它們。", "The Asteroid Belt": "小行星帶", "2.2–3.2 AU from the Sun": "距離太陽 2.2–3.2 天文單位", "Our trip starts just past Mars. Millions of asteroids orbit here, but they are so spread out that spacecraft fly through safely. 1 AU is the distance from Earth to the Sun, about 150 million km.": "旅程從火星外側開始。這裡有數百萬顆小行星，但彼此相隔非常遠，太空船可以安全飛過。1 天文單位是地球到太陽的距離，大約 1.5 億公里。", "Mars": "火星", "Ceres": "穀神星", "Dawn": "曙光號", "Psyche": "靈神星號", "NASA’s Dawn orbited the asteroid Vesta, then Ceres, the biggest object in the asteroid belt. It ran out of fuel in 2018 and is still circling Ceres, where it should stay for decades.": "NASA 的曙光號先環繞小行星灶神星，再環繞小行星帶裡最大的天體穀神星。它在 2018 年燃料用完，至今仍繞著穀神星轉，預計還會再轉好幾十年。", "NASA’s Psyche spacecraft is on its way to 16 Psyche, an asteroid rich in metal. It is due to arrive in 2029.": "NASA 的靈神星號正飛往富含金屬的小行星「16 靈神星」，預計 2029 年抵達。", "Jupiter and the Trojans": "木星與特洛伊小行星", "5.2 AU": "5.2 天文單位", "Jupiter is so big that all the other planets could fit inside it. Two swarms of Trojan asteroids share its orbit, one ahead of it and one behind.": "木星大到可以把其他所有行星都裝進去。兩群特洛伊小行星和木星共用同一條軌道，一群在它前面，一群在它後面。", "Jupiter": "木星", "Trojan asteroids": "特洛伊小行星", "Lucy": "露西號", "In October 2026, NASA’s Lucy became the first spacecraft to reach the Trojan asteroids. Its first close flyby, of the asteroid Eurybates, is planned for August 2027.": "2026 年 10 月，NASA 的露西號成為第一艘抵達特洛伊小行星的太空船。它預計在 2027 年 8 月第一次近距離飛掠小行星歐律巴特斯。", "Saturn": "土星", "9.5 AU": "9.5 天文單位", "Saturn’s rings are mostly chunks of ice. The main rings stretch about 280,000 km across, but in most places they are only about 10 meters thick.": "土星環大多是冰塊。主環寬約 28 萬公里，但大部分地方只有大約 10 公尺厚。", "Titan": "泰坦", "Cassini": "卡西尼號", "Huygens": "惠更斯號", "Cassini studied Saturn for 13 years. On September 15, 2017 it dove into Saturn on purpose, sending back data until the very end.": "卡西尼號研究土星 13 年。2017 年 9 月 15 日它刻意衝進土星，一直傳回資料到最後一刻。", "In January 2005 the Huygens probe parachuted onto Titan, Saturn’s biggest moon. It is still the farthest landing ever made.": "2005 年 1 月，惠更斯號探測器乘著降落傘降落在土星最大的衛星泰坦上。這至今仍是人類最遠的一次登陸。", "Uranus and Neptune": "天王星與海王星", "19–30 AU": "19–30 天文單位", "These ice giants are so far away that only one spacecraft has ever visited them. Uranus spins tipped over on its side.": "這兩顆冰巨星非常遙遠，只有一艘太空船造訪過它們。天王星是躺著自轉的。", "Uranus": "天王星", "Neptune": "海王星", "Voyager 2": "航海家 2 號", "Voyager 2 is the only spacecraft to visit Uranus (1986) and Neptune (1989). At Neptune it found a giant storm called the Great Dark Spot.": "航海家 2 號是唯一造訪過天王星（1986 年）和海王星（1989 年）的太空船。它在海王星發現了一個叫「大暗斑」的巨大風暴。", "The Kuiper Belt": "古柏帶", "30–50 AU": "30–50 天文單位", "A huge ring of icy worlds past Neptune. Pluto is the largest one we know of.": "海王星外一大圈冰冷的小世界。冥王星是我們已知最大的一個。", "Pluto": "冥王星", "Arrokoth": "天涯海角", "New Horizons": "新視野號", "Pale Blue Dot": "暗淡藍點", "New Horizons flew past Pluto on July 14, 2015, then past Arrokoth on January 1, 2019, the farthest object ever explored up close.": "新視野號在 2015 年 7 月 14 日飛掠冥王星，又在 2019 年 1 月 1 日飛掠天涯海角，那是人類近距離探索過最遠的天體。", "In 1990, from about 6 billion km away, Voyager 1 looked back and photographed Earth as a tiny dot in a sunbeam.": "1990 年，航海家 1 號在大約 60 億公里外回頭拍下地球，地球只是陽光中的一個小點。", "The Edge of the Sun’s Bubble": "太陽泡泡的邊緣", "about 90–170 AU": "大約 90–170 天文單位", "The Sun blows out a wind of particles that makes a giant bubble called the heliosphere. Its edge, the heliopause, is about 120 AU away. Past it is interstellar space.": "太陽吹出的粒子風形成一個巨大的泡泡，叫做太陽圈。它的邊緣「太陽圈頂」大約在 120 天文單位外，再過去就是星際空間。", "Termination shock · about 94 AU": "終端震波 · 大約 94 天文單位", "Heliopause · about 120 AU": "太陽圈頂 · 大約 120 天文單位", "Interstellar space": "星際空間", "Voyager 1": "航海家 1 號", "Golden Record": "金唱片", "Voyager 1 left the Sun’s bubble in August 2012. On November 18, 2026 it became the first human-made object one light-day from Earth, about 173 AU. Its radio signals now take a whole day to reach us.": "航海家 1 號在 2012 年 8 月離開太陽的泡泡。2026 年 11 月 18 日，它成為第一個距離地球一光日（大約 173 天文單位）的人造物體。它的無線電訊號現在要花整整一天才能傳到我們這裡。", "Both Voyagers carry a golden record with sounds, music and pictures of Earth, in case anyone ever finds them.": "兩艘航海家號都帶著一張金唱片，裡面有地球的聲音、音樂和圖片，以防哪天有誰發現它們。", "The Oort Cloud": "歐特雲", "about 2,000–100,000 AU": "大約 2,000–100,000 天文單位", "Scientists think a giant shell of icy bodies surrounds the solar system, far past the planets. Many comets come from here. Nobody has seen it directly yet.": "科學家認為在行星很遠很遠之外，有一層巨大的冰質天體外殼包圍著太陽系。很多彗星來自這裡。目前還沒有人直接看見過它。", "A very long trip": "好長的旅程", "Even at about 61,000 km per hour, Voyager 1 will need about 300 years to reach the Oort Cloud, and maybe 30,000 years to get through it.": "就算時速大約 61,000 公里，航海家 1 號也要大約 300 年才能抵達歐特雲，再花大概 3 萬年才能穿過它。", "Our Star Neighbors": "我們的恆星鄰居", "4.2–1,600 light-years": "4.2–1,600 光年", "A light-year is how far light travels in a year, about 9.5 trillion km. The nearest star to the Sun, Proxima Centauri, is 4.2 light-years away.": "一光年是光一年走的距離，大約 9.5 兆公里。離太陽最近的恆星比鄰星在 4.2 光年外。", "Proxima Centauri · 4.2 light-years": "比鄰星 · 4.2 光年", "Alpha Centauri · 4.4 light-years": "南門二 · 4.4 光年", "Orion Nebula · 1,300 light-years": "獵戶座大星雲 · 1,300 光年", "Gaia BH1": "蓋亞 BH1", "Gliese 445": "格利澤 445", "The nearest black hole we know of is about 1,560 light-years away. It is quiet and doesn’t glow. Astronomers found it by watching a Sun-like star circle around it.": "我們已知最近的黑洞大約在 1,560 光年外。它很安靜，不會發光。天文學家是觀察到一顆像太陽的恆星繞著它轉，才發現它的。", "Around the year 40,272, Voyager 1 will pass within 1.7 light-years of a small red star called Gliese 445.": "大約在西元 40272 年，航海家 1 號會從一顆叫格利澤 445 的小紅星旁 1.7 光年內經過。", "The Milky Way": "銀河系", "about 100,000 light-years across": "直徑大約 10 萬光年", "Our galaxy is a spiral of hundreds of billions of stars. The Sun sits in a small arm called the Orion Arm, about 27,000 light-years from the center.": "我們的星系是一個由數千億顆恆星組成的螺旋。太陽位在一條叫獵戶臂的小旋臂上，離中心大約 27,000 光年。", "You are here": "你在這裡", "Sagittarius A*": "人馬座 A*", "A black hole about 4 million times heavier than the Sun sits at the center of our galaxy, about 27,000 light-years away. Its first picture was shown on May 12, 2022.": "我們星系的中心有一個大約比太陽重 400 萬倍的黑洞，離我們大約 27,000 光年。它的第一張照片在 2022 年 5 月 12 日公開。", "Beyond Our Galaxy": "銀河系之外", "back to 13.8 billion years ago": "回到 138 億年前", "The nearest big galaxy, Andromeda, is 2.5 million light-years away. Looking farther means looking back in time, all the way to the glow left over from the Big Bang.": "最近的大星系仙女座星系在 250 萬光年外。看得越遠，就是看到越久以前，一直到大霹靂留下的餘暉。", "Large Magellanic Cloud · 160,000 light-years": "大麥哲倫雲 · 16 萬光年", "Andromeda · 2.5 million light-years": "仙女座星系 · 250 萬光年", "Afterglow of the Big Bang": "大霹靂的餘暉", "MoM-z14": "MoM-z14", "The farthest galaxy ever confirmed. The Webb telescope sees it as it was just 280 million years after the Big Bang. Its light traveled about 13.5 billion years to reach us.": "目前確認最遠的星系。韋伯望遠鏡看到的是它在大霹靂後僅 2.8 億年時的樣子。它的光走了大約 135 億年才到達我們這裡。", "Great Dark Spot": "大暗斑", "Beat the Great Dark Spot": "打敗大暗斑", "A giant storm on Neptune pulls planets in and swallows your biggest one every few shots, which heals it.": "海王星上的巨大風暴會把星球吸過去，每隔幾發就吞掉你最大的星球，並幫自己回血。",
     ...ZH_PLANETS,
@@ -4680,6 +5104,8 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     [/^Space facts found: (\d+)\/(\d+)$/, '找到的太空知識：$1/$2'],
     [/^New sighting: (.+)$/, (m, n) => '新發現：' + (ZH[n] || n)], [/^Spotted: (.+)$/, (m, n) => '又看到了：' + (ZH[n] || n)],
     [/^Seen (\d+) times$/, '看過 $1 次'],
+    [/^You own (\d+)$/, '你有 $1 個'], [/^New power-up high score on (.+)!$/, (m, n) => zhWord(n) + '的新道具紀錄！'],
+    [/^Remove (.+)$/, (m, n) => '移除' + (ZH[n] || n)],
     [/^Rare things fly across the sky while you play\. Tap one to catch it\. Found (\d+) of (\d+)\.$/, '玩的時候會有稀有的東西飛過天空，點一下就能抓到。已找到 $1/$2 個。'],
     [/^([\d,]+) coins$/, '$1 金幣'], [/^\+([\d,]+) coins$/, '+$1 金幣'], [/^([\d,]+) coins for a replay$/, '$1 金幣（重玩）'],
     [/^([\d,]+) coins earned this game$/, '本局獲得 $1 金幣'], [/^([\d,]+) of (\d+) earned\. Each one pays coins the first time\.$/, '已獲得 $1/$2 個。每個徽章第一次獲得時會獎勵金幣。'],
@@ -4792,7 +5218,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   function openProfile() { showScreen('profile'); renderProfile(); }
   function renderProfile() {
     $('profCoins').textContent = fmt(store.coins);
-    for (const t of ['records', 'ach', 'album']) $('ptab_' + t).setAttribute('aria-selected', t === profTab);
+    for (const t of ['records', 'ach', 'album', 'pu']) $('ptab_' + t).setAttribute('aria-selected', t === profTab);
     const st = store.stats, got = ACH.filter(a => store.ach[a.id]).length, cleared = LEVELS.filter((lv, i) => store.adv[i]).length;
     let html = '';
     if (profTab === 'records') {
@@ -4802,7 +5228,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
       html += '<div><div class="pname">Classic high scores</div><div class="maprows">' + Object.keys(MAPS).filter(id => showInShop('map:' + id)).map(id => {
         const have = owned('map:' + id);
         return '<div class="panel maprow' + (have ? '' : ' locked') + '"><img src="' + mapThumb(id) + '" alt=""><div><div class="nm">' + MAPS[id].name + '</div>' +
-          '<div class="ds">' + (have ? 'Best <b>' + fmt(bestOf(id)) + '</b>' : '🔒 Locked · <i class="coin"></i>' + fmt(MAPS[id].price)) + '</div></div>' +
+          '<div class="ds">' + (have ? 'Best <b>' + fmt(bestOf(id)) + '</b><br>With power-ups <b>' + fmt(bestPow(id)) + '</b>' : '🔒 Locked · <i class="coin"></i>' + fmt(MAPS[id].price)) + '</div></div>' +
           (have ? '<span></span>' : '<button type="button" class="btn" id="pshop_' + id + '" data-goshop="1">Shop</button>') + '</div>';
       }).join('') + '</div></div>';
       const nextLv = LEVELS.findIndex((lv, i) => !store.adv[i]);
@@ -4810,6 +5236,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         '<p class="ds">' + (nextLv < 0 ? 'Every level cleared!' : 'Next up: level ' + (nextLv + 1) + ' · ' + LEVELS[nextLv].name) + '</p>' +
         '<div class="dots">' + LEVELS.map((lv, i) => '<span class="dot' + (store.adv[i] ? ' done' : '') + (isBoss(lv) ? ' boss' : '') + '">' + (i + 1) + '</span>').join('') + '</div></div></div>';
     } else if (profTab === 'album') html += albumHtml();
+    else if (profTab === 'pu') html += puInventoryHtml();
     else {
       html += '<p class="shop-note">' + got + ' of ' + ACH.length + ' earned. Each one pays coins the first time.</p><div class="grid2">' + ACH.map(a => {
         const open = !!store.ach[a.id], hide = a.secret && !open;
@@ -4826,7 +5253,8 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   $('profList').addEventListener('click', ev => {
     const sc = ev.target.closest('[data-sight]');
     if (sc) { showSight(sc.dataset.sight); return; }
-    if (ev.target.closest('[data-goshop]')) { shopTab = 'maps'; openShop(); }
+    const gs = ev.target.closest('[data-goshop]');
+    if (gs) { shopTab = gs.dataset.goshop === 'pu' ? 'power' : 'maps'; openShop(); }
   });
 
   // ---------- Settings sheet ----------
@@ -4886,10 +5314,14 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     if ($('optRestart')) twoTap($('optRestart'), () => { newGame(); closeSettings(); });
     if ($('optRetry')) twoTap($('optRetry'), () => { closeSettings(); enterLevel(levelIdx); });
     if ($('optLevels')) $('optLevels').addEventListener('click', openAdventure);
-    if ($('optReset')) twoTap($('optReset'), () => { store.bests = {}; store.runs = {}; save(); refreshHome(); $('optReset').textContent = 'High scores reset'; });
+    if ($('optReset')) twoTap($('optReset'), () => {
+      save();      // power-ups waiting in unfinished games go back to the inventory
+      for (const k in store.runs) for (const sl of (store.runs[k] && store.runs[k].pu) || []) if (!sl.used) store.pu[sl.id] = clamp(puHave(sl.id) + 1, 0, PU_HARD);
+      puSlots = []; renderPuBar();
+      store.bests = {}; store.bestsP = {}; store.runs = {}; save(); refreshHome(); $('optReset').textContent = 'High scores reset'; });
     if ($('optWipe')) twoTap($('optWipe'), () => {
       Object.assign(store, {
-        map: 'open', bests: {}, runs: {}, sand: { ...DEFAULTS }, coins: 0, owned: {}, adv: [], eggs: {}, album: {}, ach: {}, stats: freshStats(),
+        map: 'open', bests: {}, runs: {}, sand: { ...DEFAULTS }, coins: 0, owned: {}, adv: [], eggs: {}, album: {}, pu: {}, bestsP: {}, gifts: {}, ach: {}, stats: freshStats(),
         equip: { skins: TIERS.map(() => 'classic'), faces: TIERS.map(() => 'classic'), bg: 'night', track: 'sunny' }
       });
       pick = 0; faceTarget = 'all'; curMap = 'open';
@@ -4924,6 +5356,12 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   let aiming = false;
   canvas.addEventListener('pointerdown', ev => {
     ev.preventDefault();
+    if (puMode && !over && !paused) {          // a power-up is waiting for a planet
+      const r = canvas.getBoundingClientRect();
+      puTapWorld((ev.clientX - r.left) / r.width * VW - OX, (ev.clientY - r.top) / r.height * (VH + OY) - OY);
+      return;
+    }
+    if (!$('puPick').hidden) $('puPick').hidden = true;
     if (trySpot(ev)) return;
     aiming = true; aimFrom(ev);
     try { canvas.setPointerCapture(ev.pointerId); } catch (e) {}
@@ -4959,7 +5397,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   $('btnGear').addEventListener('click', openSettings);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { save(); quietAudio(); }
-    else wakeAudio();
+    else { wakeAudio(); checkGifts(); }
   });
   window.addEventListener('pagehide', () => { save(); quietAudio(); });
   window.addEventListener('pageshow', () => { if (!document.hidden) wakeAudio(); });
@@ -4992,12 +5430,13 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     buildSprites();
     refreshHome(); fitHome();
     checkStanding();
+    checkGifts();
     const refit = () => { if (screen === 'home') fitHome(); else if (screen === 'game') fit(); };
     if (window.ResizeObserver) { new ResizeObserver(refit).observe(stage); new ResizeObserver(refit).observe($('home')); }
     window.addEventListener('resize', refit);
     requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
     if (typeof window.__PS_TEST === 'function') {
-      window.__PS_TEST({ forceSight(id, t) { sight = { s: SIGHT_BY[id], dir: 1, t: t || 3, dur: 8, y0: 160, wob: 0, caught: false, ct: 0 }; }, sightAt: () => { if (!sight) return null; const p = sightPos(sight), r = canvas.getBoundingClientRect(), k = r.width / VW; return { x: r.left + (p.x + OX) * k, y: r.top + (p.y + OY) * k, caught: sight.caught }; }, album: () => store.album, coins: () => store.coins, layout: () => { const r = canvas.getBoundingClientRect(), k = r.width / VW, t0 = r.top + OY * k; return { W, H, VH, OX, OY, k, cw: r.width, ch: r.height, top: t0, left: r.left + OX * k, iw: innerWidth, ih: innerHeight, launchBottom: t0 + (launchY() + TIERS[cur].bottom) * k, worldBottom: t0 + H * k, hudBottom: document.querySelector(".hint").getBoundingClientRect().bottom }; }, buildSprites, setScore: v => { score = v; hud(); }, setLang, zh, fitHud, failLevel, winLevel, endGame, setHoliday: v => { devHoliday = v; homeSprites = null; refreshHome(); }, holidayLook, art: (t, sk, f) => { const c = document.createElement('canvas'); c.width = c.height = 240; const g = c.getContext('2d'), q = 64 / TIERS[t].r; g.setTransform(q, 0, 0, q, 120, 130); drawPlanet(g, t, sk, f || 'classic'); return c.toDataURL(); }, armTimer: n => { const b = bodies.filter(p => !p.fly && !p.taken && p.t === 0).sort((p, q) => q.y - p.y)[0]; if (!b) return null; b.fused = true; b.fuse = n; return { x: b.x, y: b.y }; }, setCur: t => { cur = t; ready = true; }, peekGems: () => gems.filter(g => !g.got).map(g => ({ x: g.x, y: g.y })), peekRocks: () => rocks.filter(o => o.brk).map(o => ({ x: o.x, y: o.y, r: o.r })), LEVELS, quietAudio, wakeAudio, toastText: () => $('toast').textContent, toastOn: () => $('toast').classList.contains('go'), toast, peekBodies: () => bodies.map(b => ({ x: b.x, y: b.y, t: b.t, fly: b.fly, ice: !!b.ice, fuse: b.fused ? Math.max(0, b.fuse) + 1 : 0 })), peekCur: () => cur, badge, ACH, MAPS, TRACKS, songPlan, loopSeconds, audio, audioWake, setTrack, scheduleBar, enterGame, enterLevel, openAdventure, openMaps, openProfile, playMap, award, profTab(t) { profTab = t; renderProfile(); }, step, openSettings, openShop, shopTap, store, start() { hideCard(); hold = false; }, peek: () => ({ over, hold, made: made.slice(), shotsLeft, timeLeft, bossHp: boss && boss.hp, done: store.adv.slice(), title: ($('overCard').querySelector('h2') || {}).textContent }), tab(t) { shopTab = t; renderShop(); }, shoot(x) { aimX = x; launch(); }, aim(x) { aimX = x; }, get: () => ({ score, over, n: bodies.length, best: bestOf(curMap), map: curMap }) });
+      window.__PS_TEST({ pu: { grant: grantPower, slots: ids => { puSlots = ids.map(id => ({ id, used: false })); renderPuBar(); }, use: usePower, tap: (x, y) => puTapWorld(x, y), pick: t => { const i = puSlots.findIndex(s => s.id === 'pick' && !s.used); cur = t; usedPower(i); }, picker: () => { pickDraft = []; openPicker(); }, draft: ids => { pickDraft = ids.slice(); openPicker(); }, start: startWithPowers, fail: () => fail('full'), state: () => ({ slots: puSlots, runPowered, doubleT, magnetT, nudgeT, shotMod, puMode: !!puMode, bests: store.bests, bestsP: store.bestsP, inv: store.pu, coins: store.coins, paidTo, score, cur, next, hold, over, n: bodies.length, ts: bodies.map(b => b.t) }), setBodies: list => { bodies = list.map(([x, y, t]) => { const b = makeBody(x, y, t); b.age = 5; return b; }); }, bodies: () => bodies.map(b => ({ x: b.x, y: b.y, t: b.t, ghost: !!b.ghost, fly: b.fly })) }, forceSight(id, t) { sight = { s: SIGHT_BY[id], dir: 1, t: t || 3, dur: 8, y0: 160, wob: 0, caught: false, ct: 0 }; }, sightAt: () => { if (!sight) return null; const p = sightPos(sight), r = canvas.getBoundingClientRect(), k = r.width / VW; return { x: r.left + (p.x + OX) * k, y: r.top + (p.y + OY) * k, caught: sight.caught }; }, album: () => store.album, coins: () => store.coins, layout: () => { const r = canvas.getBoundingClientRect(), k = r.width / VW, t0 = r.top + OY * k; return { W, H, VH, OX, OY, k, cw: r.width, ch: r.height, top: t0, left: r.left + OX * k, iw: innerWidth, ih: innerHeight, launchBottom: t0 + (launchY() + TIERS[cur].bottom) * k, worldBottom: t0 + H * k, hudBottom: document.querySelector(".hint").getBoundingClientRect().bottom }; }, buildSprites, setScore: v => { score = v; hud(); }, setLang, zh, fitHud, failLevel, winLevel, endGame, setHoliday: v => { devHoliday = v; homeSprites = null; refreshHome(); }, holidayLook, art: (t, sk, f) => { const c = document.createElement('canvas'); c.width = c.height = 240; const g = c.getContext('2d'), q = 64 / TIERS[t].r; g.setTransform(q, 0, 0, q, 120, 130); drawPlanet(g, t, sk, f || 'classic'); return c.toDataURL(); }, armTimer: n => { const b = bodies.filter(p => !p.fly && !p.taken && p.t === 0).sort((p, q) => q.y - p.y)[0]; if (!b) return null; b.fused = true; b.fuse = n; return { x: b.x, y: b.y }; }, setCur: t => { cur = t; ready = true; }, peekGems: () => gems.filter(g => !g.got).map(g => ({ x: g.x, y: g.y })), peekRocks: () => rocks.filter(o => o.brk).map(o => ({ x: o.x, y: o.y, r: o.r })), LEVELS, quietAudio, wakeAudio, toastText: () => $('toast').textContent, toastOn: () => $('toast').classList.contains('go'), toast, peekBodies: () => bodies.map(b => ({ x: b.x, y: b.y, t: b.t, fly: b.fly, ice: !!b.ice, fuse: b.fused ? Math.max(0, b.fuse) + 1 : 0 })), peekCur: () => cur, badge, ACH, MAPS, TRACKS, songPlan, loopSeconds, audio, audioWake, setTrack, scheduleBar, enterGame, enterLevel, openAdventure, openMaps, openProfile, playMap, award, profTab(t) { profTab = t; renderProfile(); }, step, openSettings, openShop, shopTap, store, start() { hideCard(); hold = false; }, peek: () => ({ over, hold, made: made.slice(), shotsLeft, timeLeft, bossHp: boss && boss.hp, done: store.adv.slice(), title: ($('overCard').querySelector('h2') || {}).textContent }), tab(t) { shopTab = t; renderShop(); }, shoot(x) { aimX = x; launch(); }, aim(x) { aimX = x; }, get: () => ({ score, over, n: bodies.length, best: bestOf(curMap), map: curMap }) });
     }
   }
 
