@@ -88,8 +88,22 @@ body {
   align-items: center;
   justify-content: center;
   gap: 18px;
-  padding: calc(20px + env(safe-area-inset-top)) calc(28px + env(safe-area-inset-right))
+  padding: calc(96px + env(safe-area-inset-top)) calc(28px + env(safe-area-inset-right))     /* room for the corner buttons */
            calc(20px + env(safe-area-inset-bottom)) calc(28px + env(safe-area-inset-left));
+}
+@media (max-height: 760px) {           /* short phones (iPhone SE): a bit tighter so the corner buttons never touch the logo */
+  .home-inner { gap: 12px; padding-top: calc(92px + env(safe-area-inset-top)); }
+  .home-inner .logo { font-size: clamp(44px, 9.5vh, 64px); }
+  .home-inner .btn.big { padding: 11px 20px; font-size: 22px; }
+  .home-buttons { gap: 12px; }
+}
+@media (max-height: 620px) {           /* the smallest phones */
+  .home-inner { gap: 8px; padding-top: calc(80px + env(safe-area-inset-top)); }
+  .home-inner .logo { font-size: 40px; margin: 0; }
+  .home-inner .btn.big { padding: 8px 18px; font-size: 20px; }
+  .home-buttons { gap: 9px; }
+  .home-buttons .btn.holiday-pill { padding: 8px 14px 6px; }
+  .tb-c { width: 48px; height: 48px; }
 }
 .logo {
   font-family: var(--display);
@@ -434,6 +448,35 @@ canvas#c {                         /* the sky fills the whole screen; the board 
 @media (prefers-reduced-motion: no-preference) { .hp-gift { animation: giftwiggle 2.4s ease-in-out infinite; } }
 @keyframes giftwiggle { 0%, 80%, 100% { transform: rotate(0); } 85% { transform: rotate(-10deg); } 90% { transform: rotate(9deg); } 95% { transform: rotate(-5deg); } }
 .card .st.warn { color: var(--pink); }
+.chest { position: fixed; inset: 0; z-index: 85; background: rgba(10,6,30,0.86); touch-action: none; }
+.chest[hidden] { display: none; }
+.chest canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.chest-reveal { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(86vw, 340px); padding: 22px 18px 16px; background: #2b2068 !important; opacity: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; color: var(--star); }
+.chest-reveal[hidden] { display: none; }
+@media (prefers-reduced-motion: no-preference) { .chest-reveal { animation: crpop 0.35s cubic-bezier(.2,1.6,.4,1); } }
+@keyframes crpop { from { transform: translate(-50%, -50%) scale(0.4); opacity: 0; } }
+.chest-reveal h3 { margin: 0; font-size: 26px; }
+.chest-reveal p { margin: 0; font-size: 14px; }
+.cr-chest { font-weight: 700; color: var(--sun); letter-spacing: 0.04em; }
+.cr-own { font-weight: 700; color: var(--sun); } .cr-own.overflow { color: #ff7eb6; }
+.cr-tap { opacity: 0.7; margin-top: 8px !important; }
+.pu-ico.huge { width: 110px; height: 110px; padding: 14px; border-width: 4px; }
+.qlist { display: flex; flex-direction: column; gap: 10px; }
+.qrow { display: flex; align-items: center; gap: 12px; padding: 10px 12px; text-align: left; }
+.qrow.done { opacity: 0.75; }
+.qchest { width: 46px; height: 42px; flex: none; }
+.qmain { flex: 1; min-width: 0; }
+.qtier { font-size: 11px; font-weight: 700; color: var(--sun); letter-spacing: 0.05em; }
+.qtext { font-weight: 700; }
+.qbar { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.15); margin: 6px 0 3px; overflow: hidden; }
+.qbar i { display: block; height: 100%; background: var(--pink); border-radius: 4px; }
+.qrow.done .qbar i { background: #6fdc8c; }
+.qprog { font-size: 12px; opacity: 0.8; }
+.qodds { font-size: 12px; line-height: 1.5; opacity: 0.85; margin: 12px 0; }
+.qodds b { display: block; color: var(--sun); }
+.bk-h { font-weight: 700; color: var(--sun); margin-top: 4px; }
+.note.warn { color: var(--pink); font-weight: 700; }
+#bkBox { display: flex; flex-direction: column; gap: 8px; }
 .track { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; padding: 10px 12px 12px; }
 .track .nm { font-family: var(--display); font-size: 15px; }
 .track .ds { font-size: 12px; color: var(--muted); font-weight: 500; }
@@ -441,11 +484,19 @@ canvas#c {                         /* the sky fills the whole screen; the board 
 .track.on { border-color: var(--sun); background: #4a3ca0; }
 /* ---------- maps, profile, achievements ---------- */
 /* ".btn.icon" sets a 52px width with no padding; this selector is more specific so the button stays a true circle */
-.btn.icon.profile-btn {
-  position: absolute; z-index: 2; top: calc(14px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left));
-  width: 58px; height: 58px; border-radius: 50%; padding: 4px; background: var(--blue); margin: 0;
-}
-.profile-btn img { width: 100%; height: 100%; display: block; object-fit: contain; }
+/* Home screen corners: Profile on the left, Quests and Settings on the right, each with a label */
+.corner { position: absolute; z-index: 2; top: calc(12px + env(safe-area-inset-top)); display: flex; gap: 10px; }
+.corner.left { left: calc(14px + env(safe-area-inset-left)); }
+.corner.right { right: calc(14px + env(safe-area-inset-right)); }
+.corner.left { flex-direction: column; gap: 8px; }     /* Profile, with Quests under it */
+.tb { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: 0; padding: 0; cursor: pointer; color: var(--star); -webkit-tap-highlight-color: transparent; }
+.tb-c { position: relative; width: 62px; height: 62px; border-radius: 50%; display: grid; place-items: center; background: var(--sun); border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink); }
+.tb:active .tb-c { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.tb-c.profile-c { background: var(--blue); padding: 4px; }
+.tb-c.profile-c img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.tb-c.quest-c { background: #c3a6ff; }
+.tb-c b { position: absolute; top: -6px; right: -10px; font-size: 11px; line-height: 18px; padding: 0 5px; border-radius: 9px; background: var(--pink); color: var(--ink); border: 2px solid var(--ink); }
+.tb-l { font-size: 13px; font-weight: 700; text-shadow: 0 1px 2px var(--ink); }
 .card img.board { max-width: none; width: 100%; aspect-ratio: 2 / 3; border-radius: 10px; border: 2px solid var(--ink); }
 .card .ds { font-size: 11px; color: var(--muted); font-weight: 500; line-height: 1.3; text-align: center; }
 .card.locked img { opacity: 0.55; }
@@ -528,7 +579,13 @@ canvas#c {                         /* the sky fills the whole screen; the board 
 
 <section class="screen on" id="home">
   <canvas id="homeCanvas" aria-hidden="true"></canvas>
-  <button class="btn icon profile-btn" id="btnProfile" type="button" aria-label="Profile"><img id="avatar" alt=""></button>
+  <div class="corner left">
+    <button class="tb" id="btnProfile" type="button"><span class="tb-c profile-c"><img id="avatar" alt=""></span><span class="tb-l">Profile</span></button>
+    <button class="tb" id="btnQuests" type="button"><span class="tb-c quest-c"><svg viewBox="0 0 40 36" width="40" height="36" aria-hidden="true"><rect x="4" y="15" width="32" height="18" rx="3" fill="#ffd45e" stroke="#2a1650" stroke-width="2.5"/><path d="M3 15 Q3 5 20 5 Q37 5 37 15 Z" fill="#ffd45e" stroke="#2a1650" stroke-width="2.5" stroke-linejoin="round"/><rect x="17" y="5" width="6" height="28" fill="#b57a12"/><rect x="4" y="18" width="32" height="4" fill="#b57a12"/><rect x="16" y="12" width="8" height="8" rx="2" fill="#fff3b0" stroke="#2a1650" stroke-width="2"/></svg><b id="questCount"></b></span><span class="tb-l">Quests</span></button>
+  </div>
+  <div class="corner right">
+    <button class="tb" id="btnHomeSettings" type="button"><span class="tb-c"><svg viewBox="0 0 24 24" width="33" height="33" aria-hidden="true"><path fill="#2a1650" d="M10.3 2h3.4l.5 2.6 1.7.7 2.2-1.5 2.4 2.4-1.5 2.2.7 1.7 2.6.5v3.4l-2.6.5-.7 1.7 1.5 2.2-2.4 2.4-2.2-1.5-1.7.7-.5 2.6h-3.4l-.5-2.6-1.7-.7-2.2 1.5-2.4-2.4 1.5-2.2-.7-1.7L2 13.7v-3.4l2.6-.5.7-1.7-1.5-2.2 2.4-2.4 2.2 1.5 1.7-.7z"/><circle cx="12" cy="12" r="3.3" fill="#ffd45e"/></svg></span><span class="tb-l">Settings</span></button>
+  </div>
   <div class="home-inner">
     <h1 class="logo"><span class="l1">Planet</span><span class="l2">Slide</span></h1>
     <div class="pills">
@@ -542,17 +599,17 @@ canvas#c {                         /* the sky fills the whole screen; the board 
         <button class="btn blue" id="btnSandbox" type="button">Sandbox</button>
         <button class="btn blue" id="btnShop" type="button">Shop</button>
       </div>
-      <button class="btn ghost" id="btnHomeSettings" type="button">Settings</button>
       <button class="btn holiday-pill" id="btnHoliday" type="button" hidden aria-label="Holiday shop, open until Dec 26">
         <svg class="hp-tree" viewBox="0 0 32 40" width="26" height="32" aria-hidden="true"><path d="M16 5 L27 20 H21 L29 31 H3 L11 20 H5 Z" fill="#2fa152" stroke="#120d2e" stroke-width="2" stroke-linejoin="round"/><rect x="13" y="31" width="6" height="6" rx="1" fill="#8a5a33" stroke="#120d2e" stroke-width="2"/><path d="M16 0.5 l1.6 3.3 3.6.5-2.6 2.5.6 3.6-3.2-1.7-3.2 1.7.6-3.6-2.6-2.5 3.6-.5z" fill="#ffd45e"/><circle cx="12" cy="16" r="1.8" fill="#ff4f6a"/><circle cx="20" cy="23" r="1.8" fill="#7fd0ff"/><circle cx="10" cy="27" r="1.8" fill="#ffd45e"/><circle cx="22" cy="28" r="1.8" fill="#ff4f6a"/></svg>
         <span class="hp-text"><b>Holiday shop</b><small>Open until Dec 26</small></span>
         <svg class="hp-gift" viewBox="0 0 30 30" width="24" height="24" aria-hidden="true"><rect x="3" y="11" width="24" height="16" rx="2" fill="#ffd45e" stroke="#120d2e" stroke-width="2"/><rect x="1.5" y="7" width="27" height="6" rx="2" fill="#ffe58a" stroke="#120d2e" stroke-width="2"/><rect x="13" y="7" width="4" height="20" fill="#e8394a"/><path d="M15 7 C10 0 5 4 9 7 M15 7 C20 0 25 4 21 7" fill="none" stroke="#e8394a" stroke-width="2.5"/></svg>
       </button>
     </div>
-    <div class="ver">Version 1.30</div>
+    <div class="ver">Version 1.36</div>
   </div>
 </section>
 
+<div class="chest" id="chest" hidden><canvas id="chestCv" aria-hidden="true"></canvas><div class="panel chest-reveal" id="chestReveal" hidden></div></div>
 <div id="safeProbe"></div>
 <div id="rotate" role="alert"><div>Turn your phone upright to play</div></div>
 <section class="screen" id="game">
@@ -762,7 +819,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   const store = {
     map: 'open', bests: {}, runs: {},       // classic: chosen map, high score per map, game in progress per map
     opts: { music: true, sfx: true, holiday: true, lang: null }, sand: { ...DEFAULTS },
-    coins: 0, owned: {}, adv: [], eggs: {}, album: {}, pu: {}, bestsP: {}, gifts: {}, ach: {}, stats: freshStats(),
+    coins: 0, owned: {}, adv: [], eggs: {}, album: {}, pu: {}, bestsP: {}, gifts: {}, quests: null, questLog: {}, chests: [], ach: {}, stats: freshStats(),
     equip: { skins: TIERS.map(() => 'classic'), faces: TIERS.map(() => 'classic'), bg: 'night', track: 'sunny' }
   };
   let screen = 'home';           // 'home', 'game', 'shop' or 'adv' (the level list)
@@ -873,7 +930,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   const puCount = n => '<span class="ct' + (n > PU_MAX ? ' overflow' : '') + '">×' + n + '</span>';
 
   // ----- the power-ups brought into the current game -----
-  let puSlots = [], runPowered = false, paidTo = 0;
+  let puSlots = [], runPowered = false, paidTo = 0, questTick = 0;
   let puMode = null;          // waiting for a planet tap: { i, first }
   let shotMod = null;         // which slot is changing the next shot
   let doubleT = 0, magnetT = 0, nudgeT = 0, undoSnap = null, pickDraft = [], puShown = '';
@@ -1155,6 +1212,14 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(store)); } catch (e) { /* storage unavailable: the game still plays */ }
     dirty = false;
   }
+  function realItem(id) {         // only shop items that exist can be marked as owned
+    if (typeof id !== 'string') return false;
+    const [kind, a, b] = id.split(':');
+    if (kind === 'skin') return !!(TIERS[+a] && /^\d$/.test(a) && SKINS[b] && Object.prototype.hasOwnProperty.call(SKINS, b));
+    const table = { set: SETS, face: FACES, bg: BGS, wall: WALLS, map: MAPS, music: TRACKS }[kind];
+    return !!(table && Object.prototype.hasOwnProperty.call(table, a));
+  }
+  let justRestored = false;
   function loadStore(hotData) {
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) {}
@@ -1166,14 +1231,24 @@ canvas#c {                         /* the sky fills the whole screen; the board 
       } catch (e) {}
     }
     if (!saved) return;
+    justRestored = saved._restored === 1;
     if (saved.bests && typeof saved.bests === 'object') {
       for (const k in saved.bests) if (MAPS[k] && Number.isFinite(saved.bests[k])) store.bests[k] = clamp(saved.bests[k] | 0, 0, SCORE_CAP);
     } else if (Number.isFinite(saved.best)) store.bests.open = clamp(saved.best | 0, 0, SCORE_CAP);   // older saves had one best
-    if (saved.gifts && typeof saved.gifts === 'object') for (const k in saved.gifts) if (saved.gifts[k]) store.gifts[k] = 1;
+    if (saved.quests && typeof saved.quests === 'object' && /^\d{4}-\d\d-\d\d$/.test(saved.quests.day) && Array.isArray(saved.quests.list) &&
+        saved.quests.list.length === 3 && saved.quests.list.every((x, i) => x && QUEST_BY[x.id] && QUEST_BY[x.id].tier === i))
+      store.quests = { day: saved.quests.day, list: saved.quests.list.map(x => ({ id: x.id, prog: clamp(Math.floor(+x.prog) || 0, 0, QUEST_BY[x.id].goal), done: !!x.done })) };
+    if (saved.questLog && typeof saved.questLog === 'object') for (const k of Object.keys(saved.questLog).sort().slice(-60)) {
+      const l = saved.questLog[k];
+      if (/^\d{4}-\d\d-\d\d$/.test(k) && Array.isArray(l) && l.length === 3 && l.every((x, i) => x && QUEST_BY[x.id] && QUEST_BY[x.id].tier === i))
+        store.questLog[k] = l.map(x => ({ id: x.id, prog: clamp(Math.floor(+x.prog) || 0, 0, QUEST_BY[x.id].goal), done: !!x.done }));
+    }
+    if (Array.isArray(saved.chests)) store.chests = saved.chests.filter(c => c && [0, 1, 2].includes(c.tier) && PU_BY[c.pu]).slice(0, 20).map(c => ({ tier: c.tier, pu: c.pu }));
+    if (saved.gifts && typeof saved.gifts === 'object') for (const k in saved.gifts) if (saved.gifts[k] && GIFTS.some(g => g.id === k)) store.gifts[k] = 1;
     if (saved.bestsP && typeof saved.bestsP === 'object') for (const k in saved.bestsP) if (MAPS[k] && Number.isFinite(saved.bestsP[k])) store.bestsP[k] = clamp(saved.bestsP[k] | 0, 0, SCORE_CAP);
     if (saved.pu && typeof saved.pu === 'object') for (const k in saved.pu) if (PU_BY[k] && Number.isFinite(+saved.pu[k])) store.pu[k] = clamp(Math.floor(+saved.pu[k]), 0, PU_HARD);
     if (saved.runs && typeof saved.runs === 'object') {
-      for (const k in saved.runs) if (MAPS[k] && saved.runs[k] && Array.isArray(saved.runs[k].bodies)) store.runs[k] = saved.runs[k];
+      for (const k in saved.runs) if (MAPS[k] && saved.runs[k] && Array.isArray(saved.runs[k].bodies) && saved.runs[k].bodies.length <= 300) store.runs[k] = saved.runs[k];
     } else if (saved.run && Array.isArray(saved.run.bodies)) store.runs.open = saved.run;
     if (saved.ach && typeof saved.ach === 'object') for (const a of ACH) if (saved.ach[a.id]) store.ach[a.id] = saved.ach[a.id];
     if (saved.stats && typeof saved.stats === 'object') {
@@ -1186,11 +1261,11 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     if (saved.sand) for (const [key, , lo, hi] of SLIDERS) {
       if (Number.isFinite(saved.sand[key])) store.sand[key] = clamp(saved.sand[key], lo, hi);
     }
-    if (Number.isFinite(saved.coins)) store.coins = Math.max(0, saved.coins | 0);
+    if (Number.isFinite(saved.coins)) store.coins = clamp(Math.floor(saved.coins), 0, 999999999);
     if (Array.isArray(saved.adv)) store.adv = saved.adv.map(Boolean);
-    if (saved.eggs && typeof saved.eggs === 'object') for (const k in saved.eggs) if (saved.eggs[k]) store.eggs[k] = 1;
-    if (saved.album && typeof saved.album === 'object') for (const k in saved.album) if (+saved.album[k] > 0) store.album[k] = Math.floor(+saved.album[k]);
-    if (saved.owned && typeof saved.owned === 'object') for (const id in saved.owned) if (saved.owned[id]) store.owned[id] = true;
+    if (saved.eggs && typeof saved.eggs === 'object') for (const k in saved.eggs) if (saved.eggs[k] && ALL_EGGS.some(e => e.id === k)) store.eggs[k] = 1;
+    if (saved.album && typeof saved.album === 'object') for (const k in saved.album) if (SIGHT_BY[k] && +saved.album[k] > 0) store.album[k] = Math.min(999999, Math.floor(+saved.album[k]));
+    if (saved.owned && typeof saved.owned === 'object') for (const id in saved.owned) if (saved.owned[id] && realItem(id)) store.owned[id] = true;
     if (saved.equip) {      // only keep choices that still exist and are owned
       const e = saved.equip;
       if (Array.isArray(e.skins)) e.skins.forEach((sk, t) => { if (TIERS[t] && SKINS[sk] && owned('skin:' + t + ':' + sk)) store.equip.skins[t] = sk; });
@@ -1617,6 +1692,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     v = Math.min(SCORE_CAP, v);
     if (mode === 'classic' && doubleT > 0 && v > score) v = Math.min(SCORE_CAP, score + (v - score) * 2);   // Double points
     // coins are paid only for points above the best this game has reached, so an Undo can't pay twice
+    if (mode === 'classic' && v > score) { questEv('points', v - score); questEv('best', v); }
     if (mode === 'classic' && v > paidTo) { store.coins += Math.floor(v / COIN_EVERY) - Math.floor(paidTo / COIN_EVERY); paidTo = v; }
     score = v;
     if (mode === 'classic') scoreAch(v);
@@ -1758,7 +1834,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     enterGame('classic');
   }
   function goHome() {
-    setTimeout(checkGifts, 0);
+    setTimeout(checkGifts, 0); setTimeout(playChests, 400);
     if (screen === 'game') { bumpBest(); save(); }
     endPreview();
     clearToast();
@@ -1790,6 +1866,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     setTimeout(() => { showGift(gf); giftBusy = false; }, 600);
   }
   function refreshHome() {
+    if ($('questCount')) $('questCount').textContent = questsDone() + '/3';
     $('homeBest').textContent = fmt(topScore());
     $('homeCoins').textContent = fmt(store.coins);
     const av = $('avatar');
@@ -2593,6 +2670,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     audioWake(); sfx.ach();
     sparkle(p.x, p.y, 18, 160);
     toast(first ? 'New sighting: ' + s.name : 'Spotted: ' + s.name);
+    questEv('spot');
     award('spot1');
     const have = YEAR_ROUND.filter(x => store.album[x.id]).length;
     if (have >= 6) award('spot6');
@@ -2646,6 +2724,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
       undoSnap = { bodies: bodies.filter(o => !o.taken && !o.dead).map(o => ({ x: o.x, y: o.y, t: o.t })), score, cur, next, madeSun };
     const b = makeBody(clamp(aimX, pad + T.left, W - pad - T.right), launchY(), cur);
     b.fly = true; b.fresh = clock + 3;
+    questEv('shot');
     if (mode === 'classic' && shotMod !== null && puSlots[shotMod]) { b[puSlots[shotMod].id] = true; usedPower(shotMod); }   // b.ghost / b.bomb / b.wild
     bodies.push(b);
     ready = false; readyAt = clock + RELOAD; idleT = 0;
@@ -2690,6 +2769,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
       born.push(nb);
       setScore(score + 2 ** t);
       if (mode !== 'sandbox') { onMerge(t); if (a.close || b.close) award('close'); }
+      questEv('merge'); questEv('make', t);
       if (a.fused || b.fused) { toast('Defused!'); if (TW && TW.fuse) fuseNext = shotCount + TW.fuse.every; }
       const reach = TIERS[t].r + 16;   // a merge right next to a cracked rock breaks it
       const broke = rocks.filter(o => o.brk && Math.hypot(o.x - x, o.y - y) < o.r + reach);
@@ -2849,7 +2929,14 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     }
 
     clock += DT;
-    if (mode === 'classic' && !over) powerTick();
+    if (mode === 'classic' && !over) {
+      powerTick();
+      if (++questTick % 15 === 0) {        // most planets, and ringed planets, on the board at once
+        let n = 0, rg = 0;
+        for (const b of bodies) if (!b.fly && !b.taken && !b.dead && !b.ghost) { n++; if (TIERS[b.t].ring) rg++; }
+        questEv('onboard', n); questEv('rings', rg);
+      }
+    }
     if (mode !== 'sandbox') {
       // Losing: only time spent NOT MOVING past the line counts. Each planet drops an anchor where it
       // is; while it stays within STILL_RADIUS of the anchor its still-timer runs, and the moment it
@@ -2926,6 +3013,8 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     const isBest = score > 0 && score >= bestNow();
     bumpBest();
     returnUnused(); puMode = null; shotMod = null; $('puPick').hidden = true;
+    questEv('finish');
+    setTimeout(playChests, 700);
     store.stats.games++;
     if (store.stats.games >= 25) award('games');
     if (score < 100) award('tiny');
@@ -4584,10 +4673,12 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   ACH.forEach(a => { ACH_BY[a.id] = a; });
   const achQueue = [];
   let achBusy = false;
+  let quietAwards = false;
   function award(id) {
     const a = ACH_BY[id];
     if (!a || store.ach[id]) return;
     store.ach[id] = Date.now();
+    if (quietAwards) return;        // restoring a backup: record it, but no coins and no banner
     store.coins += a.coins;
     save();
     achQueue.push(id);
@@ -4925,6 +5016,8 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   // by the patterns below the word list. Anything missing here simply stays in English.
   const ZH_PLANETS = { Pluto: '冥王星', Moon: '月球', Mars: '火星', Venus: '金星', Earth: '地球', Neptune: '海王星', Uranus: '天王星', Saturn: '土星', Jupiter: '木星', Sun: '太陽' };
   const ZH = {
+    "Make 40 merges": "合併 40 次", "Make 10 Earths": "做出 10 顆地球", "Make 25 Venuses": "做出 25 顆金星", "Shoot 60 planets": "發射 60 顆星球", "Score 1,500 in one game": "一局得到 1,500 分", "Make a Uranus": "做出一顆天王星", "Have 15 planets on the board at once": "場上同時有 15 顆星球", "Have 2 planets with rings on the board at once": "場上同時有 2 顆有環的星球", "Finish a Classic game": "完成一局經典模式", "Make 150 merges": "合併 150 次", "Make 8 Neptunes": "做出 8 顆海王星", "Make a Saturn": "做出一顆土星", "Score 3,000 in one game": "一局得到 3,000 分", "Score 6,000 points in total": "總共得到 6,000 分", "Have 3 planets with rings on the board at once": "場上同時有 3 顆有環的星球", "Have 22 planets on the board at once": "場上同時有 22 顆星球", "Catch something flying across the sky": "抓到一個飛過天空的東西", "Finish 3 Classic games": "完成 3 局經典模式", "Make a Jupiter": "做出一顆木星", "Make 3 Saturns": "做出 3 顆土星", "Make 6 Uranuses": "做出 6 顆天王星", "Score 5,000 in one game": "一局得到 5,000 分", "Score 15,000 points in total": "總共得到 15,000 分", "Make 400 merges": "合併 400 次", "Have 4 planets with rings on the board at once": "場上同時有 4 顆有環的星球", "Catch 3 things flying across the sky": "抓到 3 個飛過天空的東西", "Easy chest": "簡單寶箱", "Medium chest": "中等寶箱", "Hard chest": "困難寶箱", "Daily quests": "每日任務", "Quests": "任務", "Profile": "個人檔案", "Easy": "簡單", "Medium": "中等", "Hard": "困難", "Done! Chest opened": "完成！寶箱已打開", "What’s in the chests": "寶箱裡有什麼", "Tap to continue": "點一下繼續",
+    "Back up your progress": "備份你的進度", "Save to a file": "存成檔案", "Load from a file": "從檔案載入", "Save a backup now and then, for example to Files or iCloud Drive. If you ever delete the app or get a new phone, load the file to get everything back.": "偶爾存一份備份，例如存到「檔案」或 iCloud 雲碟。如果你刪掉這個 App 或換新手機，載入這個檔案就能找回一切。", "Backup saved.": "已儲存備份。", "That file isn’t a Planet Slide backup, or it was changed after it was saved.": "這個檔案不是 Planet Slide 的備份，或是存好後被改過了。", "Loading it replaces all progress on this phone.": "載入後會取代這支手機上的所有進度。", "Cancel": "取消", "Load it": "載入", "Nothing was changed.": "什麼都沒有改變。", "Couldn’t load it: this phone has no room to save.": "無法載入：這支手機沒有空間可以儲存。",
     "Happy Thanksgiving!": "感恩節快樂！", "Thanks for playing Planet Slide! Here is a free Second chance power-up. It is waiting in your Power-ups.": "謝謝你玩 Planet Slide！送你一個免費的「第二次機會」道具，已經放進你的道具裡了。", "One-time gift": "限定禮物", "Test the Thanksgiving gift pop-up": "測試感恩節禮物彈窗",
     "Power-ups": "道具", "Common": "普通", "Uncommon": "不常見", "Rare": "稀有", "Legendary": "傳說", "Nudge": "輕推", "Swap": "交換", "Shrink ray": "縮小光線", "Double points": "雙倍分數", "Pick": "自選", "Grow": "變大", "Magnet": "磁鐵", "Cosmic hug": "宇宙擁抱", "Supernova bomb": "超新星炸彈", "Ghost shot": "幽靈射擊", "Wild planet": "百搭星球", "Undo": "復原", "Second chance": "第二次機會", "Gently shakes the planets so they settle into gaps.": "輕輕搖一搖星球，讓它們落進空隙。", "Switch the planet you’re about to shoot with the next one.": "把你要發射的星球和下一顆交換。", "Tap a planet to make it one size smaller.": "點一顆星球，讓它變小一級。", "Every merge is worth double points for 30 seconds.": "30 秒內每次合併都是雙倍分數。", "Choose which planet you shoot next, from Pluto to Venus.": "自己選下一發要射的星球，從冥王星到金星。", "Tap a small planet (up to Venus) to make it one size bigger.": "點一顆小星球（最大到金星），讓它變大一級。", "For 6 seconds, matching planets that are close together pull into each other.": "6 秒內，靠在附近的相同星球會互相吸過去。", "Tap two matching planets anywhere on the board to merge them. Works up to Saturn.": "點棋盤上任意兩顆相同的星球，讓它們合併。最大到土星。", "Tap any planet to make it disappear.": "點任何一顆星球，讓它消失。", "Your next planet explodes when it lands and clears the small planets around it.": "下一顆星球落地時會爆炸，清掉附近的小星球。", "Your next planet flies through other planets and lands in the first gap behind them.": "下一顆星球會穿過其他星球，落在它們後面的第一個空隙。", "Your next planet is a rainbow that merges with whatever it hits first (up to Neptune).": "下一顆星球變成彩虹，和第一個碰到的星球合併（最大到海王星）。", "Take back your last shot.": "收回你的上一發。", "If the sky fills up, the planets closest to the line are cleared so you can keep playing. Turns on by itself.": "如果天空滿了，最靠近線的星球會被清掉，讓你繼續玩。會自動啟動。", "Bring up to 3 power-ups. Only one can be Rare or Legendary.": "最多帶 3 個道具。稀有或傳說只能帶一個。", "Start": "開始", "Play without": "不帶道具開始", "No planet to use it on": "沒有可以用的星球", "Tap two matching planets": "點兩顆相同的星球", "Tap a glowing planet": "點一顆發光的星球", "Tap a matching planet": "點一顆相同的星球", "Next shot: Ghost shot": "下一發：幽靈射擊", "Next shot: Supernova bomb": "下一發：超新星炸彈", "Next shot: Wild planet": "下一發：百搭星球", "Wait for your next planet": "等下一顆星球裝好", "Second chance is on. It works by itself.": "第二次機會已啟動，會自動生效。", "Double points for 30 seconds!": "30 秒雙倍分數！", "Nothing to undo yet": "還沒有可以復原的", "Second chance!": "第二次機會！", "Power best": "道具最高", "With power-ups": "使用道具", "Bring up to 3 into a Classic game. Unused ones come back to you when the game ends.": "經典模式每局最多帶 3 個。沒用到的會在遊戲結束時還給你。", "Get more in the shop": "去商店買更多", "Power-ups are used up once you use them in a Classic game. You can hold up to 99 of each.": "道具在經典模式用過就沒了。每種最多可以擁有 99 個。", "Max 99": "已達 99", "None yet": "還沒有", "+5 of every power-up": "每種道具 +5", "Empty power-ups": "清空道具",
     "Fly from the asteroid belt to the edge of the universe. Tap the spacecraft along the way for space facts.": "從小行星帶一路飛到宇宙的盡頭。點一下沿路的太空船，就能看到太空小知識。", "Open until Dec 26": "開到 12 月 26 日", "Curious cadet": "好奇的學員", "Tap a spacecraft on the Adventure map to read a space fact": "在冒險地圖上點一艘太空船，讀一則太空小知識", "Space nerd": "太空迷", "Read 5 space facts on the Adventure map": "在冒險地圖上讀 5 則太空小知識", "Walking encyclopedia": "行走的百科全書", "Read every space fact on the Adventure map": "讀完冒險地圖上所有的太空小知識", "Stargazer": "觀星者", "Tap something rare flying across the sky while you play": "玩的時候點一下飛過天空的稀有東西", "Sky watcher": "天空觀察家", "Spot 6 different things for your Space album": "為太空相簿收集 6 種不同的東西", "Full album": "相簿全滿", "Spot all 11 year-round sightings in your Space album": "收集太空相簿裡全部 11 種常駐目擊", "Ho ho ho!": "吼吼吼！", "Spot Santa’s sleigh (only Nov 15 – Dec 26)": "發現聖誕老人的雪橇（只在 11/15 – 12/26 出現）", "Space album": "太空相簿", "Shooting star": "流星", "A shooting star is a speck of space dust, often smaller than a grain of sand, burning up high in Earth’s air.": "流星是一小粒太空塵埃，常常比一粒沙還小，在地球高空的空氣中燒起來。", "Comet": "彗星", "A comet is a ball of ice and dust. When it comes close to the Sun, the ice turns to gas and makes a long, glowing tail.": "彗星是一團冰和塵埃。靠近太陽時，冰會變成氣體，拖出一條長長的發光尾巴。", "Satellite": "人造衛星", "Thousands of working satellites circle Earth. They help with phone calls, maps and weather forecasts.": "有好幾千顆運作中的人造衛星繞著地球轉，幫忙打電話、看地圖和預報天氣。", "Space station": "太空站", "The International Space Station circles Earth about every 90 minutes, so its crew sees about 16 sunrises every day.": "國際太空站大約每 90 分鐘繞地球一圈，所以太空人每天大約會看到 16 次日出。", "Hubble telescope": "哈伯望遠鏡", "The Hubble Space Telescope has been taking pictures of deep space since 1990.": "哈伯太空望遠鏡從 1990 年起就一直在拍攝深太空的照片。", "Rocket": "火箭", "To stay in orbit around Earth, a spacecraft has to fly about 28,000 km per hour.": "太空船要以大約每小時 28,000 公里的速度飛行，才能留在繞地球的軌道上。", "Floating astronaut": "漂浮的太空人", "In 1984, astronaut Bruce McCandless flew in space with a jetpack, with no line tying him to his spaceship.": "1984 年，太空人布魯斯·麥坎德利斯背著噴射背包在太空中飛行，身上沒有任何繩子連著太空船。", "Lost glove": "遺失的手套", "On the first American spacewalk in 1965, a spare glove floated out of the spaceship and drifted away into orbit.": "1965 年美國第一次太空漫步時，一隻備用手套飄出太空船，飄進了軌道。", "Car in space": "太空中的汽車", "In 2018 a red sports car was launched on a test rocket. It is still out there, circling the Sun.": "2018 年，一輛紅色跑車被放在測試火箭上發射出去。它現在還在太空中繞著太陽轉。", "Friendly UFO": "友善的幽浮", "Just for fun! Nobody has ever found proof of alien visitors, but scientists keep listening for signals from other worlds.": "只是好玩而已！從來沒有人找到外星訪客的證據，不過科學家一直在聆聽來自其他世界的訊號。", "Halley’s Comet": "哈雷彗星", "Halley’s Comet comes back about every 76 years. It was last seen from Earth in 1986 and returns in 2061.": "哈雷彗星大約每 76 年回來一次。上次從地球看到它是 1986 年，下次回來是 2061 年。", "Santa’s sleigh": "聖誕老人的雪橇", "Only seen from Nov 15 to Dec 26! Every Christmas Eve since 1955, NORAD has “tracked” Santa’s sleigh for children around the world.": "只在 11 月 15 日到 12 月 26 日出現！從 1955 年起，每年平安夜北美防空司令部都會為全世界的小朋友「追蹤」聖誕老人的雪橇。", "Holiday only": "節日限定", "Easy": "簡單", "Medium": "中等", "Rare": "稀有", "Not seen yet": "還沒看過", "Seen once": "看過 1 次", "Keep watching the sky between Nov 15 and Dec 26.": "在 11 月 15 日到 12 月 26 日之間繼續注意天空。", "Not seen yet. Keep an eye on the sky while you play.": "還沒看過。玩的時候多注意天空。",
@@ -5104,6 +5197,10 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     [/^Space facts found: (\d+)\/(\d+)$/, '找到的太空知識：$1/$2'],
     [/^New sighting: (.+)$/, (m, n) => '新發現：' + (ZH[n] || n)], [/^Spotted: (.+)$/, (m, n) => '又看到了：' + (ZH[n] || n)],
     [/^Seen (\d+) times$/, '看過 $1 次'],
+    [/^Quest done! (.+) earned$/, (m, n) => '任務完成！獲得' + zhWord(n)], [/^You have (\d+)$/, '你有 $1 個'],
+    [/^New quests in (\d+)h (\d+)m\. Only Classic games count\.$/, '$1 小時 $2 分後換新任務。只有經典模式會計算。'],
+    [/^(Easy|Medium|Hard) chest: (.+)$/, (m, c, rest) => zhWord(c + ' chest') + '：' + rest.replace(/Uncommon/g, '不常見').replace(/Common/g, '普通').replace(/Rare/g, '稀有').replace(/Legendary/g, '傳說')],
+    [/^Backup from (.+)$/, '備份日期：$1'], [/^Coins: ([\d,]+) · Top score: ([\d,]+)$/, '金幣：$1 · 最高分：$2'],
     [/^You own (\d+)$/, '你有 $1 個'], [/^New power-up high score on (.+)!$/, (m, n) => zhWord(n) + '的新道具紀錄！'],
     [/^Remove (.+)$/, (m, n) => '移除' + (ZH[n] || n)],
     [/^Rare things fly across the sky while you play\. Tap one to catch it\. Found (\d+) of (\d+)\.$/, '玩的時候會有稀有的東西飛過天空，點一下就能抓到。已找到 $1/$2 個。'],
@@ -5258,6 +5355,293 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   });
 
   // ---------- Settings sheet ----------
+
+  // ---------- Backup: save progress to a file, and load it back ----------
+  // Everything stays on the phone: the file goes wherever the player saves it (Files, iCloud Drive...),
+  // and loading only reads a file the player picks. A loaded file is checked the same way as a normal save.
+  const pad2 = n => (n < 10 ? '0' : '') + n;
+  // The save inside the file is encoded and stamped with a check code worked out from its contents.
+  // Change one character and the check no longer matches, so edited files are refused. This stops
+  // casual editing (e.g. typing in more coins); it is not unbreakable, since the game's code is public.
+  const BACKUP_SALT = 'ps-bk-7f3a91c2-sat-ring';
+  function backupCheck(when, data) {
+    const str = BACKUP_SALT + '|' + when + '|' + data + '|' + BACKUP_SALT;
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for (let i = 0; i < str.length; i++) { const c = str.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (h2 >>> 0).toString(16).padStart(8, '0') + (h1 >>> 0).toString(16).padStart(8, '0');
+  }
+  const toB64 = t => { const u = new TextEncoder().encode(t); let b = ''; for (let i = 0; i < u.length; i += 0x8000) b += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(b); };
+  const fromB64 = t => new TextDecoder().decode(Uint8Array.from(atob(t), c => c.charCodeAt(0)));
+  function exportSave() {
+    save();
+    const d = new Date();
+    const name = 'planet-slide-backup-' + d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + '.json';
+    const when = d.toISOString(), data = toB64(JSON.stringify(store));
+    const text = JSON.stringify({ app: 'planet-slide', format: 2, saved: when, data, check: backupCheck(when, data) });
+    const blob = new Blob([text], { type: 'application/json' });
+    try {
+      const file = typeof File === 'function' ? new File([blob], name, { type: 'application/json' }) : null;
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {      // iPhone: the share sheet, then "Save to Files"
+        navigator.share({ files: [file] }).then(() => bkNote('Backup saved.')).catch(() => {});
+        return;
+      }
+    } catch (e) {}
+    const url = URL.createObjectURL(blob), link = document.createElement('a');
+    link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    bkNote('Backup saved.');
+  }
+  function bkNote(text, html) { const b = $('bkBox'); if (b) b.innerHTML = html || '<p class="note">' + text + '</p>'; }
+  let pendingBackup = null;
+  function readBackup(file) {
+    if (!file) return;
+    const bad = () => bkNote('That file isn’t a Planet Slide backup, or it was changed after it was saved.');
+    if (file.size > 2000000) { bad(); return; }
+    const rd = new FileReader();
+    rd.onload = () => {
+      let obj = null, data = null;
+      try {
+        obj = JSON.parse(rd.result);
+        if (obj && obj.app === 'planet-slide' && obj.format === 2 && typeof obj.data === 'string' && typeof obj.saved === 'string' &&
+            obj.check === backupCheck(obj.saved, obj.data)) data = JSON.parse(fromB64(obj.data));
+      } catch (e) { data = null; }
+      if (!data || typeof data !== 'object' || Array.isArray(data) || !data.bests || typeof data.bests !== 'object') { bad(); return; }
+      pendingBackup = data;
+      const when = obj.saved && !isNaN(Date.parse(obj.saved)) ? new Date(obj.saved) : null;
+      const nums = o => Object.values(o || {}).filter(Number.isFinite);
+      const top = Math.max(0, ...nums(data.bests), ...nums(data.bestsP));
+      bkNote('', (when ? '<p class="note">Backup from ' + when.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + '</p>' : '') +
+        '<p class="note">Coins: ' + fmt(Math.max(0, data.coins | 0)) + ' · Top score: ' + fmt(top) + '</p>' +
+        '<p class="note warn">Loading it replaces all progress on this phone.</p>' +
+        '<div class="row2"><button class="btn ghost" id="bkCancel" type="button">Cancel</button><button class="btn pink" id="bkGo" type="button">Load it</button></div>');
+      $('bkCancel').addEventListener('click', () => { pendingBackup = null; bkNote('Nothing was changed.'); });
+      $('bkGo').addEventListener('click', () => {
+        if (!pendingBackup) return;
+        // _restored marks the save as freshly loaded; it is read once at start and is not kept in the next save
+        try { localStorage.setItem(SAVE_KEY, JSON.stringify({ ...pendingBackup, _restored: 1 })); } catch (e) { bkNote('Couldn’t load it: this phone has no room to save.'); return; }
+        pendingBackup = null;
+        location.reload();          // start fresh from the loaded save, checked like any other
+      });
+    };
+    rd.onerror = bad;
+    rd.readAsText(file);
+  }
+  // ---------- Daily quests and chests ----------
+  // Every day (phone's local date) there are 3 quests: one Easy, one Medium, one Hard, picked from fixed lists
+  // by the date, so they stay the same all day and change at midnight. Only Classic games count.
+  // Each quest gives a chest (Easy, Medium or Hard) holding one random power-up. The power-up is added
+  // the moment the quest is done; the chest animation plays at the next calm moment (end of game, Home).
+  // kinds: merge = merges · make = planets of type t made · shot = shots · best = best score in one game
+  //        points = points scored in total · onboard / rings = most planets / ringed planets on the board at once
+  //        finish = Classic games finished · spot = Space album sightings caught
+  const QUESTS = [
+    { id: 'e_merge', tier: 0, kind: 'merge', goal: 40, text: 'Make 40 merges' },
+    { id: 'e_earth', tier: 0, kind: 'make', t: 4, goal: 10, text: 'Make 10 Earths' },
+    { id: 'e_venus', tier: 0, kind: 'make', t: 3, goal: 25, text: 'Make 25 Venuses' },
+    { id: 'e_shot', tier: 0, kind: 'shot', goal: 60, text: 'Shoot 60 planets' },
+    { id: 'e_best', tier: 0, kind: 'best', goal: 1500, text: 'Score 1,500 in one game' },
+    { id: 'e_uranus', tier: 0, kind: 'make', t: 6, goal: 1, text: 'Make a Uranus' },
+    { id: 'e_board', tier: 0, kind: 'onboard', goal: 15, text: 'Have 15 planets on the board at once' },
+    { id: 'e_rings', tier: 0, kind: 'rings', goal: 2, text: 'Have 2 planets with rings on the board at once' },
+    { id: 'e_finish', tier: 0, kind: 'finish', goal: 1, text: 'Finish a Classic game' },
+    { id: 'm_merge', tier: 1, kind: 'merge', goal: 150, text: 'Make 150 merges' },
+    { id: 'm_neptune', tier: 1, kind: 'make', t: 5, goal: 8, text: 'Make 8 Neptunes' },
+    { id: 'm_saturn', tier: 1, kind: 'make', t: 7, goal: 1, text: 'Make a Saturn' },
+    { id: 'm_best', tier: 1, kind: 'best', goal: 3000, text: 'Score 3,000 in one game' },
+    { id: 'm_points', tier: 1, kind: 'points', goal: 6000, text: 'Score 6,000 points in total' },
+    { id: 'm_rings', tier: 1, kind: 'rings', goal: 3, text: 'Have 3 planets with rings on the board at once' },
+    { id: 'm_board', tier: 1, kind: 'onboard', goal: 22, text: 'Have 22 planets on the board at once' },
+    { id: 'm_spot', tier: 1, kind: 'spot', goal: 1, text: 'Catch something flying across the sky' },
+    { id: 'm_finish', tier: 1, kind: 'finish', goal: 3, text: 'Finish 3 Classic games' },
+    { id: 'h_jupiter', tier: 2, kind: 'make', t: 8, goal: 1, text: 'Make a Jupiter' },
+    { id: 'h_saturn', tier: 2, kind: 'make', t: 7, goal: 3, text: 'Make 3 Saturns' },
+    { id: 'h_uranus', tier: 2, kind: 'make', t: 6, goal: 6, text: 'Make 6 Uranuses' },
+    { id: 'h_best', tier: 2, kind: 'best', goal: 5000, text: 'Score 5,000 in one game' },
+    { id: 'h_points', tier: 2, kind: 'points', goal: 15000, text: 'Score 15,000 points in total' },
+    { id: 'h_merge', tier: 2, kind: 'merge', goal: 400, text: 'Make 400 merges' },
+    { id: 'h_rings', tier: 2, kind: 'rings', goal: 4, text: 'Have 4 planets with rings on the board at once' },
+    { id: 'h_spot', tier: 2, kind: 'spot', goal: 3, text: 'Catch 3 things flying across the sky' }
+  ];
+  const QUEST_BY = {}; QUESTS.forEach(q => { QUEST_BY[q.id] = q; });
+  const CHEST_NAMES = ['Easy chest', 'Medium chest', 'Hard chest'];
+  // chance of each rarity (Common, Uncommon, Rare, Legendary) in each chest, in percent
+  const CHEST_ODDS = [[70, 27, 3, 0], [55, 38, 6, 1], [45, 38, 13, 4]];
+  const CHEST_COL = [['#d9945a', '#8a5228', '#f3c08e'], ['#cfd8ea', '#6f7a99', '#ffffff'], ['#ffd45e', '#b57a12', '#fff3b0']];
+  const dayKey = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  function dayRand(str) {               // the same random numbers all day long, from the date
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return () => { h = Math.imul(h ^ (h >>> 15), 2246822507) ^ Math.imul(h ^ (h >>> 13), 3266489909); return ((h >>>= 0) % 100000) / 100000; };
+  }
+  function pickQuests(day) {
+    const prev = (store.quests && store.quests.list || []).map(q => q.id), rnd = dayRand('quests|' + day);
+    return [0, 1, 2].map(tier => {
+      const pool = QUESTS.filter(q => q.tier === tier);
+      let q = pool[Math.floor(rnd() * pool.length)];
+      if (prev.includes(q.id)) q = pool[(pool.indexOf(q) + 1 + Math.floor(rnd() * (pool.length - 1))) % pool.length];   // not the same as yesterday
+      return { id: q.id, prog: 0, done: false };
+    });
+  }
+  let questDayAt = 0;
+  function ensureQuests(force) {
+    if (force) questDayAt = 0;
+    const now = performance.now();       // a timer the phone's date setting can't move
+    if (store.quests && now < questDayAt) return;
+    questDayAt = now + 5000;
+    const day = dayKey(new Date());
+    if (!store.quests || store.quests.day !== day) {
+      // Every day's quests are remembered (for 60 days), so moving the phone's date forward and back again
+      // brings back that day's quests as they were, already finished ones included, instead of a fresh set.
+      if (store.quests) store.questLog[store.quests.day] = store.quests.list.map(x => ({ id: x.id, prog: x.prog, done: x.done }));
+      const keep = Object.keys(store.questLog).sort().slice(-60), log = {};
+      for (const k of keep) log[k] = store.questLog[k];
+      store.questLog = log;
+      const old = store.questLog[day];
+      store.quests = { day, list: old ? old.map(x => ({ ...x })) : pickQuests(day) };
+      dirty = true;
+    }
+  }
+  function questEv(kind, v) {           // something happened in a Classic game
+    if (mode !== 'classic' || !store.quests) return;
+    ensureQuests();
+    for (const s of store.quests.list) {
+      const q = QUEST_BY[s.id];
+      if (s.done || q.kind !== kind) continue;
+      if (kind === 'make') { if (v === q.t) s.prog++; else continue; }
+      else if (kind === 'best' || kind === 'onboard' || kind === 'rings') { if (v > s.prog) s.prog = v; else continue; }
+      else if (kind === 'points') s.prog += Math.max(0, v);
+      else s.prog++;
+      dirty = true;
+      if (s.prog >= q.goal) { s.prog = q.goal; s.done = true; questDone(q); }
+    }
+  }
+  function rollChest(tier) {            // returns a power-up id
+    const odds = CHEST_ODDS[tier];
+    let r = Math.random() * 100, rare = 0;
+    for (; rare < 3; rare++) { if ((r -= odds[rare]) < 0) break; }
+    const pool = POWERUPS.filter(p => p.rare === rare);
+    return pool[Math.floor(Math.random() * pool.length)].id;
+  }
+  function questDone(q) {
+    const pu = rollChest(q.tier);
+    grantPower(pu, 1, true);            // earned, so it may go past 99
+    store.chests.push({ tier: q.tier, pu });
+    save(); sfx.ach();
+    toast('Quest done! ' + CHEST_NAMES[q.tier] + ' earned');
+    if (screen !== 'game') playChests();
+  }
+
+  // ----- the chest animation: a ship drops a chest, it opens, the power-up pops out. Tap to skip, tap to close. -----
+  let chestAnim = null;
+  function playChests() {
+    if (chestAnim || !store.chests.length) return;
+    const c = store.chests[0];
+    chestAnim = { tier: c.tier, pu: c.pu, t0: performance.now(), revealed: false, revealAt: 0 };
+    $('chest').hidden = false; $('chestReveal').hidden = true;
+    sizeChest();
+    if (reduceMotion) revealChest();
+    else { requestAnimationFrame(chestFrame); setTimeout(revealChest, CH_DONE * 1000 + 300); }   // the timer makes sure the reveal always comes
+  }
+  function sizeChest() {
+    const cv = $('chestCv'), k = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.round(innerWidth * k); cv.height = Math.round(innerHeight * k);
+  }
+  const CH_FLY = 0.5, CH_DROP = 0.85, CH_OPEN = 1.05, CH_DONE = 1.35;    // seconds
+  function chestFrame() {
+    if (!chestAnim || chestAnim.revealed) return;
+    const t = (performance.now() - chestAnim.t0) / 1000;
+    drawChestScene(Math.min(t, CH_DONE));
+    if (t >= CH_DONE) revealChest(); else requestAnimationFrame(chestFrame);
+  }
+  function drawChestScene(t) {
+    const cv = $('chestCv'), g = cv.getContext('2d'), k = cv.width / innerWidth, W2 = innerWidth, H2 = innerHeight;
+    g.setTransform(k, 0, 0, k, 0, 0); g.clearRect(0, 0, W2, H2);
+    const cx = W2 / 2, shipY = H2 * 0.22, floor = H2 * 0.5, ease = x => 1 - (1 - x) ** 3;
+    if (t < CH_DROP + 0.45) {           // the ship flies in, stops, then zooms off
+      const sx = t < CH_FLY ? -90 + (cx + 90) * ease(t / CH_FLY) : t < CH_DROP ? cx : cx + (W2 + 120 - cx) * ((t - CH_DROP) / 0.45) ** 2;
+      g.save(); g.translate(sx, shipY + Math.sin(t * 9) * 3); g.scale(1.7, 1.7);
+      drawUfo(g, { x: 0, y: 0, beam: false }); g.restore();
+    }
+    if (t >= CH_FLY) {                  // the chest falls, bounces, opens
+      const f = Math.min(1, (t - CH_FLY) / (CH_DROP - CH_FLY));
+      let y = shipY + 30 + (floor - shipY - 30) * f * f;
+      if (t > CH_DROP && t < CH_OPEN) y = floor - Math.sin((t - CH_DROP) / (CH_OPEN - CH_DROP) * Math.PI) * 14;
+      const open = t > CH_OPEN ? Math.min(1, (t - CH_OPEN) / (CH_DONE - CH_OPEN)) : 0;
+      drawChest(g, cx, y, Math.min(W2 * 0.34, 150), chestAnim.tier, open);
+    }
+  }
+  function drawChest(g, x, y, w, tier, open) {
+    const [body, trim, shine] = CHEST_COL[tier], h = w * 0.62, lidH = w * 0.3;
+    if (open > 0) {                     // a burst of light
+      g.save(); g.globalAlpha = open;
+      const gl = g.createRadialGradient(x, y - h * 0.2, 0, x, y - h * 0.2, w * 1.3);
+      gl.addColorStop(0, PU_COLOR[PU_BY[chestAnim.pu].rare]); gl.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gl; g.beginPath(); g.arc(x, y - h * 0.2, w * 1.3, 0, TAU); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 4; g.lineCap = 'round';
+      for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i - 4.5) * 0.28; g.beginPath(); g.moveTo(x + Math.cos(a) * w * 0.45, y - h * 0.25 + Math.sin(a) * w * 0.45); g.lineTo(x + Math.cos(a) * w * (0.7 + open * 0.4), y - h * 0.25 + Math.sin(a) * w * (0.7 + open * 0.4)); g.stroke(); }
+      g.restore();
+    }
+    g.lineJoin = 'round'; g.strokeStyle = INKC; g.lineWidth = 4;
+    g.fillStyle = body; g.beginPath(); g.roundRect(x - w / 2, y - h / 2, w, h, 10); g.fill(); g.stroke();      // box
+    g.fillStyle = trim; g.fillRect(x - w / 2 + 2, y - h * 0.12, w - 4, h * 0.14);
+    g.fillRect(x - w * 0.08, y - h / 2 + 2, w * 0.16, h - 4);
+    g.fillStyle = shine; g.fillRect(x - w / 2 + 8, y - h / 2 + 6, w * 0.22, 5);
+    g.save(); g.translate(x, y - h / 2);       // lid, hinged at the back
+    g.rotate(-open * 1.9 * 0.5); g.scale(1, 1 - open * 0.5);
+    g.fillStyle = body; g.beginPath(); g.roundRect(-w / 2 - 4, -lidH, w + 8, lidH, [14, 14, 4, 4]); g.fill(); g.stroke();
+    g.fillStyle = trim; g.fillRect(-w * 0.08, -lidH + 2, w * 0.16, lidH - 4);
+    g.restore();
+    g.fillStyle = '#ffd45e'; g.beginPath(); g.roundRect(x - 9, y - h / 2 - 6, 18, 16, 4); g.fill(); g.stroke();   // lock
+  }
+  function revealChest() {
+    if (!chestAnim || chestAnim.revealed) return;
+    chestAnim.revealed = true; chestAnim.revealAt = performance.now();
+    const cv = $('chestCv'), g = cv.getContext('2d'), k = cv.width / innerWidth;     // the chest is gone: just a glow behind the power-up
+    g.setTransform(k, 0, 0, k, 0, 0); g.clearRect(0, 0, innerWidth, innerHeight);
+    const gl = g.createRadialGradient(innerWidth / 2, innerHeight * 0.42, 0, innerWidth / 2, innerHeight * 0.42, 220);
+    gl.addColorStop(0, PU_COLOR[PU_BY[chestAnim.pu].rare]); gl.addColorStop(1, 'rgba(0,0,0,0)');
+    g.globalAlpha = 0.55; g.fillStyle = gl; g.fillRect(0, 0, innerWidth, innerHeight); g.globalAlpha = 1;
+    const p = PU_BY[chestAnim.pu], n = puHave(p.id);
+    $('chestReveal').innerHTML = '<div class="cr-chest">' + CHEST_NAMES[chestAnim.tier] + '</div>' + puIcon(p.id, 'huge') +
+      '<span class="ftag" style="background:' + PU_COLOR[p.rare] + '">' + PU_RARITY[p.rare] + '</span><h3>' + p.name + '</h3><p>' + p.desc + '</p>' +
+      '<p class="cr-own' + (n > PU_MAX ? ' overflow' : '') + '">You have ' + n + '</p><p class="cr-tap">Tap to continue</p>';
+    $('chestReveal').hidden = false;
+    sfx.buy();
+  }
+  $('chest').addEventListener('pointerdown', ev => {
+    ev.preventDefault();
+    if (!chestAnim) return;
+    if (!chestAnim.revealed) { revealChest(); return; }        // tap skips straight to the power-up
+    if (performance.now() - chestAnim.revealAt < 250) return;   // don't close by accident with the same tap
+    store.chests.shift(); save();
+    chestAnim = null; $('chest').hidden = true;
+    if (store.chests.length) setTimeout(playChests, 120);
+  });
+
+  // ----- the quests panel -----
+  const chestSvg = tier => { const [b, t] = CHEST_COL[tier]; return '<svg class="qchest" viewBox="0 0 40 36" aria-hidden="true"><rect x="4" y="15" width="32" height="18" rx="3" fill="' + b + '" stroke="#2a1650" stroke-width="2.5"/><path d="M3 15 Q3 5 20 5 Q37 5 37 15 Z" fill="' + b + '" stroke="#2a1650" stroke-width="2.5" stroke-linejoin="round"/><rect x="17" y="5" width="6" height="28" fill="' + t + '"/><rect x="4" y="18" width="32" height="4" fill="' + t + '"/><rect x="16" y="12" width="8" height="8" rx="2" fill="#ffd45e" stroke="#2a1650" stroke-width="2"/></svg>'; };
+  function untilMidnight() {
+    const n = new Date(), m = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1), mins = Math.max(1, Math.round((m - n) / 60000));
+    return Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm';
+  }
+  function questsDone() { ensureQuests(); return store.quests.list.filter(s => s.done).length; }
+  function openQuests() {
+    ensureQuests();
+    let html = '<h2 id="sheetTitle">Daily quests</h2><p class="note">New quests in ' + untilMidnight() + '. Only Classic games count.</p><div class="qlist">';
+    store.quests.list.forEach((s, i) => {
+      const q = QUEST_BY[s.id], pct = Math.min(100, Math.round(s.prog / q.goal * 100));
+      html += '<div class="panel qrow' + (s.done ? ' done' : '') + '">' + chestSvg(i) + '<div class="qmain"><div class="qtier">' + ['Easy', 'Medium', 'Hard'][i] + '</div><div class="qtext">' + q.text + '</div>' +
+        '<div class="qbar"><i style="width:' + pct + '%"></i></div><div class="qprog">' + (s.done ? 'Done! Chest opened' : fmt(s.prog) + ' / ' + fmt(q.goal)) + '</div></div></div>';
+    });
+    html += '</div><div class="qodds"><b>What’s in the chests</b>' + CHEST_ODDS.map((o, t) => '<div>' + CHEST_NAMES[t] + ': ' +
+      o.map((v, r) => v ? PU_RARITY[r] + ' ' + v + '%' : '').filter(Boolean).join(' · ') + '</div>').join('') + '</div>' +
+      '<button class="btn pink" id="optDone" type="button">Done</button>';
+    $('sheet').innerHTML = html;
+    $('optDone').addEventListener('click', closeSettings);
+    paused = true; $('modal').classList.add('show');
+  }
   function twoTap(btn, fn) {
     const label = btn.textContent;
     let armed = 0;
@@ -5285,7 +5669,12 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     if (holidaySeason()) html += '<button class="btn ghost" id="optHoliday" type="button"></button>' +
       (where === 'home' ? '<p class="note">Snow, festive planets on this screen, and holiday touches in Classic and Adventure.</p>' : '');
     if (where === 'home') {
-      html += '<button class="btn ghost" id="optReset" type="button">Reset high scores</button>' +
+      html += '<div class="bk-h">Back up your progress</div>' +
+              '<div class="row2"><button class="btn blue" id="optExport" type="button">Save to a file</button>' +
+              '<button class="btn blue" id="optImport" type="button">Load from a file</button></div>' +
+              '<input type="file" id="importFile" accept=".json,application/json" hidden>' +
+              '<div id="bkBox"><p class="note">Save a backup now and then, for example to Files or iCloud Drive. If you ever delete the app or get a new phone, load the file to get everything back.</p></div>' +
+              '<button class="btn ghost" id="optReset" type="button">Reset high scores</button>' +
               '<p class="note">Clears the high score on every map, and any Classic game in progress.</p>' +
               '<button class="btn ghost" id="optWipe" type="button">Reset entire game</button>' +
               '<p class="note">Erases your high scores, coins, everything you bought, your achievements and your adventure progress.</p>';
@@ -5319,9 +5708,14 @@ canvas#c {                         /* the sky fills the whole screen; the board 
       for (const k in store.runs) for (const sl of (store.runs[k] && store.runs[k].pu) || []) if (!sl.used) store.pu[sl.id] = clamp(puHave(sl.id) + 1, 0, PU_HARD);
       puSlots = []; renderPuBar();
       store.bests = {}; store.bestsP = {}; store.runs = {}; save(); refreshHome(); $('optReset').textContent = 'High scores reset'; });
+    if ($('optExport')) $('optExport').addEventListener('click', exportSave);
+    if ($('optImport')) {
+      $('optImport').addEventListener('click', () => { $('importFile').value = ''; $('importFile').click(); });
+      $('importFile').addEventListener('change', () => readBackup($('importFile').files[0]));
+    }
     if ($('optWipe')) twoTap($('optWipe'), () => {
       Object.assign(store, {
-        map: 'open', bests: {}, runs: {}, sand: { ...DEFAULTS }, coins: 0, owned: {}, adv: [], eggs: {}, album: {}, pu: {}, bestsP: {}, gifts: {}, ach: {}, stats: freshStats(),
+        map: 'open', bests: {}, runs: {}, sand: { ...DEFAULTS }, coins: 0, owned: {}, adv: [], eggs: {}, album: {}, pu: {}, bestsP: {}, gifts: {}, quests: null, questLog: {}, chests: [], ach: {}, stats: freshStats(),
         equip: { skins: TIERS.map(() => 'classic'), faces: TIERS.map(() => 'classic'), bg: 'night', track: 'sunny' }
       });
       pick = 0; faceTarget = 'all'; curMap = 'open';
@@ -5390,6 +5784,7 @@ canvas#c {                         /* the sky fills the whole screen; the board 
   $('profBack').addEventListener('click', goHome);
   $('btnSandbox').addEventListener('click', () => enterGame('sandbox'));
   $('btnHomeSettings').addEventListener('click', openSettings);
+  $('btnQuests').addEventListener('click', openQuests);
   $('btnShop').addEventListener('click', openShop);
   $('btnAdv').addEventListener('click', openAdventure);
   $('advBack').addEventListener('click', goHome);
@@ -5429,14 +5824,17 @@ canvas#c {                         /* the sky fills the whole screen; the board 
     audio.track = store.equip.track;
     buildSprites();
     refreshHome(); fitHome();
-    checkStanding();
+    quietAwards = justRestored;     // set by loadStore when the save was just loaded from a backup file          // after loading a backup, anything it already earned is recorded without paying again
+    checkStanding(); factBadges();
+    quietAwards = false;
     checkGifts();
+    ensureQuests(); setTimeout(playChests, 900);
     const refit = () => { if (screen === 'home') fitHome(); else if (screen === 'game') fit(); };
     if (window.ResizeObserver) { new ResizeObserver(refit).observe(stage); new ResizeObserver(refit).observe($('home')); }
     window.addEventListener('resize', refit);
     requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
     if (typeof window.__PS_TEST === 'function') {
-      window.__PS_TEST({ pu: { grant: grantPower, slots: ids => { puSlots = ids.map(id => ({ id, used: false })); renderPuBar(); }, use: usePower, tap: (x, y) => puTapWorld(x, y), pick: t => { const i = puSlots.findIndex(s => s.id === 'pick' && !s.used); cur = t; usedPower(i); }, picker: () => { pickDraft = []; openPicker(); }, draft: ids => { pickDraft = ids.slice(); openPicker(); }, start: startWithPowers, fail: () => fail('full'), state: () => ({ slots: puSlots, runPowered, doubleT, magnetT, nudgeT, shotMod, puMode: !!puMode, bests: store.bests, bestsP: store.bestsP, inv: store.pu, coins: store.coins, paidTo, score, cur, next, hold, over, n: bodies.length, ts: bodies.map(b => b.t) }), setBodies: list => { bodies = list.map(([x, y, t]) => { const b = makeBody(x, y, t); b.age = 5; return b; }); }, bodies: () => bodies.map(b => ({ x: b.x, y: b.y, t: b.t, ghost: !!b.ghost, fly: b.fly })) }, forceSight(id, t) { sight = { s: SIGHT_BY[id], dir: 1, t: t || 3, dur: 8, y0: 160, wob: 0, caught: false, ct: 0 }; }, sightAt: () => { if (!sight) return null; const p = sightPos(sight), r = canvas.getBoundingClientRect(), k = r.width / VW; return { x: r.left + (p.x + OX) * k, y: r.top + (p.y + OY) * k, caught: sight.caught }; }, album: () => store.album, coins: () => store.coins, layout: () => { const r = canvas.getBoundingClientRect(), k = r.width / VW, t0 = r.top + OY * k; return { W, H, VH, OX, OY, k, cw: r.width, ch: r.height, top: t0, left: r.left + OX * k, iw: innerWidth, ih: innerHeight, launchBottom: t0 + (launchY() + TIERS[cur].bottom) * k, worldBottom: t0 + H * k, hudBottom: document.querySelector(".hint").getBoundingClientRect().bottom }; }, buildSprites, setScore: v => { score = v; hud(); }, setLang, zh, fitHud, failLevel, winLevel, endGame, setHoliday: v => { devHoliday = v; homeSprites = null; refreshHome(); }, holidayLook, art: (t, sk, f) => { const c = document.createElement('canvas'); c.width = c.height = 240; const g = c.getContext('2d'), q = 64 / TIERS[t].r; g.setTransform(q, 0, 0, q, 120, 130); drawPlanet(g, t, sk, f || 'classic'); return c.toDataURL(); }, armTimer: n => { const b = bodies.filter(p => !p.fly && !p.taken && p.t === 0).sort((p, q) => q.y - p.y)[0]; if (!b) return null; b.fused = true; b.fuse = n; return { x: b.x, y: b.y }; }, setCur: t => { cur = t; ready = true; }, peekGems: () => gems.filter(g => !g.got).map(g => ({ x: g.x, y: g.y })), peekRocks: () => rocks.filter(o => o.brk).map(o => ({ x: o.x, y: o.y, r: o.r })), LEVELS, quietAudio, wakeAudio, toastText: () => $('toast').textContent, toastOn: () => $('toast').classList.contains('go'), toast, peekBodies: () => bodies.map(b => ({ x: b.x, y: b.y, t: b.t, fly: b.fly, ice: !!b.ice, fuse: b.fused ? Math.max(0, b.fuse) + 1 : 0 })), peekCur: () => cur, badge, ACH, MAPS, TRACKS, songPlan, loopSeconds, audio, audioWake, setTrack, scheduleBar, enterGame, enterLevel, openAdventure, openMaps, openProfile, playMap, award, profTab(t) { profTab = t; renderProfile(); }, step, openSettings, openShop, shopTap, store, start() { hideCard(); hold = false; }, peek: () => ({ over, hold, made: made.slice(), shotsLeft, timeLeft, bossHp: boss && boss.hp, done: store.adv.slice(), title: ($('overCard').querySelector('h2') || {}).textContent }), tab(t) { shopTab = t; renderShop(); }, shoot(x) { aimX = x; launch(); }, aim(x) { aimX = x; }, get: () => ({ score, over, n: bodies.length, best: bestOf(curMap), map: curMap }) });
+      window.__PS_TEST({ q: { freeze: t => { chestAnim.revealed = true; $('chestReveal').hidden = true; drawChestScene(t); }, ev: questEv, ensure: () => ensureQuests(true), open: openQuests, play: playChests, done: i => { const s0 = store.quests.list[i]; s0.prog = QUEST_BY[s0.id].goal - 1; }, roll: rollChest, pick: pickQuests, odds: CHEST_ODDS, state: () => ({ quests: store.quests, chests: store.chests, pu: store.pu }) }, pu: { grant: grantPower, slots: ids => { puSlots = ids.map(id => ({ id, used: false })); renderPuBar(); }, use: usePower, tap: (x, y) => puTapWorld(x, y), pick: t => { const i = puSlots.findIndex(s => s.id === 'pick' && !s.used); cur = t; usedPower(i); }, picker: () => { pickDraft = []; openPicker(); }, draft: ids => { pickDraft = ids.slice(); openPicker(); }, start: startWithPowers, fail: () => fail('full'), state: () => ({ slots: puSlots, runPowered, doubleT, magnetT, nudgeT, shotMod, puMode: !!puMode, bests: store.bests, bestsP: store.bestsP, inv: store.pu, coins: store.coins, paidTo, score, cur, next, hold, over, n: bodies.length, ts: bodies.map(b => b.t) }), setBodies: list => { bodies = list.map(([x, y, t]) => { const b = makeBody(x, y, t); b.age = 5; return b; }); }, bodies: () => bodies.map(b => ({ x: b.x, y: b.y, t: b.t, ghost: !!b.ghost, fly: b.fly })) }, forceSight(id, t) { sight = { s: SIGHT_BY[id], dir: 1, t: t || 3, dur: 8, y0: 160, wob: 0, caught: false, ct: 0 }; }, sightAt: () => { if (!sight) return null; const p = sightPos(sight), r = canvas.getBoundingClientRect(), k = r.width / VW; return { x: r.left + (p.x + OX) * k, y: r.top + (p.y + OY) * k, caught: sight.caught }; }, album: () => store.album, coins: () => store.coins, layout: () => { const r = canvas.getBoundingClientRect(), k = r.width / VW, t0 = r.top + OY * k; return { W, H, VH, OX, OY, k, cw: r.width, ch: r.height, top: t0, left: r.left + OX * k, iw: innerWidth, ih: innerHeight, launchBottom: t0 + (launchY() + TIERS[cur].bottom) * k, worldBottom: t0 + H * k, hudBottom: document.querySelector(".hint").getBoundingClientRect().bottom }; }, buildSprites, setScore: v => { score = v; hud(); }, setLang, zh, fitHud, failLevel, winLevel, endGame, setHoliday: v => { devHoliday = v; homeSprites = null; refreshHome(); }, holidayLook, art: (t, sk, f) => { const c = document.createElement('canvas'); c.width = c.height = 240; const g = c.getContext('2d'), q = 64 / TIERS[t].r; g.setTransform(q, 0, 0, q, 120, 130); drawPlanet(g, t, sk, f || 'classic'); return c.toDataURL(); }, armTimer: n => { const b = bodies.filter(p => !p.fly && !p.taken && p.t === 0).sort((p, q) => q.y - p.y)[0]; if (!b) return null; b.fused = true; b.fuse = n; return { x: b.x, y: b.y }; }, setCur: t => { cur = t; ready = true; }, peekGems: () => gems.filter(g => !g.got).map(g => ({ x: g.x, y: g.y })), peekRocks: () => rocks.filter(o => o.brk).map(o => ({ x: o.x, y: o.y, r: o.r })), LEVELS, quietAudio, wakeAudio, toastText: () => $('toast').textContent, toastOn: () => $('toast').classList.contains('go'), toast, peekBodies: () => bodies.map(b => ({ x: b.x, y: b.y, t: b.t, fly: b.fly, ice: !!b.ice, fuse: b.fused ? Math.max(0, b.fuse) + 1 : 0 })), peekCur: () => cur, badge, ACH, MAPS, TRACKS, songPlan, loopSeconds, audio, audioWake, setTrack, scheduleBar, enterGame, enterLevel, openAdventure, openMaps, openProfile, playMap, award, profTab(t) { profTab = t; renderProfile(); }, step, openSettings, openShop, shopTap, store, start() { hideCard(); hold = false; }, peek: () => ({ over, hold, made: made.slice(), shotsLeft, timeLeft, bossHp: boss && boss.hp, done: store.adv.slice(), title: ($('overCard').querySelector('h2') || {}).textContent }), tab(t) { shopTab = t; renderShop(); }, shoot(x) { aimX = x; launch(); }, aim(x) { aimX = x; }, get: () => ({ score, over, n: bodies.length, best: bestOf(curMap), map: curMap }) });
     }
   }
 
